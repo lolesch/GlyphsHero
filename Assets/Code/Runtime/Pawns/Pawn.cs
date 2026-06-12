@@ -15,6 +15,8 @@ namespace Code.Runtime.Pawns
         [SerializeField, ReadOnly, PreviewIcon] private Sprite _icon;
         // TODO: move pawn effect into config!
         [SerializeField] private PawnEffect _pawnEffects;
+        [SerializeField] private float _moveLerpSpeed = 8f;
+        private Grid _grid;
 
         //[field: SerializeField] public PawnConfig        Config        { get; private set; }
         [field: SerializeField, ReadOnly] public PawnTeam          Team          { get; private set; }
@@ -27,7 +29,7 @@ namespace Code.Runtime.Pawns
        
         public event Action OnDefeated;
 
-        public  void SpawnPawn(PawnConfig config, PawnTeam team, Hex hex)
+        public  void SpawnPawn(PawnConfig config, PawnTeam team, Hex hex, Grid grid)
         {
             if (!config)
             {
@@ -35,6 +37,7 @@ namespace Code.Runtime.Pawns
                 return;
             }
 
+            _grid         = grid;
             _icon         = config.icon;
             Stats         = new PawnStats(config);
             Inventory     = new TetrisContainer(new Vector2Int(6, 3));
@@ -50,7 +53,9 @@ namespace Code.Runtime.Pawns
             
             Team = team;
             MoveTo(hex);
-            
+            if (_grid != null)
+                transform.position = hex.ToWorld(_grid);
+
             gameObject.SetActive(true);
         }
 
@@ -65,6 +70,14 @@ namespace Code.Runtime.Pawns
         public void TakeDamage(float damage) => Stats.health.ReduceCurrent(damage);
         
         public void MoveTo(Hex hex) => HexPosition = hex;
+
+        // View follows model: smoothly track the logical hex position each frame.
+        private void Update()
+        {
+            if (_grid == null) return;
+            var targetPos = HexPosition.ToWorld(_grid);
+            transform.position = Vector3.Lerp(transform.position, targetPos, _moveLerpSpeed * Time.deltaTime);
+        }
     }
 
     public interface IPawn : IMovable, ICombatParticipant

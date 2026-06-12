@@ -45,11 +45,11 @@ namespace Code.Data.Items.Weapon
     [System.Serializable]
     public class ModifierEffect
     {
-        public ModifierType type;
+        public EffectType type;
         public float value;
     }
     
-    public enum ModifierType
+    public enum EffectType
     {
         AddPierce,
         AddSplit,

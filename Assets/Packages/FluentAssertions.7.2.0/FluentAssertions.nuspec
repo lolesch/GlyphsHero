@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>FluentAssertions</id>
+    <version>7.2.0</version>
+    <authors>Dennis Doomen,Jonas Nyrup</authors>
+    <license type="expression">Apache-2.0</license>
+    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>
+    <icon>FluentAssertions.png</icon>
+    <projectUrl>https://www.fluentassertions.com/</projectUrl>
+    <description>A very extensive set of extension methods that allow you to more naturally specify the expected outcome of a TDD or
+      BDD-style unit tests. Targets .NET Framework 4.7, .NET 6, as well as .NET Standard 2.0 and 2.1.
+      Supports the unit test frameworks MSTest2, NUnit3, XUnit2, XUnit3, MSpec and TUnit.
+
+      Supported by InfoSupport B.V.</description>
+    <releaseNotes>See https://fluentassertions.com/releases/</releaseNotes>
+    <copyright>Copyright Dennis Doomen 2010-2025</copyright>
+    <tags>MSTest2 xUnit NUnit MSpec TUnit TDD BDD Fluent netstandard uwp</tags>
+    <repository type="git" url="https://github.com/fluentassertions/fluentassertions" commit="3dd8243e396432a55dd12a74a5a548a5f085fac5" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.7">
+        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net6.0">
+        <dependency id="System.Configuration.ConfigurationManager" version="6.0.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.Net.Http" targetFramework=".NETFramework4.7, .NETFramework4.7" />
+      <frameworkAssembly assemblyName="System.Configuration" targetFramework=".NETFramework4.7" />
+      <frameworkAssembly assemblyName="System.Data" targetFramework=".NETFramework4.7" />
+      <frameworkAssembly assemblyName="System.Xml" targetFramework=".NETFramework4.7" />
+      <frameworkAssembly assemblyName="System.Xml.Linq" targetFramework=".NETFramework4.7" />
+    </frameworkAssemblies>
+  </metadata>
+</package>

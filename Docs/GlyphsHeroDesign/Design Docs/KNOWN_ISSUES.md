@@ -29,7 +29,7 @@
 
 - move pathFinder into submodule, extract all 'non-submodule' logic and pass in its calculations upfront.
 # Bugs
-- [ ] currently combat is broken, pawns do not move to each other.
+- [x] ~~currently combat is broken, pawns do not move to each other.~~ Fixed (2026-06-12): root cause was `Timer` firing `OnRewind` synchronously in `Start()`, so movement resolved instantly + recursively and corrupted the reservation sets. `Timer` now only schedules (fires `OnComplete` on natural elapse; `Stop()` is a silent cancel); movement subscribes to `OnComplete`; `CombatCoordinator` re-checks range before committing a buffered step. Pawn transform now follows `HexPosition` each frame (view-sync).
 - cross container drag swaps items:
 	the returning item is placed at the outgoing item with its origin cell, not relative to the cell the outgoing item was placed on top of the returning. make it relative to the dropped cell might feel better. -> or just highlight the required slots in the origin inventory, to show the collisions.
 - [ ] Same-container drag should attempt swap first to match cross-container; fallback to force-pickup only if returning item does not fit at source
@@ -62,6 +62,7 @@
 
 ## Code Smells / Tech Debt
 
+- [ ] **Movement → central planner** (with lerp/movement-feel polish). Current per-pawn async-timer movement makes every decision against stale world state — that's why `CombatCoordinator` needs the range re-check guard plus the `_reservedHexes`/`_claimedHexes` bookkeeping. Migrate to a planner that re-plans all pawns against one world snapshot per tick (per-pawn speed via a move-readiness accumulator). Dissolves the whole stale-decision bug class and the reservation hack. Do it together with the lerp polish: the pawn view currently snaps the logical position at step completion and then lerps to catch up — interpolate across the step duration instead.
 - [ ] `TetrisContainer` with `null` `IPawnStats` — mild smell; replace with `NullPawnStats` null-object pattern when a third statless container type appears
 - [ ] `ItemTooltipController` calls `ChainResolver.ResolveTopology` on every hover. Acceptable for a dev tool. Upgrade path: cache topology on `OnContentsChanged` in `InventoryView` and pass the cached result to `Show()`.
 

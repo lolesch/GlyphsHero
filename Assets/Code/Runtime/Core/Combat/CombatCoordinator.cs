@@ -35,6 +35,9 @@ namespace Code.Runtime.Core.Combat
         private ICombatEventBus _eventBus;
         private bool            _isRunning;
 
+        // Temporary movement diagnostics — flip off once movement is verified.
+        private const bool LogMovement = true;
+
         private void Awake()
         {
             _eventBus       = new CombatEventBus();
@@ -103,6 +106,10 @@ namespace Code.Runtime.Core.Combat
             var target = TargetSelector.Select(unit, opponents, _maxWeaponRange[unit]);
             var controller = _controllers[unit];
 
+            if (LogMovement)
+                Debug.Log($"[Move] Evaluate {unit.HexPosition} range={_maxWeaponRange[unit]} " +
+                          $"target={(target != null ? target.HexPosition.ToString() : "none")}");
+
             if (target != null)
             {
                 StopMovement(unit);
@@ -137,6 +144,11 @@ namespace Code.Runtime.Core.Combat
         private void ScheduleNextStep(IPawn unit, IPawn destination, IReadOnlyList<IPawn> opponents)
         {
             var nextHex = ResolveNextHex(unit, destination);
+
+            if (LogMovement)
+                Debug.Log($"[Move] Step {unit.HexPosition} -> " +
+                          $"{(nextHex == Hex.Invalid ? "INVALID" : nextHex.ToString())} (dest {destination.HexPosition})");
+
             if (nextHex == Hex.Invalid) return;
 
             // Reserve before the timer fires — other units see it immediately.
@@ -149,10 +161,21 @@ namespace Code.Runtime.Core.Combat
             var timer = new Timer(duration, false);
             _movementTimers[unit] = timer;
 
-            timer.OnRewind += () =>
+            // OnComplete (not OnRewind): the step lands after its travel duration, once,
+            // driven by the tick loop — never synchronously inside Start().
+            timer.OnComplete += () =>
             {
                 _movementTimers.Remove(unit);
                 _reservedHexes.Remove(unit);
+
+                // A target may have moved into range while this step was travelling.
+                // Re-check before committing — otherwise we take a redundant final step.
+                if (TargetSelector.Select(unit, opponents, _maxWeaponRange[unit]) != null)
+                {
+                    EvaluateUnit(unit, opponents); // stops movement and engages
+                    return;
+                }
+
                 _claimedHexes[unit] = nextHex;
                 unit.MoveTo(nextHex);
                 EvaluateUnit(unit, opponents);
@@ -175,14 +198,27 @@ namespace Code.Runtime.Core.Combat
                 occupiedSet,
                 unit.MovementCosts);
 
-            if (path == null) return Hex.Invalid;
+            if (path == null)
+            {
+                if (LogMovement)
+                    Debug.Log($"[Move]   no path {unit.HexPosition}->{destination.HexPosition} " +
+                              $"invalid={invalidSet.Count} occupied={occupiedSet.Count}");
+                return Hex.Invalid;
+            }
 
             // Walk the parent chain back to find the first step after the start.
             var node = path;
             while (node.Parent != null && node.Parent.Hex != unit.HexPosition)
                 node = node.Parent;
 
-            return node.Hex == unit.HexPosition ? Hex.Invalid : node.Hex;
+            var firstStep = node.Hex == unit.HexPosition ? Hex.Invalid : node.Hex;
+
+            if (LogMovement)
+                Debug.Log($"[Move]   path goalNode={path.Hex} " +
+                          $"firstStep={(firstStep == Hex.Invalid ? "INVALID" : firstStep.ToString())} " +
+                          $"invalid={invalidSet.Count} occupied={occupiedSet.Count}");
+
+            return firstStep;
         }
 
         /// <summary>

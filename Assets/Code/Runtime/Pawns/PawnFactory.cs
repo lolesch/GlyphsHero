@@ -17,7 +17,7 @@ namespace Code.Runtime.Pawns
         public IPawn CreatePawn(PawnConfig config, Hex hex, PawnTeam team)
         {
             Pawn pawn = Instantiate(pawnPrefab, hex.ToWorld(grid), Quaternion.identity, pawnParent);
-            pawn.SpawnPawn(config, team, hex);
+            pawn.SpawnPawn(config, team, hex, grid);
             
             _registry.Register(pawn);
             pawn.OnDefeated += () => { _registry.Unregister(pawn); };
