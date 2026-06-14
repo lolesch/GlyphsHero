@@ -45,7 +45,7 @@
 ## Game Loop
 
 - [x] Pawns should start with a default weapon
-- [ ] On player death → trigger Game Over
+- [x] On player death → trigger Game Over. Done (2026-06-14): `CombatCoordinator` raises `OnCombatEnded` on team wipe → `CombatPhase` routes victory→Loot / defeat→`GamePhase.GameOver` (restart button reloads scene). Wipe rule extracted to pure `CombatOutcomeResolver` (+ red-green test). This closes the Placement→Combat→Loot→Placement loop from gameplay.
 - [ ] Hex placement phase — not yet wired in scene
 
 ## Combat

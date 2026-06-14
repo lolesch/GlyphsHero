@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Code.Runtime.Modules.HexGrid;
 using Code.Runtime.Modules.Inventory;
@@ -35,8 +36,11 @@ namespace Code.Runtime.Core.Combat
         private ICombatEventBus _eventBus;
         private bool            _isRunning;
 
+        /// <summary>Raised once when a team is wiped — victory (enemies gone) or defeat (player gone).</summary>
+        public event Action<CombatOutcome> OnCombatEnded;
+
         // Temporary movement diagnostics — flip off once movement is verified.
-        private const bool LogMovement = true;
+        private const bool LogMovement = false;
 
         private void Awake()
         {
@@ -62,6 +66,9 @@ namespace Code.Runtime.Core.Combat
 
             foreach (var unit in playerUnits) EvaluateUnit(unit, enemyUnits);
             foreach (var unit in enemyUnits)  EvaluateUnit(unit, playerUnits);
+
+            // Handle an encounter that begins with an empty side.
+            TryResolveOutcome();
         }
 
         public void StopCombat()
@@ -277,9 +284,33 @@ namespace Code.Runtime.Core.Combat
 
             _eventBus.PublishDefeated(unit);
 
+            // A team may have just been wiped — end combat instead of re-evaluating survivors.
+            if (TryResolveOutcome()) return;
+
             // Re-evaluate all surviving units — their target may be gone or a new gap opened.
             foreach (var u in playerUnits) EvaluateUnit(u, enemyUnits);
             foreach (var u in enemyUnits)  EvaluateUnit(u, playerUnits);
+        }
+
+        /// <summary>
+        /// Ends combat if a team is wiped. Returns true when an outcome was raised, so callers
+        /// stop touching combat state (StopCombat clears it during the OnCombatEnded handler).
+        /// </summary>
+        private bool TryResolveOutcome()
+        {
+            if (!_isRunning) return false;
+
+            var outcome = CombatOutcomeResolver.Resolve(playerUnits.Count, enemyUnits.Count);
+            if (outcome == null) return false;
+
+            EndCombat(outcome.Value);
+            return true;
+        }
+
+        private void EndCombat(CombatOutcome outcome)
+        {
+            _isRunning = false; // stop further evaluation + guard against re-entrancy
+            OnCombatEnded?.Invoke(outcome);
         }
 
         /// <summary>
@@ -300,6 +331,8 @@ namespace Code.Runtime.Core.Combat
 
     public interface ICombatCoordinator
     {
+        event Action<CombatOutcome> OnCombatEnded;
+
         void StartCombat();
         void StopCombat();
     }

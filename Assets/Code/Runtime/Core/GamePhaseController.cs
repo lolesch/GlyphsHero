@@ -8,6 +8,7 @@ using Code.Runtime.Pawns;
 using Code.Runtime.UI.Inventory;
 using NaughtyAttributes;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Code.Runtime.Core
@@ -32,6 +33,7 @@ namespace Code.Runtime.Core
         [Header("UI")]
         [SerializeField] private Button confirmPlacementButton;
         [SerializeField] private Button continueAfterLootButton;
+        [SerializeField] private Button gameOverButton;
 
         [Header("Loot")]
         [SerializeField] private ItemConfig[] itemPool;
@@ -62,7 +64,8 @@ namespace Code.Runtime.Core
 
             _combatPhase = new CombatPhase(
                 combatCoordinator,
-                () => TransitionTo(GamePhase.Loot));
+                () => TransitionTo(GamePhase.Loot), // victory
+                OnPlayerDefeated);                  // defeat → Game Over
 
             _lootPhase = new LootPhase(
                 PlayerData,
@@ -70,6 +73,9 @@ namespace Code.Runtime.Core
                 lootCount,
                 continueAfterLootButton,
                 () => TransitionTo(GamePhase.Placement));
+
+            gameOverButton.onClick.AddListener(
+                () => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex));
         }
         
         public void LoadMap(EncounterConfig encounterData)
@@ -83,7 +89,8 @@ namespace Code.Runtime.Core
         {
             confirmPlacementButton.gameObject.SetActive(false);
             continueAfterLootButton.gameObject.SetActive(false);
-            
+            gameOverButton.gameObject.SetActive(false);
+
             LoadMap(PlayerData.currentEncounter);
             AddItems();
             TransitionTo(GamePhase.Placement);
@@ -94,6 +101,14 @@ namespace Code.Runtime.Core
             GetPhase(Current)?.Exit();
             Current = next;
             GetPhase(Current)?.Enter();
+        }
+
+        private void OnPlayerDefeated()
+        {
+            // GetPhase(GameOver) is null, so this cleanly Exits combat and Enters nothing.
+            TransitionTo(GamePhase.GameOver);
+            Debug.Log("[GameLoop] Game Over");
+            gameOverButton.gameObject.SetActive(true); // restart (reloads the scene)
         }
 
         private IGamePhase GetPhase(GamePhase phase) => phase switch
