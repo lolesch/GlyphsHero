@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Code.Data;
 using Code.Runtime.Modules.Inventory;
-using Code.Runtime.Pawns;
 using NaughtyAttributes;
 using Submodules.Utility.Extensions;
 using UnityEngine;
@@ -46,14 +45,12 @@ namespace Code.Runtime.UI.Inventory
         {
             if (_container != null)
                 _dragController?.Register(_container, Slots);
-            HexSelectionHandler.OnPawnHovered += RefreshView;
         }
 
         private void OnDisable()
         {
             if (_container != null)
                 _dragController?.Unregister(_container);
-            HexSelectionHandler.OnPawnHovered -= RefreshView;
         }
 
         private void OnDestroy()
@@ -61,8 +58,6 @@ namespace Code.Runtime.UI.Inventory
             if (_container != null)
                 _container.OnContentsChanged -= OnContentsChanged;
         }
-
-        public void RefreshView(IPawn pawn) => RefreshView(pawn.Inventory);
 
         public void RefreshView(ITetrisContainer container)
         {
@@ -161,7 +156,6 @@ namespace Code.Runtime.UI.Inventory
     public interface IInventoryView
     {
         IReadOnlyList<ISlotView> Slots { get; }
-        void RefreshView(IPawn pawn);
         void RefreshView(ITetrisContainer container);
     }
 }

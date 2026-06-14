@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Code.Data.Enums;
 using Code.Data.Items;
@@ -5,7 +6,6 @@ using Code.Data.Pawns;
 using Code.Runtime.Core.Combat;
 using Code.Runtime.Modules.Inventory;
 using Code.Runtime.Pawns;
-using Code.Runtime.UI.Inventory;
 using NaughtyAttributes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -42,6 +42,14 @@ namespace Code.Runtime.Core
         [field: SerializeField, ReadOnly] public GamePhase Current { get; private set; }
 
         public IPlayerData PlayerData { get; private set; }
+
+        /// <summary>
+        /// The player stash, broadcast once it exists. UI presenters listen for
+        /// this instead of being referenced directly (GameLoop must not depend on
+        /// UI). <see cref="CurrentStash"/> caches the value for late subscribers.
+        /// </summary>
+        public static event Action<ITetrisContainer> StashBound;
+        public static ITetrisContainer CurrentStash { get; private set; }
 
         private IGamePhase _placementPhase;
         private IGamePhase _combatPhase;
@@ -93,6 +101,10 @@ namespace Code.Runtime.Core
 
             LoadMap(PlayerData.currentEncounter);
             AddItems();
+
+            CurrentStash = PlayerData.Stash;
+            StashBound?.Invoke(CurrentStash);
+
             TransitionTo(GamePhase.Placement);
         }
 
