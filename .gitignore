@@ -109,3 +109,7 @@ InitTestScene*.unity*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Obsidian per-user workspace layout (high churn, machine-specific)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
