@@ -1,70 +1,37 @@
 {
   "main": {
-    "id": "f2cc4fc3b9f38f50",
+    "id": "7482b696736d42bb",
     "type": "split",
     "children": [
       {
-        "id": "185809fd80b2a921",
+        "id": "4c3cbdb036e4c0a0",
         "type": "tabs",
         "children": [
           {
-            "id": "67f58c1cfce64830",
+            "id": "3ade7f3df46c3c7d",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Design Docs/KNOWN_ISSUES.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "KNOWN_ISSUES"
-            }
-          },
-          {
-            "id": "25327e918c12dc89",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Design Docs/Inventory/Items/Payload.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Payload"
-            }
-          },
-          {
-            "id": "f9ff66f23e83e6cb",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Reference Games.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Reference Games"
+              "title": "New tab"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
   },
   "left": {
-    "id": "0546028862aa791d",
+    "id": "a6932e3f638011e8",
     "type": "split",
     "children": [
       {
-        "id": "9ec1764d3a3c23d3",
+        "id": "4d314eede4674033",
         "type": "tabs",
         "children": [
           {
-            "id": "c4217fb52c7121bd",
+            "id": "b7e4d1e7ad7a18d8",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -77,7 +44,7 @@
             }
           },
           {
-            "id": "fa36bce855fc89ea",
+            "id": "4a368c2470f0c6c8",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -94,7 +61,7 @@
             }
           },
           {
-            "id": "fb70a7f45b3838d6",
+            "id": "6566ba87ef1e3f5f",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -107,23 +74,22 @@
       }
     ],
     "direction": "horizontal",
-    "width": 210.5
+    "width": 300
   },
   "right": {
-    "id": "6dd908cfd4c1aff7",
+    "id": "2cbcc3738c3b7687",
     "type": "split",
     "children": [
       {
-        "id": "edc516ead0642594",
+        "id": "ffb5dcce35e30c0c",
         "type": "tabs",
         "children": [
           {
-            "id": "497ead57e20feaff",
+            "id": "1db67b08638d572b",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Templates/New Feature.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -133,25 +99,24 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for New Feature"
+              "title": "Backlinks"
             }
           },
           {
-            "id": "9cc4680055864495",
+            "id": "4c3ef417e37787c7",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Templates/New Feature.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from New Feature"
+              "title": "Outgoing links"
             }
           },
           {
-            "id": "39d0a6b4bb916ea4",
+            "id": "08b5913da5d4461c",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -166,7 +131,7 @@
             }
           },
           {
-            "id": "05afed1bb728d0b5",
+            "id": "e19518a74267902b",
             "type": "leaf",
             "state": {
               "type": "all-properties",
@@ -180,18 +145,17 @@
             }
           },
           {
-            "id": "7080c04d301a02dc",
+            "id": "60180703d4672383",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "Templates/New Feature.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of New Feature"
+              "title": "Outline"
             }
           }
         ]
@@ -212,39 +176,6 @@
       "bases:Create new base": false
     }
   },
-  "active": "f9ff66f23e83e6cb",
-  "lastOpenFiles": [
-    "Design Debates.md",
-    "Design Docs/Combat/Attack Targeting.md",
-    "Design Docs/Inventory/Items/Payload.md",
-    "TODO.md",
-    "Design Docs/Inventory/Items/Weapon.md",
-    "Design Docs/Inventory/Missing Documentation.md",
-    "Design Docs/Game Concept.md",
-    "Design Docs/Ideation.md",
-    "Design Docs/KNOWN_ISSUES.md",
-    "Glyphs/Sigil_Design_Handoff.md",
-    "Templates/New Feature.md",
-    "Reference Games.md",
-    "Technical Information.md",
-    "Design Docs/Combat/Combat.md",
-    "Design Docs/Combat/Pawn.md",
-    "Design Docs/Inventory/Item Chaining.md",
-    "Design Docs/Inventory/Inventory.md",
-    "Design Docs/Combat/Status Effects.md",
-    "Design Docs/Inventory/Items/Splitter & Merger.md",
-    "Design Docs/Inventory/Items/Shifter.md",
-    "Design Docs/Inventory/Items/Reactor.md",
-    "Design Docs/Inventory/Items/Converter.md",
-    "Design Docs/Inventory/Items/Amplifier.md",
-    "Weapons.md",
-    "Handover/Itemchain handover March 26.md",
-    "Handover/Itemchain handover March 15.md",
-    "Design Docs/Combat",
-    "Design Docs/Inventory/Items",
-    "Design Docs/Inventory",
-    "Design Docs/Glyphs-Items",
-    "Templates",
-    "Ported"
-  ]
+  "active": "3ade7f3df46c3c7d",
+  "lastOpenFiles": []
 }
