@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 using Code.Data.Enums;
 using Code.Data.Items;
 using Code.Data.Pawns;
 using Code.Runtime.Core.Combat;
 using Code.Runtime.Modules.Inventory;
 using Code.Runtime.Pawns;
+using Code.Runtime.UI.Inventory;
 using NaughtyAttributes;
 using UnityEngine;
 using UnityEngine.SceneManagement;

@@ -98,7 +98,14 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
-# Ignore user-specific and high-churn .xml files in .idea
-.idea
-.idea/**/*.xml
-*.xml
+# JetBrains Rider / IntelliJ
+.idea/
+*.DotSettings.user
+
+# Burst compiler output
+/[Aa]ssets/burst*.bc
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini

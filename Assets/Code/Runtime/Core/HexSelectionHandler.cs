@@ -65,7 +65,7 @@ namespace Code.Runtime.UI.Inventory
             if (_hoveredCell != cell)
             {
                 _hoveredCell = cell;
-                Debug.Log($"Hovered {_hoveredCell.CellToHex()}");
+                //Debug.Log($"Hovered {_hoveredCell.CellToHex()}");
             }
             CheckHexForUnit();
         }
