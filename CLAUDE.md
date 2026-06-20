@@ -49,3 +49,17 @@ Code is split into Unity assembly definitions (`.asmdef`). Dependencies flow one
 ## Working sessions
 
 - **Context budget:** keep a session under **200k tokens of context**, and avoid exceeding ~100k by much when it can be helped. Prefer wrapping up and starting a fresh session (leaning on memory + this file) over letting one session balloon — long sessions get slower and lose focus.
+
+## Agent skills
+
+### Issue tracker
+
+Issues, PRDs, and triage live in GitHub Issues at `lolesch/glyphshero` (via the `gh` CLI). External PRs are **not** a triage surface. See `Docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical label vocabulary, unmapped: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `Docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo. `CLAUDE.md` is the current architecture reference; `CONTEXT.md` / `Docs/adr/` are created lazily as terms and decisions get resolved. See `Docs/agents/domain.md`.
