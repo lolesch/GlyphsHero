@@ -112,9 +112,12 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     internal sealed class FakeReactor : FakeItem, IReactorItem
     {
         public FakeReactor(string name, params Vector2Int[] connectorDirections)
+            : this(name, ReactorType.OnSelfHit, connectorDirections) { }
+
+        public FakeReactor(string name, ReactorType reactorType, params Vector2Int[] connectorDirections)
             : base(name, connectorDirections)
         {
-            ReactorType = ReactorType.OnSelfHit;
+            ReactorType = reactorType;
             inputMod    = new WeaponInputModifier(WeaponInputStat.AttackSpeed,
                 new Modifier(1f, ModifierType.FlatAdd, Guid.NewGuid()));
         }

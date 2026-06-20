@@ -1,9 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 namespace Code.Runtime.Modules.Inventory
 {
+    /// <summary>
+    /// Pure topology: a chain's firing source (<see cref="Root"/>), its ordered downstream
+    /// <see cref="Modifiers"/>, and the <see cref="Weapon"/> they resolve around. It holds no stat
+    /// state and mutates nothing — effective stats are computed on demand by
+    /// <see cref="WeaponStatResolver"/>.
+    /// </summary>
     public sealed class ItemChain : IItemChain
     {
         public static readonly IItemChain Empty = new ItemChain(null, new List<ITetrisItem>());
@@ -14,69 +19,18 @@ namespace Code.Runtime.Modules.Inventory
         public IWeaponItem                Weapon    => Root as IWeaponItem
                                                     ?? Modifiers.OfType<IWeaponItem>().FirstOrDefault();
 
-        private bool _modifiersApplied;
-
         public ItemChain(ITetrisItem root, List<ITetrisItem> modifiers)
         {
             Root      = root;
             Modifiers = modifiers;
         }
-
-        /// <summary>
-        /// Applies amplifier modifiers to the weapon's attack stats.
-        /// Idempotent — safe to call multiple times; applies once until RemoveChainModifiers is called.
-        /// </summary>
-        public void ApplyChainModifiers()
-        {
-            if (_modifiersApplied) return;
-
-            var weapon = Weapon;
-            if (weapon == null)
-            {
-                Debug.LogWarning("ItemChain.ApplyChainModifiers: no weapon in chain.");
-                return;
-            }
-
-            foreach (var item in Modifiers)
-            {
-                if (item is not IAmplifierItem amp) continue;
-                var mod = amp.outputMod;
-                
-                WeaponUtils.GetOutputStat(weapon, mod.stat)
-                    .AddModifier(mod.modifier);
-            }
-
-            _modifiersApplied = true;
-        }
-
-        /// <summary>Removes all amplifier modifiers from the weapon's attack stats.</summary>
-        public void RemoveChainModifiers()
-        {
-            if (!_modifiersApplied) return;
-
-            var weapon = Weapon;
-            if (weapon == null) return;
-
-            foreach (var item in Modifiers)
-            {
-                if (item is not IAmplifierItem amp) continue;
-            
-                var mod = amp.outputMod;
-                WeaponUtils.GetOutputStat(weapon, mod.stat)
-                    .TryRemoveModifier(mod.modifier);
-            }
-
-            _modifiersApplied = false;
-        }
     }
 
     public interface IItemChain
     {
-        ITetrisItem               Root      { get; }
+        ITetrisItem                Root      { get; }
         IReadOnlyList<ITetrisItem> Modifiers { get; }
-        bool                      IsValid   { get; }
-        IWeaponItem               Weapon    { get; }
-        void ApplyChainModifiers();
-        void RemoveChainModifiers();
+        bool                       IsValid   { get; }
+        IWeaponItem                Weapon    { get; }
     }
 }

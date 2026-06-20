@@ -37,7 +37,8 @@
 - adding and removing max resource mods changes the current value. 
 	- change implementation or reset on battle start?
 		- implement resource gen first and think of giving a bonus while not in combat
-- [ ] The current problem with item chaining is that weapons fire twice when connected to amplifiers from both sides. ChainResolver should apply all connected amplifiers and then perform the attack once. -> could be the general solution for all attachment types
+- [x] Weapons fire twice when connected to amplifiers from both sides. **Fixed at the source (2026-06-20, Candidate 2):** `ChainResolver` is now weapon-centric and runs one BFS per firing source over all connectors, so `[ampA][weapon][ampB]` is a single firing carrying both amps — no duplicate `(root, weapon)` chains. `ChainCollapser` (the Candidate-1 stopgap) is deleted. Verified by `ChainResolverTests.AmplifierOnBothSides_ProducesOneChainWithBothAmplifiers`.
+- [x] **Equidistant reactors drop a firing (found 2026-06-19).** **Fixed (2026-06-20, Candidate 2):** the weapon now owns a deduped list of reactor firing sources (0 → timer, ≥1 → fire per reactor event, timer suppressed); equidistant/parallel reactors all fire. Verified by `EquidistantReactors_OnDifferentEvents_BothFire` (+ mutation-tested). See `Architecture Review.md` §2.
 
 ---
 
@@ -64,7 +65,7 @@
 
 - [ ] **Movement → central planner** (with lerp/movement-feel polish). Current per-pawn async-timer movement makes every decision against stale world state — that's why `CombatCoordinator` needs the range re-check guard plus the `_reservedHexes`/`_claimedHexes` bookkeeping. Migrate to a planner that re-plans all pawns against one world snapshot per tick (per-pawn speed via a move-readiness accumulator). Dissolves the whole stale-decision bug class and the reservation hack. Do it together with the lerp polish: the pawn view currently snaps the logical position at step completion and then lerps to catch up — interpolate across the step duration instead.
 - [ ] `TetrisContainer` with `null` `IPawnStats` — mild smell; replace with `NullPawnStats` null-object pattern when a third statless container type appears
-- [ ] `ItemTooltipController` calls `ChainResolver.ResolveTopology` on every hover. Acceptable for a dev tool. Upgrade path: cache topology on `OnContentsChanged` in `InventoryView` and pass the cached result to `Show()`.
+- [ ] `ItemTooltipController` calls `ChainResolver.ResolveTopology` on every hover. Acceptable for a dev tool. Upgrade path: cache topology on `OnContentsChanged` in `InventoryView` and pass the cached result to `Show()`. **This is the deferred half of Candidate 2 ("resolve once / push topology"):** the firing-model rework (Candidate 2-B) shipped 2026-06-20; topology *ownership* across the UI consumers (InventoryView, ItemTooltipController) is the remaining 2-A. See `Architecture Review.md` §2.
 
 ---
 

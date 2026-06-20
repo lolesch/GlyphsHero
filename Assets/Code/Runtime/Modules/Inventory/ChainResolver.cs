@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Code.Data.Enums;
 using UnityEngine;
 
 namespace Code.Runtime.Modules.Inventory
@@ -42,137 +43,144 @@ namespace Code.Runtime.Modules.Inventory
 
         public static ChainTopology ResolveTopology(ITetrisContainer container)
         {
-            var adjacency     = BuildAdjacency(container);
-            var resolvedRoots = ResolveRoots(container, adjacency);
-
-            if (resolvedRoots.Count == 0)
-                return ChainTopology.Empty;
+            var adjacency  = BuildAdjacency(container);
+            var positionOf = container.Contents.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
 
             var chains               = new List<IItemChain>();
             var connectedEdges       = new HashSet<(Vector2Int, Vector2Int)>();
             var downstreamConnectors = new Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>>();
             var upstreamConnectors   = new Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>>();
-            var rootSet              = new HashSet<ITetrisItem>(resolvedRoots.Select(r => r.root));
+            var roots                = new HashSet<ITetrisItem>();
 
-            foreach (var (root, rootPos) in resolvedRoots)
+            // Weapon-centric: every weapon owns its firing sources. The reactors connected to it are
+            // the sources (each fires on its own event); with none, the weapon fires itself on its
+            // timer. One firing per source — never one per connector — so a weapon amplified on both
+            // sides is a single firing carrying both amps (the double-fire is gone at the source).
+            foreach (var weapon in container.Contents.Values.OfType<IWeaponItem>())
             {
-                foreach (var (rootSlotPos, rootDirection) in root.GetGridConnectors(rootPos))
+                var sources = FiringSources(weapon, adjacency);
+                if (sources.Count == 0)
+                    sources.Add(weapon); // no reactor → timer-driven, the weapon is its own source
+
+                foreach (var source in sources)
                 {
-                    if (!TryGetValidNeighbour(adjacency, container, root, rootSlotPos, rootDirection,
-                            out var firstNeighbour, out var firstOrigin))
-                        continue;
+                    var modifiers = GatherModifiers(source, weapon, positionOf[source], adjacency, container,
+                        connectedEdges, upstreamConnectors, downstreamConnectors);
 
-                    connectedEdges.Add(MakeKey(rootSlotPos, rootSlotPos + rootDirection));
-                    MarkConnector(upstreamConnectors, root, rootSlotPos, rootDirection);
-
-                    var modifiers = new List<ITetrisItem>();
-                    var visited   = new HashSet<ITetrisItem> { root };
-                    var queue     = new Queue<(ITetrisItem item, Vector2Int pos, Vector2Int inSlotPos, Vector2Int inDirection)>();
-                    queue.Enqueue((firstNeighbour, firstOrigin, rootSlotPos + rootDirection, -rootDirection));
-
-                    while (queue.Count > 0)
+                    // A reactor source must reach this weapon; defensive only — FiringSources found it
+                    // by walking the trigger graph back from the weapon, so the path always exists.
+                    if (source is not IWeaponItem && !modifiers.Exists(m => m is IWeaponItem))
                     {
-                        var (current, currentPos, inSlotPos, inDirection) = queue.Dequeue();
-                        if (visited.Contains(current)) continue;
-                        visited.Add(current);
-                        modifiers.Add(current);
-
-                        MarkConnector(downstreamConnectors, current, inSlotPos, inDirection);
-
-                        foreach (var (slotPos, direction) in current.GetGridConnectors(currentPos))
-                        {
-                            if (!TryGetValidNeighbour(adjacency, container, current, slotPos, direction,
-                                    out var next, out var nextOrigin)) continue;
-                            if (visited.Contains(next)) continue;
-                            if (IsTrigger(next) && !IsTrigger(current)) continue;
-
-                            connectedEdges.Add(MakeKey(slotPos, slotPos + direction));
-                            MarkConnector(upstreamConnectors, current, slotPos, direction);
-                            queue.Enqueue((next, nextOrigin, slotPos + direction, -direction));
-                        }
-                    }
-
-                    var hasWeapon = root is IWeaponItem || modifiers.Exists(m => m is IWeaponItem);
-                    if (!hasWeapon)
-                    {
-                        Debug.LogWarning($"[ChainResolver] Root '{root.Name}' has no weapon in chain — skipped.");
+                        Debug.LogWarning($"[ChainResolver] Firing source '{source.Name}' reached no weapon — skipped.");
                         continue;
                     }
-                    
-                    var chain = new ItemChain(root, modifiers);
-                    chains.Add(chain);
-                    //LogChain(chain);
+
+                    roots.Add(source);
+                    chains.Add(new ItemChain(source, modifiers));
+                    //LogChain(chains[^1]);
                 }
-                
-                if (root is IWeaponItem && !chains.Any(c => c.Root == root))
-                    chains.Add(new ItemChain(root, new List<ITetrisItem>()));
             }
 
-            return new ChainTopology(chains, connectedEdges, downstreamConnectors, upstreamConnectors, rootSet);
+            if (chains.Count == 0)
+                return ChainTopology.Empty;
+
+            return new ChainTopology(chains, connectedEdges, downstreamConnectors, upstreamConnectors, roots);
         }
 
-        // ── First pass ────────────────────────────────────────────────────
+        // ── Firing sources ────────────────────────────────────────────────
 
-        private static List<(ITetrisItem root, Vector2Int pos)> ResolveRoots(
-            ITetrisContainer                           container,
+        /// <summary>
+        /// The reactors that drive this weapon, found by walking the trigger graph (shifters and
+        /// reactors) outward from the weapon. Only reactors are firing sources — shifters are
+        /// stat-shaping walls. Deduplicated by <see cref="ReactorType"/>: two reactors on the same
+        /// event collapse to one firing (the weapon's trigger list holds unique events).
+        /// </summary>
+        private static List<ITetrisItem> FiringSources(
+            IWeaponItem                                weapon,
             Dictionary<ITetrisItem, List<ITetrisItem>> adjacency)
         {
-            var positionOf    = container.Contents.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
-            var assignedRoots = new HashSet<ITetrisItem>();
-            var roots         = new List<(ITetrisItem, Vector2Int)>();
+            var sources    = new List<ITetrisItem>();
+            var seenEvents = new HashSet<ReactorType>();
+            var visited    = new HashSet<ITetrisItem> { weapon };
+            var queue      = new Queue<ITetrisItem>();
 
-            foreach (var kvp in container.Contents)
+            if (adjacency.TryGetValue(weapon, out var weaponNeighbours))
+                foreach (var neighbour in weaponNeighbours)
+                    if (IsTrigger(neighbour))
+                        queue.Enqueue(neighbour);
+
+            while (queue.Count > 0)
             {
-                if (kvp.Value is not IWeaponItem weapon) continue;
+                var trigger = queue.Dequeue();
+                if (!visited.Add(trigger)) continue;
 
-                var visited = new HashSet<ITetrisItem> { weapon };
-                var queue   = new Queue<(ITetrisItem item, int depth)>();
+                if (trigger is IReactorItem reactor && seenEvents.Add(reactor.ReactorType))
+                    sources.Add(reactor);
 
-                var weaponPos = kvp.Key;
-                if (adjacency.TryGetValue(weapon, out var weaponNeighbors))
-                    foreach (var neighbor in weaponNeighbors)
-                        if (IsTrigger(neighbor) && IsUpstreamOf(neighbor, weapon, weaponPos, container))
-                            queue.Enqueue((neighbor, 1));
-
-                ITetrisItem furthestTrigger = null;
-                var         maxDepth        = 0;
-
-                while (queue.Count > 0)
-                {
-                    var (current, depth) = queue.Dequeue();
-                    if (visited.Contains(current)) continue;
-                    visited.Add(current);
-
-                    if (depth > maxDepth) { maxDepth = depth; furthestTrigger = current; }
-
-                    if (!adjacency.TryGetValue(current, out var neighbors)) continue;
-                    foreach (var neighbor in neighbors)
-                        if (IsTrigger(neighbor) && !visited.Contains(neighbor))
-                            queue.Enqueue((neighbor, depth + 1));
-                }
-
-                var resolvedRoot = furthestTrigger ?? weapon;
-                if (assignedRoots.Add(resolvedRoot))
-                    roots.Add((resolvedRoot, positionOf[resolvedRoot]));
+                if (adjacency.TryGetValue(trigger, out var neighbours))
+                    foreach (var neighbour in neighbours)
+                        if (IsTrigger(neighbour) && !visited.Contains(neighbour))
+                            queue.Enqueue(neighbour);
             }
 
-            return roots;
+            return sources;
         }
-        
-        private static bool IsUpstreamOf(
-            ITetrisItem      trigger,
-            ITetrisItem      weapon,
-            Vector2Int       weaponOrigin,
-            ITetrisContainer container)
+
+        /// <summary>
+        /// Gathers a firing's contributors by BFS from its <paramref name="source"/>. Two walls keep
+        /// firings scoped: a different weapon ends the branch (it is its own firing), and a trigger
+        /// cannot be entered from a non-trigger (existing rule) so each reactor claims only its own
+        /// side's shifters. The first hop skips the trigger-wall so the source reaches its immediate
+        /// shifter. Connectors/edges are recorded here for the overlay.
+        /// </summary>
+        private static List<ITetrisItem> GatherModifiers(
+            ITetrisItem                                                source,
+            IWeaponItem                                                weapon,
+            Vector2Int                                                 sourcePos,
+            Dictionary<ITetrisItem, List<ITetrisItem>>                 adjacency,
+            ITetrisContainer                                           container,
+            HashSet<(Vector2Int, Vector2Int)>                          connectedEdges,
+            Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>> upstreamConnectors,
+            Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>> downstreamConnectors)
         {
-            var triggerOrigin = container.Contents.First(kvp => kvp.Value == trigger).Key;
-            var weaponCells   = new HashSet<Vector2Int>(weapon.GetPointers(weaponOrigin));
+            var modifiers = new List<ITetrisItem>();
+            var visited   = new HashSet<ITetrisItem> { source };
+            var queue     = new Queue<(ITetrisItem item, Vector2Int pos, Vector2Int inSlotPos, Vector2Int inDirection)>();
 
-            foreach (var (slotPos, direction) in trigger.GetGridConnectors(triggerOrigin))
-                if (weaponCells.Contains(slotPos + direction))
-                    return true;
+            foreach (var (slotPos, direction) in source.GetGridConnectors(sourcePos))
+            {
+                if (!TryGetValidNeighbour(adjacency, container, source, slotPos, direction,
+                        out var firstNeighbour, out var firstOrigin)) continue;
+                if (firstNeighbour is IWeaponItem && firstNeighbour != weapon) continue;
 
-            return false;
+                connectedEdges.Add(MakeKey(slotPos, slotPos + direction));
+                MarkConnector(upstreamConnectors, source, slotPos, direction);
+                queue.Enqueue((firstNeighbour, firstOrigin, slotPos + direction, -direction));
+            }
+
+            while (queue.Count > 0)
+            {
+                var (current, currentPos, inSlotPos, inDirection) = queue.Dequeue();
+                if (!visited.Add(current)) continue;
+                modifiers.Add(current);
+
+                MarkConnector(downstreamConnectors, current, inSlotPos, inDirection);
+
+                foreach (var (slotPos, direction) in current.GetGridConnectors(currentPos))
+                {
+                    if (!TryGetValidNeighbour(adjacency, container, current, slotPos, direction,
+                            out var next, out var nextOrigin)) continue;
+                    if (visited.Contains(next)) continue;
+                    if (next is IWeaponItem && next != weapon) continue;     // other weapon = its own firing
+                    if (IsTrigger(next) && !IsTrigger(current)) continue;    // trigger wall
+
+                    connectedEdges.Add(MakeKey(slotPos, slotPos + direction));
+                    MarkConnector(upstreamConnectors, current, slotPos, direction);
+                    queue.Enqueue((next, nextOrigin, slotPos + direction, -direction));
+                }
+            }
+
+            return modifiers;
         }
 
         /// <summary>

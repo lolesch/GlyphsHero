@@ -16,8 +16,9 @@ namespace Code.Runtime.Core.Combat
     /// <summary>
     /// Owns all combat state for a single pawn.
     /// Created and managed exclusively by CombatCoordinator — never self-owned by Pawn.
-    /// Weapon stats are live MutableFloat objects — amplifier mods applied once per chain
-    /// build, all cleanup routes through _cleanupActions.
+    /// Each firing's stats are resolved to a <see cref="WeaponStats"/> value via
+    /// <see cref="WeaponStatResolver"/>; the weapon's live MutableFloats are never mutated.
+    /// _cleanupActions tears down timers and event subscriptions on rebuild/stop.
     /// </summary>
     public sealed class PawnCombatController : IPawnCombatController
     {
@@ -70,62 +71,47 @@ namespace Code.Runtime.Core.Combat
                 return;
             }
 
-            foreach (var chain in chains)
+            // Each chain is one firing: ChainResolver now emits a weapon-rooted firing only when no
+            // reactor drives the weapon (timer), else one reactor-rooted firing per reactor event
+            // (the timer is suppressed). No duplicate (root, weapon) chains to collapse, and stats
+            // are resolved to a value per firing — no weapon mutation, nothing to revert in Cleanup.
+            foreach (var firing in chains)
             {
-                chain.ApplyChainModifiers();
-                _cleanupActions.Add(chain.RemoveChainModifiers);
+                var stats = WeaponStatResolver.Resolve(firing);
 
-                switch (chain.Root)
+                switch (firing.Root)
                 {
                     case IWeaponItem:
-                    case IShifterItem:
-                        BuildTimedChain(chain);
+                        BuildTimedChain(firing, stats);
                         break;
                     case IReactorItem reactor:
-                        BuildReactor(reactor, chain);
+                        BuildReactor(reactor, firing, stats);
                         break;
                 }
             }
         }
 
-        private void BuildTimedChain(IItemChain chain)
-        {
-            var weapon  = chain.Weapon;
-            var shifters = GetShifters(chain);
-            var (costResource, genResource) = ResolveChainResources(chain);
-
-            foreach (var shifter in shifters)
-            {
-                weapon.GetInputStat(shifter.inputMod.stat).AddModifier(shifter.inputMod.modifier);
-                weapon.GetOutputStat(shifter.outputMod.stat).AddModifier(shifter.inputMod.modifier);
-            }
-
-            var timer = new Timer(1f / weapon.AttackSpeed, true);
-            timer.OnRewind += () =>
-            {
-                timer.Duration = 1f / weapon.AttackSpeed;
-                if (CanFire(weapon, costResource))
-                    Fire(chain, weapon, costResource, genResource);
-            };
-            timer.Start();
-
-            _cleanupActions.Add(() =>
-            {
-                timer.Stop();
-                foreach (var shifter in shifters)
-                {
-                    weapon.GetInputStat(shifter.inputMod.stat).TryRemoveModifier(shifter.inputMod.modifier);
-                    weapon.GetOutputStat(shifter.outputMod.stat).TryRemoveModifier(shifter.inputMod.modifier);
-                }
-            });
-        }
-
-        private void BuildReactor(IReactorItem reactor, IItemChain chain)
+        private void BuildTimedChain(IItemChain chain, WeaponStats stats)
         {
             var weapon = chain.Weapon;
             var (costResource, genResource) = ResolveChainResources(chain);
 
-            weapon.GetInputStat(reactor.inputMod.stat).AddModifier(reactor.inputMod.modifier);
+            var timer = new Timer(1f / stats.AttackSpeed, true);
+            timer.OnRewind += () =>
+            {
+                timer.Duration = 1f / stats.AttackSpeed;
+                if (CanFire(stats.ResourceCost, costResource))
+                    Fire(chain, weapon, stats, costResource, genResource);
+            };
+            timer.Start();
+
+            _cleanupActions.Add(timer.Stop);
+        }
+
+        private void BuildReactor(IReactorItem reactor, IItemChain chain, WeaponStats stats)
+        {
+            var weapon = chain.Weapon;
+            var (costResource, genResource) = ResolveChainResources(chain);
 
             switch (reactor.ReactorType)
             {
@@ -133,8 +119,8 @@ namespace Code.Runtime.Core.Combat
                 {
                     void OnHealthChanged(float prev, float curr, float _)
                     {
-                        if (curr < prev && CanFire(weapon, costResource))
-                            Fire(chain, weapon, costResource, genResource);
+                        if (curr < prev && CanFire(stats.ResourceCost, costResource))
+                            Fire(chain, weapon, stats, costResource, genResource);
                     }
                     _pawn.Stats.health.OnCurrentChanged += OnHealthChanged;
                     _cleanupActions.Add(() => _pawn.Stats.health.OnCurrentChanged -= OnHealthChanged);
@@ -144,8 +130,8 @@ namespace Code.Runtime.Core.Combat
                 {
                     void OnManaDeplete()
                     {
-                        if (CanFire(weapon, costResource))
-                            Fire(chain, weapon, costResource, genResource);
+                        if (CanFire(stats.ResourceCost, costResource))
+                            Fire(chain, weapon, stats, costResource, genResource);
                     }
                     _pawn.Stats.mana.OnDepleted += OnManaDeplete;
                     _cleanupActions.Add(() => _pawn.Stats.mana.OnDepleted -= OnManaDeplete);
@@ -156,8 +142,8 @@ namespace Code.Runtime.Core.Combat
                     void OnDefeated(IPawn unit)
                     {
                         if (unit.Team == _pawn.Team) return;
-                        if (CanFire(weapon, costResource))
-                            Fire(chain, weapon, costResource, genResource);
+                        if (CanFire(stats.ResourceCost, costResource))
+                            Fire(chain, weapon, stats, costResource, genResource);
                     }
                     _eventBus.OnUnitDefeated += OnDefeated;
                     _cleanupActions.Add(() => _eventBus.OnUnitDefeated -= OnDefeated);
@@ -168,8 +154,8 @@ namespace Code.Runtime.Core.Combat
                     void OnAllyAttacked(IPawn unit)
                     {
                         if (unit.Team != _pawn.Team || unit == _pawn) return;
-                        if (CanFire(weapon, costResource))
-                            Fire(chain, weapon, costResource, genResource);
+                        if (CanFire(stats.ResourceCost, costResource))
+                            Fire(chain, weapon, stats, costResource, genResource);
                     }
                     _eventBus.OnUnitAttacked += OnAllyAttacked;
                     _cleanupActions.Add(() => _eventBus.OnUnitAttacked -= OnAllyAttacked);
@@ -180,8 +166,8 @@ namespace Code.Runtime.Core.Combat
                     void OnAllyKill(IPawn unit)
                     {
                         if (unit.Team != _pawn.Team || unit == _pawn) return;
-                        if (CanFire(weapon, costResource))
-                            Fire(chain, weapon, costResource, genResource);
+                        if (CanFire(stats.ResourceCost, costResource))
+                            Fire(chain, weapon, stats, costResource, genResource);
                     }
                     // OnAllyKills = ally attacks that result in a defeat.
                     // The kill event isn't separately tracked; subscribe to OnUnitDefeated
@@ -199,38 +185,36 @@ namespace Code.Runtime.Core.Combat
                         if (unit.Team == _pawn.Team) return;
                         if (_hexGrid == null) return;
                         if (_pawn.HexPosition.Distance(unit.HexPosition) > /*reactor.Range*/ 1) return;
-                        if (CanFire(weapon, costResource))
-                            Fire(chain, weapon, costResource, genResource);
+                        if (CanFire(stats.ResourceCost, costResource))
+                            Fire(chain, weapon, stats, costResource, genResource);
                     }
                     _eventBus.OnUnitDefeated += OnNearbyEnemyDefeated;
                     _cleanupActions.Add(() => _eventBus.OnUnitDefeated -= OnNearbyEnemyDefeated);
                     break;
                 }
             }
-
-            _cleanupActions.Add(() => weapon.GetInputStat(reactor.inputMod.stat).TryRemoveModifier(reactor.inputMod.modifier));
         }
 
-        private void Fire(IItemChain chain, IWeaponItem weapon, Resource costResource, Resource genResource)
+        private void Fire(IItemChain chain, IWeaponItem weapon, WeaponStats stats, Resource costResource, Resource genResource)
         {
             if (_target == null) return;
-            costResource.ReduceCurrent(weapon.ResourceCost);
-            _target.TakeDamage(weapon.Damage);
-            genResource.IncreaseCurrent(weapon.ResourceGenOnHit);
+            costResource.ReduceCurrent(stats.ResourceCost);
+            _target.TakeDamage(stats.Damage);
+            genResource.IncreaseCurrent(stats.ResourceGenOnHit);
 
             _eventBus.PublishAttacked(_pawn);
             _eventBus.PublishHit(_pawn, _target);
 
-            FirePayloads(chain, weapon, costResource, genResource);
+            FirePayloads(chain, weapon, stats, costResource, genResource);
         }
 
-        private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, Resource costResource, Resource genResource)
+        private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, WeaponStats rootStats, Resource costResource, Resource genResource)
         {
             foreach (var item in chain.Modifiers)
             {
                 if (item is not IWeaponItem payload || item == rootWeapon) continue;
-                if (!CanFire(payload, costResource)) continue;
-                if (!EvaluatePayloadCondition(payload, (float)rootWeapon.Damage)) continue;
+                if (!CanFire(payload.ResourceCost, costResource)) continue;
+                if (!EvaluatePayloadCondition(payload, rootStats.Damage)) continue;
 
                 var behavior = payload.Payload;
                 costResource.ReduceCurrent(payload.ResourceCost);
@@ -360,17 +344,8 @@ namespace Code.Runtime.Core.Combat
             };
         }
 
-        private bool CanFire(IWeaponItem weapon, Resource costResource) =>
-            costResource.CanSpend(weapon.ResourceCost);
-
-        private static List<IShifterItem> GetShifters(IItemChain chain)
-        {
-            var list = new List<IShifterItem>();
-            if (chain.Root is IShifterItem root) list.Add(root);
-            foreach (var item in chain.Modifiers)
-                if (item is IShifterItem shift) list.Add(shift);
-            return list;
-        }
+        private static bool CanFire(float resourceCost, Resource costResource) =>
+            costResource.CanSpend(resourceCost);
 
         private (Resource costResource, Resource genResource) ResolveChainResources(IItemChain chain)
         {
