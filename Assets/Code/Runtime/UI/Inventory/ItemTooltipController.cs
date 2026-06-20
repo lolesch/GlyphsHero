@@ -252,68 +252,20 @@ namespace Code.Runtime.UI.Inventory
             var weapon = chain.Weapon;
             if (weapon == null) return;
 
+            // Diff two resolved snapshots: the chain up to (but excluding) the hovered item, and the
+            // chain including it. The difference is exactly what the hovered item contributes — no
+            // weapon mutation. OrderedItems puts the root first, so the prefix is the upstream chain.
             var ordered  = OrderedItems(chain);
             var hovIndex = ordered.IndexOf(hovered);
 
-            var ampsBefore       = ordered.Take(hovIndex).OfType<IAmplifierItem>().ToList();
-            var activatorsBefore = ordered.Take(hovIndex).OfType<IShifterItem>().ToList();
-            var hoveredAmp       = hovered as IAmplifierItem;
-            var hoveredActivator = hovered as IShifterItem;
-
-            foreach (var amp in ampsBefore)       ApplyAmp(amp, weapon);
-            foreach (var act in activatorsBefore) ApplyActivator(act, weapon);
-
-            float dmgBase  = weapon.Damage;
-            float spdBase  = weapon.AttackSpeed;
-            float costBase = weapon.ResourceCost;
-            float genBase  = weapon.ResourceGenOnHit;
-
-            if (hoveredAmp       != null) ApplyAmp(hoveredAmp, weapon);
-            if (hoveredActivator != null) ApplyActivator(hoveredActivator, weapon);
-
-            float dmgFinal  = weapon.Damage;
-            float spdFinal  = weapon.AttackSpeed;
-            float costFinal = weapon.ResourceCost;
-            float genFinal  = weapon.ResourceGenOnHit;
+            var before = WeaponStatResolver.Resolve(weapon, ordered.Take(hovIndex));
+            var with   = WeaponStatResolver.Resolve(weapon, ordered.Take(hovIndex + 1));
 
             sb.AppendLine("<b>Attack:</b>");
-            sb.AppendLine($"  dmg  {Stat(dmgBase, dmgFinal, detailed)}   " +
-                          $"{FireRate(chain, spdBase, spdFinal, detailed)}");
-            sb.AppendLine($"  cost {Stat(costBase, costFinal, detailed, invert: true)}   " +
-                          $"gen  {Stat(genBase,  genFinal,  detailed)}");
-
-            foreach (var amp in ampsBefore)       RemoveAmp(amp, weapon);
-            foreach (var act in activatorsBefore) RemoveActivator(act, weapon);
-            if (hoveredAmp       != null) RemoveAmp(hoveredAmp, weapon);
-            if (hoveredActivator != null) RemoveActivator(hoveredActivator, weapon);
-        }
-        
-        // ── Modifier apply/remove ─────────────────────────────────────────
-
-        private static void ApplyAmp(IAmplifierItem amp, IWeaponItem weapon)
-        {
-            var mod = amp.outputMod;
-            weapon.GetOutputStat(mod.stat)
-                .AddModifier(mod.modifier);
-        }
-
-        private static void RemoveAmp(IAmplifierItem amp, IWeaponItem weapon)
-        {
-            var mod = amp.outputMod;
-            weapon.GetOutputStat(mod.stat)
-                .TryRemoveModifier(mod.modifier);
-        }
-
-        private static void ApplyActivator(IShifterItem act, IWeaponItem weapon)
-        {
-            weapon.GetInputStat(act.inputMod.stat).AddModifier(act.inputMod.modifier);
-            weapon.GetOutputStat(act.outputMod.stat).AddModifier(act.outputMod.modifier);
-        }
-
-        private static void RemoveActivator(IShifterItem act, IWeaponItem weapon)
-        {
-            weapon.GetInputStat(act.inputMod.stat).TryRemoveModifier(act.inputMod.modifier);
-            weapon.GetOutputStat(act.outputMod.stat).TryRemoveModifier(act.outputMod.modifier);
+            sb.AppendLine($"  dmg  {Stat(before.Damage, with.Damage, detailed)}   " +
+                          $"{FireRate(chain, before.AttackSpeed, with.AttackSpeed, detailed)}");
+            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}   " +
+                          $"gen  {Stat(before.ResourceGenOnHit, with.ResourceGenOnHit, detailed)}");
         }
 
         // ── Stat formatting ───────────────────────────────────────────────
