@@ -69,11 +69,11 @@ Each layer has its own investment curve. Terrain is read and reacted to. Aura is
 
 ## Combat Structure
 
-Two-phase combat is under consideration:
+Two-phase combat — **decided** (see [[0001-range-movement-and-combat-tick|ADR-0001]] §1):
 
-**Phase 1 — Positioning (turn-based):** Player moves units, reads terrain, adjusts team composition. This is the deliberate planning layer that makes terrain and Aura legible and actionable.
+**Phase 1 — Positioning (turn-based):** Player moves units, reads terrain, adjusts team composition. This is the deliberate planning layer that makes terrain and Aura legible and actionable. **The strategic weight of positioning lives here** — Resolution mostly executes what Placement set up.
 
-**Phase 2 — Resolution (real-time or simultaneous):** Weapon chains fire on their timers, Reactors trigger on events, damage resolves. This preserves the item chain design intact.
+**Phase 2 — Resolution (real-time):** Weapon chains fire, Reactors trigger on events, damage resolves. Runs on a **fixed combat tick** (`CombatClock`), decoupled from the frame rate, so the simulation is deterministic and the view interpolates between ticks. This preserves the item chain design intact.
 
 This model avoids the conflict between turn-based repositioning and real-time weapon chain firing by giving each a separate time domain. Reactors are naturally compatible with turn-event framing.
 
@@ -121,13 +121,31 @@ low DPS, huge battlefield impact
 
 # Movement
 
-### Default Kite
-- find weapon with smallest range
-- move into range.
-	- move away if target is closer that half the range?
-	- or use weapon tags to derive dominant behavior? (melee/range)
+**Decided — see [[0001-range-movement-and-combat-tick|ADR-0001]] §3–§7.**
 
-pulling pushing into occupied/invalid pieces adds a stun
-- or chain push, all in a line get pushed
+### Range is a pawn stat
+A pawn has one **range** stat (its archetype identity — sniper vs. brawler), the **ceiling for
+range-scaling deliveries** (Projectile/Beam/Arc). Range-fixed deliveries (Adjacent/Dash) stay range-1
+regardless. Range is **capped, not infinitely scalable**, and bought only via passive item stats that
+cost inventory-grid space (a real tradeoff) — not pumped by Amplifiers. Shape is still Converter-driven,
+so a range-3 attack can be a beam, cone, etc. Weapons no longer carry a range identity (they vary by
+payload/shape/economy).
+
+### Default movement — monotone closing
+- A pawn closes to the **minimum effective reach across its *active* weapons**, so all of them can fire
+  (the player authors the engagement profile through the weapon mix).
+- **No kiting/retreat in v1** — monotone closing only. This removes mutual-kite oscillation deadlock, so
+  no stalemate-breaker is needed yet.
+- Contested hex → **closest-to-target wins** (stable-id tiebreak). Blocked by allies/terrain → **idle and
+  re-evaluate** next tick (allies are passable-but-costly; destination must be empty). A walled-off unit
+  idling is legible punishment for bad placement — *but must be telegraphed as blocked*.
+
+### Deferred (designed, not built)
+- **Kite/retreat** as an opt-in movement-strategy item — must ship paired with a stalemate breaker
+  (fatigue / advance pressure).
+- **Cooperative single-hop sidestep**: a blocked pawn asks a blocking ally to step aside, but only to a
+  hex equally valid on *all three* placement reads (range + Aura + terrain) — never cascading (a cascade
+  is the heavy planner). Else idle.
+- Pull/push effects: pushing into occupied/invalid hexes adds a stun; or chain-push a whole line.
 
 

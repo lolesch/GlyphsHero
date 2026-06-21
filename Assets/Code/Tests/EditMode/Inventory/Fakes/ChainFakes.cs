@@ -230,5 +230,6 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public Stat     healthRegen   => throw new NotSupportedException();
         public Stat     manaRegen     => throw new NotSupportedException();
         public Stat     movementSpeed => throw new NotSupportedException();
+        public Stat     range         => throw new NotSupportedException();
     }
 }

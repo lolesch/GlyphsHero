@@ -67,8 +67,15 @@ define what the attack produces.
 - Life On Hit / Leech
 - Mana On Hit
 - StatusApplication
-- Range
-#### Range
 
-What defines the range/shape of an [[Weapon#Root Mode|attack]]?
-- weapons could define a range, payloads might interact with the 'melee'/'ranged' tags for higher affinity between 'ranged' and 'projectiles' 
+> **Range is NOT a weapon output stat** — see [[0001-range-movement-and-combat-tick|ADR-0001]] §2.
+> Range moved to the **pawn**. Weapons no longer carry a range identity; they vary by payload, shape,
+> and economy.
+
+#### Range (now a pawn stat)
+
+Range lives on the **pawn**, not the weapon — it is the pawn's archetype identity (sniper vs. brawler)
+and the **ceiling for range-scaling deliveries** (Projectile/Beam/Arc). Range-fixed deliveries
+(Adjacent/Dash) ignore it and stay range-1. What a *weapon* still controls is **shape/delivery** (via
+[[Converter]]), so a range-3 pawn can fire a beam, cone, etc. Range is capped, not infinitely scalable,
+and bought only via passive item stats that cost grid space.

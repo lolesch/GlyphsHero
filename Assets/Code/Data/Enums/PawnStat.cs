@@ -11,8 +11,13 @@ namespace Code.Data.Enums
         ManaRegen,
         
         MovementSpeed,
-        
-        
+
+        // Reach ceiling for range-scaling weapon deliveries (ADR-0001, Decision 2).
+        // Range is a pawn stat, not a weapon stat: capped + expensive, never freely
+        // Amplifier-pumpable. Movement closes to the minimum active-weapon reach.
+        Range,
+
+
         // WEAPON BONI
         // ResourceCostReduction,
         // CooldownReduction,

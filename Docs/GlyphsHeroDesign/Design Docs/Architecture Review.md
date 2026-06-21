@@ -55,8 +55,16 @@ verify, keeping `ChainResolverTests` green.
   mutation-verified** (disabling the bootstrap apply failed exactly the 4 bootstrap-dependent tests; green on
   revert). The confusing `IAttachmentItem.OnChained`/`OnUnchained` naming (OnChained *removes* the passive) was
   left as-is — a possible small follow-up rename.
-- **Next up:** Candidate 5 — *central per-tick movement planner* (also in KNOWN_ISSUES; largest/riskiest item).
+- **Designed (2026-06-21):** Candidate 5 — *movement on a fixed combat tick*. A design grilling
+  ([[0001-range-movement-and-combat-tick|ADR-0001]]) settled the range/movement model **before** coding
+  and **re-scoped #5 from a heavy planner to a small pure step-rule**: range becomes a pawn stat,
+  movement is monotone closing, and a project-side `CombatClock` fixed tick drives a move-readiness
+  step-rule (deleting the reservation sets + re-check guard). Attacks stay on the Utility `Timer`. **Next
+  up to implement.**
+- **Next up:** Candidate 5 (implement, per ADR-0001 / §5 below).
 - Candidate 6: not started.
+- **Candidate 7 (new):** *Combat clock / timer unification* — spun out of #5: migrate attack firing +
+  reactors onto `CombatClock` for full read-then-write simultaneity. Queued after #5. See §7.
 
 Mark each candidate `done` / `doing` / `next` in its heading as you go.
 
@@ -264,7 +272,7 @@ owned topology from #2.
 
 ---
 
-## 5 · A central per-tick movement planner
+## 5 · Movement on a fixed combat tick — **re-scoped & de-risked 2026-06-21** (see [[0001-range-movement-and-combat-tick|ADR-0001]])
 **Strength:** Worth exploring · **already on the roadmap** ([[KNOWN_ISSUES]] → "Movement → central planner")
 
 **Files**
@@ -274,14 +282,48 @@ owned topology from #2.
 **Problem.** Each pawn's async timer decides against stale world state, so the coordinator carries
 `_reservedHexes`/`_claimedHexes` and re-check guards purely to compensate.
 
-**Solution.** Replace per-pawn timers with a planner that maps one world snapshot to all moves per
-tick — a pure module behind a small interface.
+**Original framing (heavy).** A planner that maps one world snapshot to all moves per tick.
 
-**Wins.** planner testable through its interface · delete reservation bookkeeping · every decision hits
-one snapshot · dissolves the stale-state guard class.
+**Re-scoped (after the 2026-06-21 range/movement design grilling — [[0001-range-movement-and-combat-tick|ADR-0001]]).**
+The grilling's payoff is that the *heavy* planner is **not necessary**. With **range as a pawn stat**,
+**monotone-closing** movement (close to the minimum active-weapon reach, no kiting), and
+**closest-to-target-wins** hex arbitration, the planner collapses to a **small pure step-rule** in a
+per-tick `foreach`. This candidate is now:
+- Introduce a **project-side `CombatClock`** — a fixed-tick heartbeat (accumulator, 0..N ticks/frame,
+  frame-rate independent) firing `OnTick(fixedDelta)`.
+- Put **movement** on it: per-pawn **move-readiness accumulator** + a pure snapshot **step-rule**
+  (single-unit A*, allies passable-but-costly, destination must be empty). **Delete** `_reservedHexes`,
+  the reservation use of `_claimedHexes`, and the on-arrival re-check guard.
+- **Attacks stay on the Utility `Timer` for now** — movement (5a) needs no `Timer`. The view interpolates
+  between ticks (lands the deferred lerp polish).
 
-**Note.** Largest single structural item, but the riskiest. Already diagnosed in [[KNOWN_ISSUES]];
-listed here only for ranking. The chain-side trio (1–3) gives more leverage per unit of risk.
+**Wins.** step-rule unit-testable against a snapshot · delete reservation bookkeeping · deterministic
+combat · dissolves the stale-state guard class · folds in the lerp polish.
+
+**Note.** No longer the riskiest item — the design work above shrank it. The chain-side trio (1–3) was
+still sequenced first.
+
+---
+
+## 7 · Combat clock / timer unification — **new, queued (spun out of #5, 2026-06-21)**
+**Strength:** Worth exploring · **depends on #5's `CombatClock`**
+
+**Files**
+- `Assets/Code/Runtime/Core/Combat/PawnCombatController.cs` (chain firing)
+- `Assets/Submodules/Utility/Tools/Timer/` (submodule — do **not** globally re-route)
+
+**Problem.** After #5, **movement** runs on `CombatClock` but **attack firing + reactor events** still
+run on the frame-based Utility `Timer`, so attack-vs-attack firing isn't synchronised and combat isn't
+yet fully deterministic.
+
+**Solution.** Migrate attack firing + reactor timing onto `CombatClock` with **read-then-write**
+within a tick (gather all decisions against the frozen snapshot, then apply) — true simultaneity.
+`Timer.Tick(interval)` is already delta-parameterised, so the migration is cheap, and it **subsumes /
+cleans up** whatever interim timer logic #5 introduces. Keep the Utility submodule untouched; subscribe
+combat to the project-side clock.
+
+**Wins.** fully deterministic combat (`(snapshot, tick) → snapshot`, unit-testable across N ticks) ·
+death + reactions resolve on one tick · one combat heartbeat for movement *and* firing.
 
 ---
 

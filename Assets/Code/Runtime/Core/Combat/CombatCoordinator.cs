@@ -4,37 +4,51 @@ using Code.Runtime.Modules.HexGrid;
 using Code.Runtime.Modules.Inventory;
 using Code.Runtime.Pawns;
 using Submodules.Utility.Extensions;
-using Submodules.Utility.Tools.Timer;
 using UnityEngine;
 
 namespace Code.Runtime.Core.Combat
 {
     /// <summary>
     /// Scene-level authority for all combat.
-    /// Owns PawnCombatController lifetimes, per-unit targeting, hex reservation,
-    /// and movement timers. CombatPhase calls StartCombat / StopCombat.
-    /// Pawns self-register via Register / Unregister.
+    /// Owns PawnCombatController lifetimes, per-unit targeting, and resolution-tick movement.
+    /// CombatPhase calls StartCombat / StopCombat. Pawns self-register via Register / Unregister.
+    ///
+    /// Movement runs on a project-side <see cref="CombatClock"/> (ADR-0001, Candidate #5): every
+    /// tick each seeking pawn accrues move-readiness and proposes a single step against a frozen
+    /// snapshot, then <see cref="MovementResolver"/> resolves all proposals together (read-then-write,
+    /// closest-to-target wins contested hexes). This replaced the per-pawn movement <c>Timer</c>s and
+    /// the reservation bookkeeping (reserved/claimed hex sets + on-arrival re-check) that existed only
+    /// to compensate for stale per-pawn decisions. Attacks still fire on the Utility <c>Timer</c>
+    /// (their migration onto the clock is Candidate #7).
     /// </summary>
     public sealed class CombatCoordinator : MonoBehaviour, ICombatCoordinator
     {
         private PawnRegistry _registry;
         [SerializeField] private HexGridController _hexGrid;
+        // Resolution tick length, decoupled from frame rate. 0.1s = 10 ticks/sec; a pawn with
+        // movementSpeed 1 over cost-1 terrain banks one hex per second. View lerps between ticks.
+        [SerializeField] private float _tickInterval = 0.1f;
 
         private IReadOnlyList<IPawn> playerUnits => _registry.playerPawns;
         private IReadOnlyList<IPawn> enemyUnits  => _registry.enemyPawns;
 
         // Per-unit combat controllers
-        private readonly Dictionary<IPawn, PawnCombatController> _controllers    = new();
-        // Where each unit currently stands (updated on MoveTo)
-        private readonly Dictionary<IPawn, Hex>                  _claimedHexes   = new();
-        // Destination reserved by a unit that is currently mid-movement
-        private readonly Dictionary<IPawn, Hex>                  _reservedHexes  = new();
-        private readonly Dictionary<IPawn, ITimer>               _movementTimers = new();
-        // Max weapon range per unit — derived from chains, refreshed on RebuildChains
-        private readonly Dictionary<IPawn, int>                  _maxWeaponRange = new();
+        private readonly Dictionary<IPawn, PawnCombatController> _controllers  = new();
+        // Where each unit currently stands — the movement snapshot's occupancy (no longer a reservation).
+        private readonly Dictionary<IPawn, Hex>                  _claimedHexes = new();
+        // Banked move-readiness for seeking units; reset to 0 once a unit engages.
+        private readonly Dictionary<IPawn, float>               _readiness    = new();
+        // Stable per-combat registration index — the deterministic contested-hex tiebreak.
+        private readonly Dictionary<IPawn, int>                  _pawnIds      = new();
+        // Units currently firing (engaged) — guards against rebuilding chains every tick.
+        private readonly HashSet<IPawn>                          _engaged      = new();
+        // Minimum active-weapon reach per unit — the ring a pawn closes to so all its weapons fire.
+        private readonly Dictionary<IPawn, int>                  _minReach     = new();
 
         private ICombatEventBus _eventBus;
+        private CombatClock     _clock;
         private bool            _isRunning;
+        private int             _nextPawnId;
 
         /// <summary>Raised once when a team is wiped — victory (enemies gone) or defeat (player gone).</summary>
         public event Action<CombatOutcome> OnCombatEnded;
@@ -45,8 +59,10 @@ namespace Code.Runtime.Core.Combat
         private void Awake()
         {
             _eventBus       = new CombatEventBus();
+            _clock          = new CombatClock(_tickInterval);
+            _clock.OnTick  += Tick;
         }
-        
+
         public void Initialize(PawnRegistry registry)
         {
             _registry = registry;
@@ -60,12 +76,13 @@ namespace Code.Runtime.Core.Combat
         public void StartCombat()
         {
             _isRunning = true;
+            _clock.Reset();
 
             foreach (var unit in playerUnits) InitUnit(unit);
             foreach (var unit in enemyUnits)  InitUnit(unit);
 
-            foreach (var unit in playerUnits) EvaluateUnit(unit, enemyUnits);
-            foreach (var unit in enemyUnits)  EvaluateUnit(unit, playerUnits);
+            foreach (var unit in playerUnits) EvaluateEngagement(unit, enemyUnits);
+            foreach (var unit in enemyUnits)  EvaluateEngagement(unit, playerUnits);
 
             // Handle an encounter that begins with an empty side.
             TryResolveOutcome();
@@ -75,14 +92,23 @@ namespace Code.Runtime.Core.Combat
         {
             _isRunning = false;
 
-            foreach (var (_, controller) in _controllers)  controller.StopCombat();
-            foreach (var (_, timer)      in _movementTimers) timer.Stop();
+            foreach (var (_, controller) in _controllers) controller.StopCombat();
 
             _controllers.Clear();
-            _movementTimers.Clear();
             _claimedHexes.Clear();
-            _reservedHexes.Clear();
-            _maxWeaponRange.Clear();
+            _readiness.Clear();
+            _pawnIds.Clear();
+            _engaged.Clear();
+            _minReach.Clear();
+            _nextPawnId = 0;
+            _clock.Reset();
+        }
+
+        // Drives the resolution clock; the clock fires Tick once per fixed interval.
+        private void Update()
+        {
+            if (!_isRunning) return;
+            _clock.Advance(Time.deltaTime);
         }
 
         // ── Internal ─────────────────────────────────────────────────────
@@ -90,172 +116,159 @@ namespace Code.Runtime.Core.Combat
         private void InsertUnit(IPawn unit)
         {
             InitUnit(unit);
-            
-            foreach (var u in playerUnits) EvaluateUnit(u, enemyUnits);
-            foreach (var u in enemyUnits)  EvaluateUnit(u, playerUnits);
+
+            foreach (var u in playerUnits) EvaluateEngagement(u, enemyUnits);
+            foreach (var u in enemyUnits)  EvaluateEngagement(u, playerUnits);
         }
-        
+
         private void InitUnit(IPawn unit)
         {
-            _claimedHexes[unit]   = unit.HexPosition;
-            _maxWeaponRange[unit] = ResolveMaxRange(unit);
-            _controllers[unit]    = new PawnCombatController(unit, _hexGrid, _eventBus, _registry);
+            _claimedHexes[unit] = unit.HexPosition;
+            _readiness[unit]    = 0f;
+            _minReach[unit]     = ResolveMinReach(unit);
+            _pawnIds[unit]      = _nextPawnId++;
+            _controllers[unit]  = new PawnCombatController(unit, _hexGrid, _eventBus, _registry);
         }
 
         /// <summary>
-        /// Core per-unit decision: find a target or move toward one.
-        /// Called on combat start, on each hex arrival, and on any defeat.
+        /// Decides whether a unit is firing or seeking. A target within reach engages the unit
+        /// (chains start firing on the Utility Timer); otherwise the unit disengages and is moved
+        /// by the resolution tick. Returns true when engaged. Idempotent — chains are (re)built only
+        /// on the not-engaged → engaged transition, so calling it every tick doesn't reset attacks.
         /// </summary>
-        private void EvaluateUnit(IPawn unit, IReadOnlyList<IPawn> opponents)
+        private bool EvaluateEngagement(IPawn unit, IReadOnlyList<IPawn> opponents)
         {
-            if (!_isRunning) return;
+            if (!_isRunning) return false;
 
-            var target = TargetSelector.Select(unit, opponents, _maxWeaponRange[unit]);
+            var target     = TargetSelector.Select(unit, opponents, _minReach[unit]);
             var controller = _controllers[unit];
-
-            if (LogMovement)
-                Debug.Log($"[Move] Evaluate {unit.HexPosition} range={_maxWeaponRange[unit]} " +
-                          $"target={(target != null ? target.HexPosition.ToString() : "none")}");
 
             if (target != null)
             {
-                StopMovement(unit);
                 controller.SetCurrentTarget(target);
-                controller.StartCombat();
+                if (_engaged.Add(unit))
+                    controller.StartCombat();
+                _readiness[unit] = 0f; // not moving while engaged
+                return true;
             }
-            else
-            {
+
+            if (_engaged.Remove(unit))
                 controller.StopCombat();
-                StartMovement(unit, opponents);
-            }
-        }
-
-        private void StartMovement(IPawn unit, IReadOnlyList<IPawn> opponents)
-        {
-            if (_movementTimers.ContainsKey(unit)) return;
-
-            var nearest = FindNearest(unit, opponents);
-            if (nearest == null) return;
-
-            ScheduleNextStep(unit, nearest, opponents);
-        }
-
-        private void StopMovement(IPawn unit)
-        {
-            if (!_movementTimers.TryGetValue(unit, out var timer)) return;
-            timer.Stop();
-            _movementTimers.Remove(unit);
-            _reservedHexes.Remove(unit);
-        }
-
-        private void ScheduleNextStep(IPawn unit, IPawn destination, IReadOnlyList<IPawn> opponents)
-        {
-            var nextHex = ResolveNextHex(unit, destination);
-
-            if (LogMovement)
-                Debug.Log($"[Move] Step {unit.HexPosition} -> " +
-                          $"{(nextHex == Hex.Invalid ? "INVALID" : nextHex.ToString())} (dest {destination.HexPosition})");
-
-            if (nextHex == Hex.Invalid) return;
-
-            // Reserve before the timer fires — other units see it immediately.
-            _reservedHexes[unit] = nextHex;
-
-            var terrainType = _hexGrid.GetTerrain(nextHex);
-            var moveCost    = unit.MovementCosts?.GetCost(terrainType) ?? 1;
-            var duration    = moveCost / Mathf.Max(unit.Stats.movementSpeed, 0.01f);
-
-            var timer = new Timer(duration, false);
-            _movementTimers[unit] = timer;
-
-            // OnComplete (not OnRewind): the step lands after its travel duration, once,
-            // driven by the tick loop — never synchronously inside Start().
-            timer.OnComplete += () =>
-            {
-                _movementTimers.Remove(unit);
-                _reservedHexes.Remove(unit);
-
-                // A target may have moved into range while this step was travelling.
-                // Re-check before committing — otherwise we take a redundant final step.
-                if (TargetSelector.Select(unit, opponents, _maxWeaponRange[unit]) != null)
-                {
-                    EvaluateUnit(unit, opponents); // stops movement and engages
-                    return;
-                }
-
-                _claimedHexes[unit] = nextHex;
-                unit.MoveTo(nextHex);
-                EvaluateUnit(unit, opponents);
-            };
-            timer.Start();
+            return false;
         }
 
         /// <summary>
-        /// Builds invalid and occupied sets, runs A*, and returns the first step hex.
+        /// One resolution tick: gather every seeking unit's proposed step against the frozen
+        /// snapshot, resolve them together, then apply. Read-then-write — no unit moves until all
+        /// proposals are in, so movement-vs-movement is fully synchronised within the tick.
+        /// </summary>
+        private void Tick()
+        {
+            if (!_isRunning) return;
+
+            var movers = new List<Mover>();
+            var pawns  = new List<IPawn>();
+
+            GatherMovers(playerUnits, enemyUnits, movers, pawns);
+            GatherMovers(enemyUnits,  playerUnits, movers, pawns);
+
+            if (movers.Count == 0) return;
+
+            var results = MovementResolver.Resolve(movers);
+            for (var i = 0; i < results.Count; i++)
+            {
+                var unit = pawns[i];
+                var res  = results[i];
+                _readiness[unit] = res.Readiness;
+
+                if (!res.Stepped) continue;
+
+                _claimedHexes[unit] = res.Position;
+                unit.MoveTo(res.Position);
+
+                if (LogMovement)
+                    Debug.Log($"[Move] {_pawnIds[unit]} stepped to {res.Position}");
+            }
+        }
+
+        private void GatherMovers(IReadOnlyList<IPawn> units, IReadOnlyList<IPawn> opponents,
+            List<Mover> movers, List<IPawn> pawns)
+        {
+            foreach (var unit in units)
+            {
+                // Engaged units fire instead of moving; this also keeps firing state current.
+                if (EvaluateEngagement(unit, opponents)) continue;
+
+                var nearest = FindNearest(unit, opponents);
+                if (nearest == null) continue;
+
+                var nextHex     = ResolveNextHex(unit, nearest);
+                var nextHexValid = nextHex.IsValid && nextHex != unit.HexPosition;
+                var stepCost    = nextHexValid ? StepCost(unit, nextHex) : 1;
+
+                movers.Add(new Mover
+                {
+                    Id            = _pawnIds[unit],
+                    Position      = unit.HexPosition,
+                    Target        = nearest.HexPosition,
+                    Reach         = _minReach[unit],
+                    NextStep      = nextHexValid ? nextHex : Hex.Invalid,
+                    NextStepCost  = stepCost,
+                    Readiness     = _readiness[unit],
+                    ReadinessGain = Mathf.Max(unit.Stats.movementSpeed, 0f) * _clock.TickInterval,
+                });
+                pawns.Add(unit);
+            }
+        }
+
+        private int StepCost(IPawn unit, Hex hex)
+        {
+            var terrainType = _hexGrid.GetTerrain(hex);
+            return unit.MovementCosts?.GetCost(terrainType) ?? 1;
+        }
+
+        /// <summary>
+        /// Single-unit A* against the snapshot; returns the first step toward <paramref name="destination"/>,
+        /// or <see cref="Hex.Invalid"/> when blocked / no path. No reservations — other units appear
+        /// only at their current positions and are hard obstacles: A* routes around an empty detour,
+        /// and a fully walled-off pawn gets no path and idles (Decision 5). One step per tick against a
+        /// fresh snapshot, so a path that an ally is blocking simply opens once the ally moves.
         /// </summary>
         private Hex ResolveNextHex(IPawn unit, IPawn destination)
         {
-            var (invalidSet, occupiedSet) = BuildPathingSets(unit);
+            var occupiedSet = BuildOccupancySet(unit);
 
             var path = HexPathfinder.FindPath(
                 unit.HexPosition,
                 destination.HexPosition,
-                invalidSet,
+                occupiedSet,         // occupied hexes are impassable: not traversable, not a landing hex
                 _hexGrid,
-                occupiedSet,
+                null,
                 unit.MovementCosts);
 
-            if (path == null)
-            {
-                if (LogMovement)
-                    Debug.Log($"[Move]   no path {unit.HexPosition}->{destination.HexPosition} " +
-                              $"invalid={invalidSet.Count} occupied={occupiedSet.Count}");
-                return Hex.Invalid;
-            }
+            if (path == null) return Hex.Invalid;
 
             // Walk the parent chain back to find the first step after the start.
             var node = path;
             while (node.Parent != null && node.Parent.Hex != unit.HexPosition)
                 node = node.Parent;
 
-            var firstStep = node.Hex == unit.HexPosition ? Hex.Invalid : node.Hex;
-
-            if (LogMovement)
-                Debug.Log($"[Move]   path goalNode={path.Hex} " +
-                          $"firstStep={(firstStep == Hex.Invalid ? "INVALID" : firstStep.ToString())} " +
-                          $"invalid={invalidSet.Count} occupied={occupiedSet.Count}");
-
-            return firstStep;
+            return node.Hex == unit.HexPosition ? Hex.Invalid : node.Hex;
         }
 
-        /// <summary>
-        /// <para>invalidSet — impassable as destination AND as traversal node (e.g. terrain walls).
-        /// Currently only reserved destinations from other mid-movement units.</para>
-        /// <para>occupiedSet — high-cost traversal (units currently standing still).
-        /// Passable in traversal but never valid as a landing hex.</para>
-        /// </summary>
-        private (HashSet<Hex> invalidSet, HashSet<Hex> occupiedSet) BuildPathingSets(IPawn movingUnit)
+        /// <summary>Current positions of all units except the mover — the frozen movement snapshot.</summary>
+        private HashSet<Hex> BuildOccupancySet(IPawn movingUnit)
         {
-            // Other units' destinations are invalid to land on.
-            var invalidSet = new HashSet<Hex>();
-            foreach (var (unit, hex) in _reservedHexes)
-                if (unit != movingUnit) invalidSet.Add(hex);
-
-            // Units standing still are expensive to pass through, never valid to land on.
-            var occupiedSet = new HashSet<Hex>();
+            var occupied = new HashSet<Hex>();
             foreach (var (unit, hex) in _claimedHexes)
-                if (unit != movingUnit) occupiedSet.Add(hex);
-
-            // Occupied hexes are also invalid as destinations.
-            invalidSet.UnionWith(occupiedSet);
-
-            return (invalidSet, occupiedSet);
+                if (unit != movingUnit) occupied.Add(hex);
+            return occupied;
         }
 
         private IPawn FindNearest(IPawn unit, IReadOnlyList<IPawn> candidates)
         {
             IPawn nearest  = null;
-            var         bestDist = int.MaxValue;
+            var   bestDist = int.MaxValue;
 
             foreach (var candidate in candidates)
             {
@@ -270,8 +283,6 @@ namespace Code.Runtime.Core.Combat
 
         private void HandlePawnRemoved(IPawn unit)
         {
-            StopMovement(unit);
-
             if (_controllers.TryGetValue(unit, out var controller))
             {
                 controller.StopCombat();
@@ -279,8 +290,10 @@ namespace Code.Runtime.Core.Combat
             }
 
             _claimedHexes.Remove(unit);
-            _reservedHexes.Remove(unit);
-            _maxWeaponRange.Remove(unit);
+            _readiness.Remove(unit);
+            _pawnIds.Remove(unit);
+            _engaged.Remove(unit);
+            _minReach.Remove(unit);
 
             _eventBus.PublishDefeated(unit);
 
@@ -288,8 +301,8 @@ namespace Code.Runtime.Core.Combat
             if (TryResolveOutcome()) return;
 
             // Re-evaluate all surviving units — their target may be gone or a new gap opened.
-            foreach (var u in playerUnits) EvaluateUnit(u, enemyUnits);
-            foreach (var u in enemyUnits)  EvaluateUnit(u, playerUnits);
+            foreach (var u in playerUnits) EvaluateEngagement(u, enemyUnits);
+            foreach (var u in enemyUnits)  EvaluateEngagement(u, playerUnits);
         }
 
         /// <summary>
@@ -314,18 +327,26 @@ namespace Code.Runtime.Core.Combat
         }
 
         /// <summary>
-        /// Derives max weapon range from the unit's current chains.
-        /// TODO: requires IWeaponItem.Range to be implemented. Defaults to 1 (melee) until then.
+        /// Minimum effective reach across the unit's active weapons (ADR-0001, Decision 3): a pawn
+        /// closes until <em>all</em> its weapons can fire. Reach is a pawn stat (Decision 2) — a
+        /// range-fixed weapon (melee/adjacent, intrinsic Payload.Range ≤ 1) reaches 1; a range-scaling
+        /// weapon reaches the pawn's range stat. v1 classifies range-fixed by the weapon's existing
+        /// Payload.Range; the full delivery-pattern split (Projectile/Beam/Arc) is the Decision 2b follow-up.
         /// </summary>
-        private static int ResolveMaxRange(IPawn unit)
+        private static int ResolveMinReach(IPawn unit)
         {
-            var chains   = unit.Inventory.Topology.Chains;
-            var maxRange = 1;
+            var chains    = unit.Inventory.Topology.Chains;
+            var pawnRange = Mathf.Max(1, Mathf.RoundToInt(unit.Stats.range));
+
+            var minReach = int.MaxValue;
             foreach (var chain in chains)
-                // TODO: revise range!
-                if (chain.Weapon.Payload.Range > maxRange)
-                    maxRange = chain.Weapon.Payload.Range;
-            return maxRange;
+            {
+                var rangeFixed = chain.Weapon.Payload.Range <= 1;
+                var reach      = rangeFixed ? 1 : pawnRange;
+                if (reach < minReach) minReach = reach;
+            }
+
+            return minReach == int.MaxValue ? 1 : minReach;
         }
     }
 
