@@ -41,21 +41,34 @@ namespace Code.Tests.EditMode.Inventory.Fakes
 
         public bool TryAdd(ITetrisItem item) => throw new NotSupportedException();
         public bool TryAddAt(Vector2Int position, ref ITetrisItem arrival) => throw new NotSupportedException();
+        public bool TrySwapInto(Vector2Int anchor, ref ITetrisItem incoming,
+            ITetrisContainer source, Vector2Int sourceAnchor) => throw new NotSupportedException();
         public bool TryRemove(Vector2Int position, out ITetrisItem removed) => throw new NotSupportedException();
         public bool TryRemove(ITetrisItem item) => throw new NotSupportedException();
         public bool CanAddAt(Vector2Int position, ITetrisItem item, out List<Vector2Int> overlapping)
             => throw new NotSupportedException();
     }
 
-    /// <summary>1x1 item with a configurable set of outgoing connector directions.</summary>
+    /// <summary>
+    /// Rectangular item (default 1x1) with a configurable set of outgoing connector directions.
+    /// A multi-cell size lets placement/swap collision be exercised; connectors stay rooted at the
+    /// placement cell (the resolver only cares about 1x1 fakes).
+    /// </summary>
     internal abstract class FakeItem : ITetrisItem
     {
         private readonly List<Vector2Int> _connectorDirections;
+        private readonly Vector2Int       _size;
 
         protected FakeItem(string name, params Vector2Int[] connectorDirections)
+            : this(name, 1, 1, connectorDirections) { }
+
+        // Width/height (not a Vector2Int) so this never collides with the direction-array overload
+        // when called as (name, oneDirection) — that ambiguity silently zero-sizes the item.
+        protected FakeItem(string name, int width, int height, params Vector2Int[] connectorDirections)
         {
             Name = name;
             Guid = Guid.NewGuid();
+            _size = new Vector2Int(width, height);
             _connectorDirections = connectorDirections?.ToList() ?? new List<Vector2Int>();
         }
 
@@ -64,10 +77,18 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public string       Name     { get; }
         public RotationType rotation { get; set; }
 
-        public List<Vector2Int> GetPointers(Vector2Int position) => new() { position };
+        public List<Vector2Int> GetPointers(Vector2Int position)
+        {
+            var pointers = new List<Vector2Int>();
+            for (var x = 0; x < _size.x; x++)
+                for (var y = 0; y < _size.y; y++)
+                    pointers.Add(position + new Vector2Int(x, y));
+            return pointers;
+        }
+
         public Vector2Int GetShapeOrigin(List<Vector2Int> normalized = null) => Vector2Int.zero;
-        public Vector2Int GetDimensions() => Vector2Int.one;
-        public Vector2Int GetVisualDimensions() => Vector2Int.one;
+        public Vector2Int GetDimensions() => _size;
+        public Vector2Int GetVisualDimensions() => _size;
 
         // For a 1x1 item the single occupied cell is the placement itself.
         public List<(Vector2Int slotPos, Vector2Int direction)> GetGridConnectors(Vector2Int placement)
@@ -78,6 +99,9 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     {
         public FakeWeapon(string name, params Vector2Int[] connectorDirections)
             : base(name, connectorDirections) { }
+
+        public FakeWeapon(string name, int width, int height, params Vector2Int[] connectorDirections)
+            : base(name, width, height, connectorDirections) { }
 
         public MutableFloat    Damage           { get; } = new(1f);
         public MutableFloat    AttackSpeed      { get; } = new(1f);

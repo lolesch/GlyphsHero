@@ -34,8 +34,18 @@ verify, keeping `ChainResolverTests` green.
   re-resolving; the tooltip no longer re-resolves per hover, and `ChainOverlayView` reads the
   container directly (the `InventoryView → UpdateTopology` push is deleted). 47/47 EditMode green,
   mutation-verified (see §2 outcome).
-- **Next up:** Candidate 3 — *move placement & swap rules into the container*.
-- Candidates 4–6: not started.
+- **Done:** Candidate 3 — *move placement & swap rules into the container* (2026-06-21). The cross-container
+  swap routing left the drag MonoBehaviour: `ITetrisContainer.TrySwapInto(anchor, ref incoming, source,
+  sourceAnchor)` is now the single rule for **both** same- and cross-container drops — place the held item,
+  return a single displaced item to the freed source cell, force-pickup it only when it won't fit there.
+  `DropCrossContainerSwap` deleted; `DropAt` is one call; the controller is input-only for drops. This also
+  fixes KNOWN_ISSUES line 35 (same-container now attempts a full swap first instead of always force-picking-up)
+  and hardens the source-return to empty space only (no silent item loss via a nested swap). **Deferred:**
+  KNOWN_ISSUES line 34 (return the displaced item *relative to the dropped cell*) — only affects multi-cell
+  displaced items, marked speculative; `TrySwapInto` is the one place to add it later. 52/52 EditMode green,
+  mutation-verified.
+- **Next up:** Candidate 4 — *reconnect or delete the orphaned chain-state seam* (`ChainStateController`).
+- Candidates 5–6: not started.
 
 Mark each candidate `done` / `doing` / `next` in its heading as you go.
 

@@ -59,6 +59,35 @@ namespace Code.Runtime.Modules.Inventory
             return false;
         }
 
+        public bool TrySwapInto(Vector2Int anchor, ref ITetrisItem incoming,
+            ITetrisContainer source, Vector2Int sourceAnchor)
+        {
+            var placing = incoming;
+            if (!TryAddAt(anchor, ref placing))
+                return false; // incoming did not fit; nothing changed, caller keeps holding it
+
+            // No displacement: the drop settled, caller is empty-handed.
+            if (ReferenceEquals(placing, incoming))
+            {
+                incoming = null;
+                return true;
+            }
+
+            // One item was displaced; try to return it to the cell the incoming item came from.
+            // Only into empty space — never a second nested swap (that would silently drop an item).
+            var returning = placing;
+            if (source.CanAddAt(sourceAnchor, returning, out var blocking) && blocking.Count == 0 &&
+                source.TryAddAt(sourceAnchor, ref returning))
+            {
+                incoming = null; // full swap completed
+                return true;
+            }
+
+            // Displaced item does not fit back at the source: caller carries it (force-pickup).
+            incoming = placing;
+            return true;
+        }
+
         public bool TryAddAt(Vector2Int position, ref ITetrisItem arrival)
         {
             if (!CanAddAt(position, arrival, out var other))
@@ -185,6 +214,17 @@ namespace Code.Runtime.Modules.Inventory
 
         bool TryAdd(ITetrisItem item);
         bool TryAddAt(Vector2Int position, ref ITetrisItem arrival);
+
+        /// <summary>
+        /// Drops <paramref name="incoming"/> at <paramref name="anchor"/> in this (target) container,
+        /// routing a single displaced item back to <paramref name="source"/> at
+        /// <paramref name="sourceAnchor"/> (the cell the incoming item was picked up from). Same- and
+        /// cross-container drops share this one path. Returns false (nothing changed) when the incoming
+        /// item cannot be placed. On success <paramref name="incoming"/> is null when the drop fully
+        /// settled, or the displaced item the caller must keep holding when it does not fit at the source.
+        /// </summary>
+        bool TrySwapInto(Vector2Int anchor, ref ITetrisItem incoming,
+            ITetrisContainer source, Vector2Int sourceAnchor);
         bool TryRemove(Vector2Int position, out ITetrisItem removed);
         bool TryRemove(ITetrisItem item);
         bool CanAddAt(Vector2Int position, ITetrisItem item, out List<Vector2Int> overlapping);

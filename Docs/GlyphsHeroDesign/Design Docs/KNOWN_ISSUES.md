@@ -32,7 +32,7 @@
 - [x] ~~currently combat is broken, pawns do not move to each other.~~ Fixed (2026-06-12): root cause was `Timer` firing `OnRewind` synchronously in `Start()`, so movement resolved instantly + recursively and corrupted the reservation sets. `Timer` now only schedules (fires `OnComplete` on natural elapse; `Stop()` is a silent cancel); movement subscribes to `OnComplete`; `CombatCoordinator` re-checks range before committing a buffered step. Pawn transform now follows `HexPosition` each frame (view-sync).
 - cross container drag swaps items:
 	the returning item is placed at the outgoing item with its origin cell, not relative to the cell the outgoing item was placed on top of the returning. make it relative to the dropped cell might feel better. -> or just highlight the required slots in the origin inventory, to show the collisions.
-- [ ] Same-container drag should attempt swap first to match cross-container; fallback to force-pickup only if returning item does not fit at source
+- [x] Same-container drag should attempt swap first to match cross-container; fallback to force-pickup only if returning item does not fit at source. **Fixed (2026-06-21, Candidate 3):** same- and cross-container drops share `ITetrisContainer.TrySwapInto`, which returns the displaced item to the freed source cell and only force-picks-up when it won't fit. Verified by `TetrisContainerTests.TrySwapInto_SameContainer_ReturnsDisplacedToFreedSourceCell` (+ mutation-tested).
 - [ ] implement required slots highlights again -> use backpack battles as reference.
 - adding and removing max resource mods changes the current value. 
 	- change implementation or reset on battle start?

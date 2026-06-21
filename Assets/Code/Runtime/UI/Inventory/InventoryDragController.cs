@@ -230,58 +230,23 @@ namespace Code.Runtime.UI.Inventory
 
             var targetAnchor = slot.GridPosition - _grabOffset;
 
-            // Cross-container occupied slot is the only case requiring manual routing.
-            if (targetContainer != _sourceContainer)
+            // Same- and cross-container drops share one rule: place the held item, return any single
+            // displaced item to the freed source cell, and only force-pickup it if it won't fit there.
+            ITetrisItem carried = _heldItem;
+            if (!targetContainer.TrySwapInto(targetAnchor, ref carried, _sourceContainer, _pickupAnchor))
             {
-                targetContainer.CanAddAt(targetAnchor, _heldItem, out var overlapping);
-                if (overlapping is { Count: 1 } &&
-                    targetContainer.Contents.TryGetValue(overlapping[0], out var displaced))
-                {
-                    DropCrossContainerSwap(targetContainer, targetAnchor, overlapping[0], displaced);
-                    return;
-                }
-            }
-
-            // Same-container (any overlap), or cross-container empty slot.
-            ITetrisItem arrival = _heldItem;
-            if (!targetContainer.TryAddAt(targetAnchor, ref arrival)) { Cancel(); return; }
-
-            if (!ReferenceEquals(arrival, _heldItem))
-                ContinueHolding(arrival, targetContainer);
-            else
-                EndDrag();
-        }
-
-        private void DropCrossContainerSwap(
-            ITetrisContainer targetContainer,
-            Vector2Int       targetAnchor,
-            Vector2Int       displacedAnchor,
-            ITetrisItem      displaced)
-        {
-            targetContainer.TryRemove(displacedAnchor, out _);
-
-            ITetrisItem arrival = _heldItem;
-            if (!targetContainer.TryAddAt(targetAnchor, ref arrival))
-            {
-                // Failed to place A — restore B and cancel.
-                ITetrisItem restoredB = displaced;
-                targetContainer.TryAddAt(displacedAnchor, ref restoredB);
                 Cancel();
                 return;
             }
 
-            if (_sourceContainer.CanAddAt(_pickupAnchor, displaced, out _))
+            if (carried == null)
             {
-                // B fits in source — full swap, done.
-                ITetrisItem restoredDisplaced = displaced;
-                _sourceContainer.TryAddAt(_pickupAnchor, ref restoredDisplaced);
                 EndDrag();
             }
             else
             {
-                // B doesn't fit in source — force-pickup B, player must resolve.
-                ContinueHolding(displaced, targetContainer);
-                _pickupAnchor = displacedAnchor;
+                ContinueHolding(carried, targetContainer);
+                _pickupAnchor = targetAnchor; // displaced item now lives where the drop happened
             }
         }
 
