@@ -152,4 +152,83 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public ReactorType        ReactorType { get; }
         public WeaponInputModifier inputMod   { get; }
     }
+
+    /// <summary>
+    /// Container double for the chain-state seam: contents and the chain topology are set directly
+    /// (no resolver), so a test can declare exactly which items are "chained" and raise
+    /// <see cref="OnContentsChanged"/> on demand. The resolver itself is locked by ChainResolverTests.
+    /// </summary>
+    internal sealed class FakeStateContainer : ITetrisContainer
+    {
+        private readonly Dictionary<Vector2Int, ITetrisItem> _contents = new();
+        private List<IItemChain> _chains = new();
+        private int _nextCell;
+
+        public FakeStateContainer Add(ITetrisItem item)
+        {
+            _contents[new Vector2Int(_nextCell++, 0)] = item;
+            return this;
+        }
+
+        public void Remove(ITetrisItem item)
+        {
+            foreach (var key in _contents.Where(kvp => kvp.Value == item).Select(kvp => kvp.Key).ToList())
+                _contents.Remove(key);
+        }
+
+        public void SetChains(params IItemChain[] chains) => _chains = chains.ToList();
+        public void RaiseChanged() => OnContentsChanged?.Invoke(_contents);
+
+        public Vector2Int GridSize => new(6, 3);
+        public IReadOnlyDictionary<Vector2Int, ITetrisItem> Contents       => _contents;
+        public IReadOnlyDictionary<Vector2Int, Vector2Int>  ContentPointer => throw new NotSupportedException();
+        public ChainTopology Topology => new(_chains, new(), new(), new(), new());
+
+        public event Action<IReadOnlyDictionary<Vector2Int, ITetrisItem>> OnContentsChanged;
+
+        public bool TryAdd(ITetrisItem item) => throw new NotSupportedException();
+        public bool TryAddAt(Vector2Int position, ref ITetrisItem arrival) => throw new NotSupportedException();
+        public bool TrySwapInto(Vector2Int anchor, ref ITetrisItem incoming,
+            ITetrisContainer source, Vector2Int sourceAnchor) => throw new NotSupportedException();
+        public bool TryRemove(Vector2Int position, out ITetrisItem removed) => throw new NotSupportedException();
+        public bool TryRemove(ITetrisItem item) => throw new NotSupportedException();
+        public bool CanAddAt(Vector2Int position, ITetrisItem item, out List<Vector2Int> overlapping)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// Attachment item carrying one passive pawn-stat affix. Mirrors the real AttachmentItem:
+    /// OnUnchained applies the affix, OnChained removes it.
+    /// </summary>
+    internal sealed class FakeAttachment : FakeItem, IAttachmentItem
+    {
+        public FakeAttachment(string name)
+            : base(name) =>
+            Affix = new PawnStatModifier(PawnStat.LifeMax,
+                new Modifier(5f, ModifierType.FlatAdd, Guid.NewGuid()));
+
+        public PawnStatModifier Affix { get; }
+        public IReadOnlyList<PawnStatModifier> affixes => new[] { Affix };
+
+        public void OnUnchained(IPawnStats stats) => stats.ApplyMod(Affix);
+        public void OnChained(IPawnStats stats)   => stats.RemoveMod(Affix);
+    }
+
+    /// <summary>
+    /// IPawnStats double that records the currently-applied pawn-stat modifiers. Only ApplyMod /
+    /// RemoveMod are exercised by the chain-state seam; the stat pools are unused.
+    /// </summary>
+    internal sealed class RecordingStats : IPawnStats
+    {
+        public readonly List<PawnStatModifier> Active = new();
+
+        public void ApplyMod(PawnStatModifier mod)  => Active.Add(mod);
+        public void RemoveMod(PawnStatModifier mod) => Active.Remove(mod);
+
+        public Resource health        => throw new NotSupportedException();
+        public Resource mana          => throw new NotSupportedException();
+        public Stat     healthRegen   => throw new NotSupportedException();
+        public Stat     manaRegen     => throw new NotSupportedException();
+        public Stat     movementSpeed => throw new NotSupportedException();
+    }
 }

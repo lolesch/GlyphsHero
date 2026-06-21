@@ -44,8 +44,19 @@ verify, keeping `ChainResolverTests` green.
   KNOWN_ISSUES line 34 (return the displaced item *relative to the dropped cell*) — only affects multi-cell
   displaced items, marked speculative; `TrySwapInto` is the one place to add it later. 52/52 EditMode green,
   mutation-verified.
-- **Next up:** Candidate 4 — *reconnect or delete the orphaned chain-state seam* (`ChainStateController`).
-- Candidates 5–6: not started.
+- **Done:** Candidate 4 — *reconnect the orphaned chain-state seam* (2026-06-21). Decision: **reconnect**, not
+  delete — the "unchained = passive pawn stat" mechanic is authored on `AttachmentItemConfig.pawnStatMod` and
+  already surfaced in the tooltip (bold when loose, greyed when chained), so the seam was a half-wired feature,
+  not dead code. `ChainStateController` was already correct but never constructed; it's now built in
+  `Pawn.SpawnPawn` (after the starter weapon, so it lives across all phases — placement included) fed by the
+  container's owned topology (#2-A). A loose attachment now applies its `pawnStatMod` to `PawnStats`, losing it
+  once chained into a weapon. +6 `ChainStateControllerTests` (new `FakeStateContainer`/`FakeAttachment`/
+  `RecordingStats` fakes that isolate the controller's diff logic from the resolver). **58/58 EditMode green,
+  mutation-verified** (disabling the bootstrap apply failed exactly the 4 bootstrap-dependent tests; green on
+  revert). The confusing `IAttachmentItem.OnChained`/`OnUnchained` naming (OnChained *removes* the passive) was
+  left as-is — a possible small follow-up rename.
+- **Next up:** Candidate 5 — *central per-tick movement planner* (also in KNOWN_ISSUES; largest/riskiest item).
+- Candidate 6: not started.
 
 Mark each candidate `done` / `doing` / `next` in its heading as you go.
 
@@ -236,7 +247,7 @@ dictionaries · interface shrinks; container absorbs the rules.
 
 ---
 
-## 4 · Reconnect (or delete) the orphaned chain-state seam
+## 4 · Reconnect (or delete) the orphaned chain-state seam — **done (reconnected, 2026-06-21)**
 **Strength:** Worth exploring · **dependency:** in-process
 
 **Files**

@@ -26,6 +26,10 @@ namespace Code.Runtime.Pawns
         public IPawnStats       Stats         { get; private set; }
         public ITetrisContainer Inventory     { get; private set; }
         public IPawnEffect      PawnEffects   { get; private set; }
+
+        // Owns the attachment chain-state seam for this pawn's whole lifetime (placement included):
+        // a loose attachment grants its passive pawn-stat affix, lost once it joins a weapon chain.
+        private ChainStateController _chainState;
        
         public event Action OnDefeated;
 
@@ -48,6 +52,10 @@ namespace Code.Runtime.Pawns
                 Inventory.TryAdd(ItemFactory.Create(config.starterWeapon));
             else
                 Debug.LogWarning($"{gameObject.name} has no StarterWeapon assigned in PawnConfig.", this);
+
+            // Bootstrap after the starter weapon is in: it applies loose attachments' passive stats
+            // and keeps them in sync as the player chains/unchains items in any phase.
+            _chainState = new ChainStateController(Inventory, Stats);
 
             Stats.health.OnDepleted += DespawnPawn;
             
