@@ -28,10 +28,14 @@ verify, keeping `ChainResolverTests` green.
   fixes the equidistant-reactor drop, dissolves the amp double-fire at the source, deletes
   `ChainCollapser`. All 3 game-design decisions answered (see §2). 43/43 EditMode tests green,
   mutation-verified.
-- **Next up:** Candidate 2-A — *topology ownership* (resolve once on `OnContentsChanged`, push the
-  cached topology to the UI consumers so the tooltip stops re-resolving per hover). Deferred from the
-  2-B session to keep context lean; pure-vs-MonoBehaviour split made 2-B the high-leverage half.
-- Candidates 3–6: not started.
+- **Done (A):** Candidate 2-A — *topology ownership* (2026-06-20). The container now owns the resolved
+  topology: `TetrisContainer.Topology` is a lazily-cached `ChainTopology`, resolved once and invalidated
+  (dirty flag) on every `Add`/`Remove`. All five consumers read `container.Topology` instead of
+  re-resolving; the tooltip no longer re-resolves per hover, and `ChainOverlayView` reads the
+  container directly (the `InventoryView → UpdateTopology` push is deleted). 47/47 EditMode green,
+  mutation-verified (see §2 outcome).
+- **Next up:** Candidate 3 — *move placement & swap rules into the container*.
+- Candidates 4–6: not started.
 
 Mark each candidate `done` / `doing` / `next` in its heading as you go.
 
@@ -78,7 +82,7 @@ tooltip read one value · chain stats become unit-testable for the first time ·
 
 ---
 
-## 2 · Own the chain topology — resolve once, push it  `B done · A next`
+## 2 · Own the chain topology — resolve once, push it  `done`
 **Strength:** Strong · **dependency:** in-process · *composes with #1* · **spec'd 2026-06-19** ·
 **2-B shipped 2026-06-20**
 
@@ -157,6 +161,28 @@ duplication; Candidate 2 removes the *cause* and deletes it. This is the proper 
 - **Deferred → 2-A:** topology ownership (resolve once on `OnContentsChanged`, push the cached topology
   to `InventoryView` / `ItemTooltipController`; overlay stops re-deriving). Signature of
   `ResolveTopology` is unchanged, so those consumers still compile and read correct edges/connectors.
+
+**Outcome (2026-06-20) — 2-A shipped.**
+- `ITetrisContainer` gained `ChainTopology Topology { get; }`. `TetrisContainer` owns it: a `_topology`
+  cache + `_topologyDirty` flag, computed lazily on first read and invalidated in `Add`/`Remove`
+  (alongside the existing `OnContentsChanged` fire). A multi-step mutation (swap = remove + add)
+  therefore resolves **once**, and all readers share one instance — the per-hover/per-frame re-resolve
+  is gone. `ChainResolver.ResolveTopology`/`Resolve` stay public (the container + the resolver's own
+  tests call them).
+- **Consumers migrated** to read `container.Topology`: `ItemTooltipController` (kills per-hover
+  resolve — [[KNOWN_ISSUES]] line 67), `InventoryView.Refresh`, `PawnCombatController.RebuildChains`,
+  `CombatCoordinator.ResolveMaxRange`, and the orphaned `ChainStateController`. `ChainOverlayView` now
+  reads `_container.Topology` directly in `OnDrawGizmos`; its `UpdateTopology` push channel + cached
+  field are **deleted** (`InventoryView` no longer pushes). The overlay still iterates
+  `GetGridConnectors` for *drawing geometry* (dot positions + red arrows on unconnected connectors,
+  which topology never enumerates) — that is rendering, not topology, and stays put.
+- **New tests:** `TetrisContainerTests.cs` — `Topology_ReflectsCurrentContents`,
+  `…ReturnsSameInstance_WhenContentsUnchanged` (the resolve-once lock),
+  `…Recomputes_AfterContentsChange`, `…Recomputes_AfterRemoval`. Red-green proven: the same-instance
+  test failed under a naive recompute-every-read impl; the three content-reflecting tests failed under
+  a dirty-flag-dropped mutation (44/47), exactly and only those three. `ChainResolverTests` untouched.
+- **Verified via Unity MCP** (`TestRunnerApi` over `Unity_RunCommand`, polled via console): 47/47
+  EditMode green after the migration; mutation reverted, still 47/47.
 
 **⚠ `ChainResolverTests` constraint is LIFTED here.** Candidate 1 had to keep `ChainResolverTests`
 green because it never touched topology. Candidate 2 *is* the topology change: the characterization

@@ -21,6 +21,25 @@ namespace Code.Runtime.Modules.Inventory
 
         public Vector2Int GridSize { get; }
 
+        private ChainTopology _topology;
+        private bool          _topologyDirty = true;
+
+        /// <summary>Resolved once and cached; recomputed lazily after the next content change. A
+        /// multi-step mutation (e.g. a swap = remove + add) therefore resolves once, and every
+        /// consumer reads the same instance — no per-hover or per-frame re-resolve.</summary>
+        public ChainTopology Topology
+        {
+            get
+            {
+                if (_topologyDirty)
+                {
+                    _topology      = ChainResolver.ResolveTopology(this);
+                    _topologyDirty = false;
+                }
+                return _topology;
+            }
+        }
+
         public event Action<IReadOnlyDictionary<Vector2Int, ITetrisItem>> OnContentsChanged;
 
         public bool TryAdd(ITetrisItem arrival)
@@ -91,6 +110,7 @@ namespace Code.Runtime.Modules.Inventory
                 return false;
             }
 
+            _topologyDirty = true;
             OnContentsChanged?.Invoke(Contents);
             return true;
         }
@@ -121,6 +141,7 @@ namespace Code.Runtime.Modules.Inventory
             foreach (var pointer in pointers)
                 _contentPointer.Remove(pointer);
 
+            _topologyDirty = true;
             OnContentsChanged?.Invoke(Contents);
             return true;
         }
@@ -155,6 +176,11 @@ namespace Code.Runtime.Modules.Inventory
         Vector2Int GridSize { get; }
         IReadOnlyDictionary<Vector2Int, ITetrisItem> Contents       { get; }
         IReadOnlyDictionary<Vector2Int, Vector2Int>  ContentPointer { get; }
+
+        /// <summary>The resolved chain topology for the current contents. Owned and cached by the
+        /// container — resolved once per content change, read by all consumers (no per-hover re-resolve).</summary>
+        ChainTopology Topology { get; }
+
         event Action<IReadOnlyDictionary<Vector2Int, ITetrisItem>> OnContentsChanged;
 
         bool TryAdd(ITetrisItem item);

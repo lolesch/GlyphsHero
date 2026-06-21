@@ -126,9 +126,7 @@ namespace Code.Runtime.UI.Inventory
                     _container.Contents.TryGetValue(pos, out var item) ? item : null);
             }
 
-            var topology = ChainResolver.ResolveTopology(_container);
-
-            _chainOverlay?.UpdateTopology(topology);
+            var topology = _container.Topology;
 
             foreach (var (anchor, item) in _container.Contents)
             {

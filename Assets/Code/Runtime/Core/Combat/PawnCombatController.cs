@@ -64,7 +64,7 @@ namespace Code.Runtime.Core.Combat
             Cleanup();
             if (!_isRunning) return;
 
-            var chains = ChainResolver.Resolve(_inventory);
+            var chains = _inventory.Topology.Chains;
             if (chains.Count == 0)
             {
                 Debug.Log("[Combat] No weapons — pawn is not attacking.");

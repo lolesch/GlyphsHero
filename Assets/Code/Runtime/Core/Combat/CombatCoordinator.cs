@@ -319,7 +319,7 @@ namespace Code.Runtime.Core.Combat
         /// </summary>
         private static int ResolveMaxRange(IPawn unit)
         {
-            var chains   = ChainResolver.Resolve(unit.Inventory);
+            var chains   = unit.Inventory.Topology.Chains;
             var maxRange = 1;
             foreach (var chain in chains)
                 // TODO: revise range!

@@ -32,6 +32,9 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public IReadOnlyDictionary<Vector2Int, ITetrisItem> Contents       => _contents;
         public IReadOnlyDictionary<Vector2Int, Vector2Int>  ContentPointer => _pointer;
 
+        // The fake recomputes; caching is exercised on the real TetrisContainer.
+        public ChainTopology Topology => ChainResolver.ResolveTopology(this);
+
 #pragma warning disable 0067 // event required by interface, unused by the resolver
         public event Action<IReadOnlyDictionary<Vector2Int, ITetrisItem>> OnContentsChanged;
 #pragma warning restore 0067

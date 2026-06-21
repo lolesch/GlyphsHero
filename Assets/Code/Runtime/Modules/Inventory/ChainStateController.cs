@@ -24,7 +24,7 @@ namespace Code.Runtime.Modules.Inventory
         // Bootstrap from whatever is already in the inventory (e.g. starter weapon).
         private void Bootstrap()
         {
-            var topology   = ChainResolver.ResolveTopology(_inventory);
+            var topology   = _inventory.Topology;
             var nowChained = CollectChained(topology);
 
             foreach (var item in _inventory.Contents.Values)
@@ -39,7 +39,7 @@ namespace Code.Runtime.Modules.Inventory
 
         private void Refresh()
         {
-            var topology   = ChainResolver.ResolveTopology(_inventory);
+            var topology   = _inventory.Topology;
             var nowChained = CollectChained(topology);
             var nowAll     = new HashSet<ITetrisItem>(_inventory.Contents.Values);
 

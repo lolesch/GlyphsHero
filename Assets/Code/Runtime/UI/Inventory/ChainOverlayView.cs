@@ -12,7 +12,6 @@ namespace Code.Runtime.UI.Inventory
 
         private ITetrisContainer                  _container;
         private IReadOnlyList<ISlotView>          _slots;
-        private ChainTopology                     _topology = ChainTopology.Empty;
 
         private static readonly Color ColorConnected   = Color.yellow;
         private static readonly Color ColorUnconnected = Color.red;
@@ -35,15 +34,13 @@ namespace Code.Runtime.UI.Inventory
             _slots     = _inventoryView.Slots;
         }
 
-        // Called by InventoryView after every Refresh() — single source of truth for topology.
-        public void UpdateTopology(ChainTopology topology)
-        {
-            _topology = topology;
-        }
-
         private void OnDrawGizmos()
         {
             if (_container == null || _slots == null) return;
+
+            // The container owns the resolved topology (cached, resolved once per content change);
+            // the overlay reads it rather than receiving a pushed copy.
+            var topology = _container.Topology;
 
             var o = GetWorldPos(new Vector2Int(0, 0));
             var r = GetWorldPos(new Vector2Int(1, 0));
@@ -102,7 +99,7 @@ namespace Code.Runtime.UI.Inventory
                     var targetCell = slotPos + direction;
                     var key        = MakeKey(slotPos, targetCell);
 
-                    if (_topology.ConnectedEdges.Contains(key))
+                    if (topology.ConnectedEdges.Contains(key))
                     {
                         if (!IsLowerSide(slotPos, targetCell)) continue;
 

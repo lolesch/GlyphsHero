@@ -103,7 +103,7 @@ namespace Code.Runtime.UI.Inventory
             _pendingItem  = null;
             _visibleItem  = item;
 
-            var topology    = ChainResolver.ResolveTopology(container);
+            var topology    = container.Topology;   // container-owned, resolved once — no per-hover re-resolve
             _cachedItem     = item;
             _cachedTopology = topology;
             _altWasPressed  = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
