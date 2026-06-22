@@ -18,8 +18,9 @@ namespace Code.Runtime.Core.Combat
     /// snapshot, then <see cref="MovementResolver"/> resolves all proposals together (read-then-write,
     /// closest-to-target wins contested hexes). This replaced the per-pawn movement <c>Timer</c>s and
     /// the reservation bookkeeping (reserved/claimed hex sets + on-arrival re-check) that existed only
-    /// to compensate for stale per-pawn decisions. Attacks still fire on the Utility <c>Timer</c>
-    /// (their migration onto the clock is Candidate #7).
+    /// to compensate for stale per-pawn decisions. Attacks ride the same clock (Candidate #7): each
+    /// tick advances every controller's per-weapon attack metronome, so firing and movement resolve
+    /// on one deterministic, frame-rate-independent tick instead of a separate Utility <c>Timer</c>.
     /// </summary>
     public sealed class CombatCoordinator : MonoBehaviour, ICombatCoordinator
     {
@@ -44,6 +45,8 @@ namespace Code.Runtime.Core.Combat
         private readonly HashSet<IPawn>                          _engaged      = new();
         // Minimum active-weapon reach per unit — the ring a pawn closes to so all its weapons fire.
         private readonly Dictionary<IPawn, int>                  _minReach     = new();
+        // Reused per-tick snapshot of controllers so a kill-cascade can't mutate the live enumerator.
+        private readonly List<PawnCombatController>              _tickBuffer   = new();
 
         private ICombatEventBus _eventBus;
         private CombatClock     _clock;
@@ -80,6 +83,10 @@ namespace Code.Runtime.Core.Combat
 
             foreach (var unit in playerUnits) InitUnit(unit);
             foreach (var unit in enemyUnits)  InitUnit(unit);
+
+            // Enemies always start a combat at full health (player current carries from spawn —
+            // injuries / low-current threshold builds are intentional and left untouched).
+            foreach (var unit in enemyUnits) unit.Stats.health.RefillCurrent();
 
             foreach (var unit in playerUnits) EvaluateEngagement(unit, enemyUnits);
             foreach (var unit in enemyUnits)  EvaluateEngagement(unit, playerUnits);
@@ -132,7 +139,7 @@ namespace Code.Runtime.Core.Combat
 
         /// <summary>
         /// Decides whether a unit is firing or seeking. A target within reach engages the unit
-        /// (chains start firing on the Utility Timer); otherwise the unit disengages and is moved
+        /// (chains start firing on the combat clock); otherwise the unit disengages and is moved
         /// by the resolution tick. Returns true when engaged. Idempotent — chains are (re)built only
         /// on the not-engaged → engaged transition, so calling it every tick doesn't reset attacks.
         /// </summary>
@@ -166,9 +173,31 @@ namespace Code.Runtime.Core.Combat
         {
             if (!_isRunning) return;
 
+            ResolveMovement();
+            AdvanceAttacks();
+            RegenerateResources();
+        }
+
+        /// <summary>
+        /// Health regen on the combat clock: every alive pawn restores healthRegen-per-second,
+        /// scaled by the tick interval. Combat-only — the clock advances solely while combat runs.
+        /// Regen only raises current, so it can't unregister a pawn mid-iteration.
+        /// </summary>
+        private void RegenerateResources()
+        {
+            foreach (var unit in playerUnits)
+                unit.Stats.health.Regenerate(unit.Stats.healthRegen, _clock.TickInterval);
+            foreach (var unit in enemyUnits)
+                unit.Stats.health.Regenerate(unit.Stats.healthRegen, _clock.TickInterval);
+        }
+
+        private void ResolveMovement()
+        {
             var movers = new List<Mover>();
             var pawns  = new List<IPawn>();
 
+            // GatherMovers also (re)evaluates engagement for every unit, so engaged/seeking state is
+            // current before either system resolves this tick.
             GatherMovers(playerUnits, enemyUnits, movers, pawns);
             GatherMovers(enemyUnits,  playerUnits, movers, pawns);
 
@@ -188,6 +217,25 @@ namespace Code.Runtime.Core.Combat
 
                 if (LogMovement)
                     Debug.Log($"[Move] {_pawnIds[unit]} stepped to {res.Position}");
+            }
+        }
+
+        /// <summary>
+        /// Advances every controller's attack metronomes by one tick (Candidate #7). Engaged pawns
+        /// fire their ready attacks; seeking pawns hold no cadences, so this is a no-op for them.
+        /// Runs after movement so a pawn that just engaged this tick is already firing-ready.
+        /// </summary>
+        private void AdvanceAttacks()
+        {
+            // A fire can kill a pawn → HandlePawnRemoved mutates _controllers (and may end combat)
+            // mid-iteration; advance over a snapshot. Removed/disengaged controllers are already
+            // torn down, so their Tick is a guarded no-op.
+            _tickBuffer.Clear();
+            _tickBuffer.AddRange(_controllers.Values);
+            foreach (var controller in _tickBuffer)
+            {
+                if (!_isRunning) return;
+                controller.Tick(_clock.TickInterval);
             }
         }
 

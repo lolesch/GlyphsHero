@@ -8,7 +8,6 @@ using Code.Runtime.Modules.Inventory;
 using Code.Runtime.Modules.Statistics;
 using Code.Runtime.Pawns;
 using Submodules.Utility.Extensions;
-using Submodules.Utility.Tools.Timer;
 using UnityEngine;
 
 namespace Code.Runtime.Core.Combat
@@ -18,7 +17,10 @@ namespace Code.Runtime.Core.Combat
     /// Created and managed exclusively by CombatCoordinator — never self-owned by Pawn.
     /// Each firing's stats are resolved to a <see cref="WeaponStats"/> value via
     /// <see cref="WeaponStatResolver"/>; the weapon's live MutableFloats are never mutated.
-    /// _cleanupActions tears down timers and event subscriptions on rebuild/stop.
+    /// Timed firings ride per-weapon <see cref="CombatClock"/> metronomes advanced by
+    /// <see cref="Tick"/> (Candidate #7) — attacks resolve on the same deterministic fixed tick
+    /// as movement, not the player-loop Utility Timer. _cadences holds those metronomes;
+    /// _cleanupActions tears down reactor event subscriptions; both are cleared on rebuild/stop.
     /// </summary>
     public sealed class PawnCombatController : IPawnCombatController
     {
@@ -27,6 +29,8 @@ namespace Code.Runtime.Core.Combat
         private readonly IHexGrid         _hexGrid;
         private readonly ICombatEventBus  _eventBus;
         private readonly List<Action>     _cleanupActions = new();
+        // Per-weapon attack metronomes; advanced by Tick on the combat clock (Candidate #7).
+        private readonly List<CombatClock> _cadences      = new();
 
         private IPawn _target;
         private bool        _isRunning;
@@ -44,6 +48,27 @@ namespace Code.Runtime.Core.Combat
         }
 
         public void SetCurrentTarget(IPawn target) => _target = target;
+
+        /// <summary>
+        /// Advances this pawn's attack metronomes by one combat-clock step. Driven by the
+        /// coordinator's master tick (Candidate #7), so attacks fire on the same fixed,
+        /// frame-rate-independent tick as movement. A fresh cadence won't reach a whole interval on
+        /// the engaging tick, so a just-engaged pawn doesn't fire instantly. No-op when not running
+        /// or when the pawn has no timed firings (e.g. reactor-only).
+        ///
+        /// A fire can cascade into a kill → registry removal → re-evaluation that calls StopCombat on
+        /// this very controller, clearing <see cref="_cadences"/> mid-iteration. Advance over a
+        /// snapshot and stop the moment this controller is torn down (_isRunning flips false).
+        /// </summary>
+        public void Tick(float deltaTime)
+        {
+            if (!_isRunning) return;
+            foreach (var cadence in _cadences.ToArray())
+            {
+                if (!_isRunning) return;
+                cadence.Advance(deltaTime);
+            }
+        }
 
         public void StartCombat()
         {
@@ -96,16 +121,18 @@ namespace Code.Runtime.Core.Combat
             var weapon = chain.Weapon;
             var (costResource, genResource) = ResolveChainResources(chain);
 
-            var timer = new Timer(1f / stats.AttackSpeed, true);
-            timer.OnRewind += () =>
+            // Attack cadence rides the combat clock (Candidate #7): Tick advances this metronome by
+            // the master tick interval, firing 0..N times per tick (carrying the remainder), so
+            // attacks resolve on the same deterministic fixed tick as movement. stats is an immutable
+            // value resolved once per rebuild, so the interval is fixed for the cadence's lifetime.
+            var cadence = new CombatClock(1f / stats.AttackSpeed);
+            cadence.OnTick += () =>
             {
-                timer.Duration = 1f / stats.AttackSpeed;
                 if (CanFire(stats.ResourceCost, costResource))
                     Fire(chain, weapon, stats, costResource, genResource);
             };
-            timer.Start();
 
-            _cleanupActions.Add(timer.Stop);
+            _cadences.Add(cadence);
         }
 
         private void BuildReactor(IReactorItem reactor, IItemChain chain, WeaponStats stats)
@@ -360,6 +387,8 @@ namespace Code.Runtime.Core.Combat
         {
             foreach (var action in _cleanupActions) action();
             _cleanupActions.Clear();
+            // CombatClocks hold no global registration — dropping the references retires them.
+            _cadences.Clear();
         }
     }
 
@@ -368,5 +397,6 @@ namespace Code.Runtime.Core.Combat
         void SetCurrentTarget(IPawn target);
         void StartCombat();
         void StopCombat();
+        void Tick(float deltaTime);
     }
 }

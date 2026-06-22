@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Code.Data.Enums;
 using Code.Data.Pawns;
 using Code.Runtime.Modules.Inventory;
@@ -23,9 +24,29 @@ namespace Code.Runtime.Pawns
         [field: SerializeField, ReadOnly] public Hex               HexPosition   { get; private set; }
         [field: SerializeField, ReadOnly] public TerrainCostConfig    MovementCosts { get; private set; }
         
-        public IPawnStats       Stats         { get; private set; }
+        // Backed by a concrete serialized field so the live stat block (resources, regen, range)
+        // is visible+expandable in the Inspector at runtime — the IPawnStats interface alone is
+        // not serializable, so a property-only Stats showed nothing. PawnStats and its Resource/Stat
+        // members already carry [SerializeField, ReadOnly, AllowNesting] for this.
+        [SerializeField, ReadOnly, AllowNesting] private PawnStats _stats;
+        public IPawnStats       Stats         => _stats;
         public ITetrisContainer Inventory     { get; private set; }
         public IPawnEffect      PawnEffects   { get; private set; }
+
+        // Runtime-only mirror of this pawn's resolved attacks (weapon + chain mods → WeaponStats),
+        // rebuilt on every inventory change so the live damage/fire-rate is inspectable like _stats.
+        // Read-only diagnostic — combat resolves its own stats at fire time; this is not the source.
+        [SerializeField, ReadOnly, AllowNesting] private List<ResolvedAttack> _attacks = new();
+
+        [Serializable]
+        private struct ResolvedAttack
+        {
+            public string weapon;
+            public float  damage;
+            public float  attackSpeed;      // attacks per second (fire interval = 1 / attackSpeed)
+            public float  resourceCost;
+            public float  resourceGenOnHit;
+        }
 
         // Owns the attachment chain-state seam for this pawn's whole lifetime (placement included):
         // a loose attachment grants its passive pawn-stat affix, lost once it joins a weapon chain.
@@ -43,7 +64,7 @@ namespace Code.Runtime.Pawns
 
             _grid         = grid;
             _icon         = config.icon;
-            Stats         = new PawnStats(config);
+            _stats        = new PawnStats(config);
             Inventory     = new TetrisContainer(new Vector2Int(6, 3));
             PawnEffects   = _pawnEffects;
             MovementCosts = config.movementCosts;
@@ -56,6 +77,9 @@ namespace Code.Runtime.Pawns
             // Bootstrap after the starter weapon is in: it applies loose attachments' passive stats
             // and keeps them in sync as the player chains/unchains items in any phase.
             _chainState = new ChainStateController(Inventory, Stats);
+
+            Inventory.OnContentsChanged += _ => RebuildAttacks();
+            RebuildAttacks();
 
             Stats.health.OnDepleted += DespawnPawn;
             
@@ -73,6 +97,27 @@ namespace Code.Runtime.Pawns
             OnDefeated?.Invoke();
             
             gameObject.SetActive(false);
+        }
+
+        // Refreshes the inspectable attack readout from the pawn's resolved chains. Pure read of the
+        // container-owned topology — same WeaponStatResolver combat and the tooltip use.
+        private void RebuildAttacks()
+        {
+            _attacks.Clear();
+            if (Inventory == null) return;
+
+            foreach (var chain in Inventory.Topology.Chains)
+            {
+                var stats = WeaponStatResolver.Resolve(chain);
+                _attacks.Add(new ResolvedAttack
+                {
+                    weapon           = chain.Weapon?.Name ?? "(no weapon)",
+                    damage           = stats.Damage,
+                    attackSpeed      = stats.AttackSpeed,
+                    resourceCost     = stats.ResourceCost,
+                    resourceGenOnHit = stats.ResourceGenOnHit,
+                });
+            }
         }
 
         public void TakeDamage(float damage) => Stats.health.ReduceCurrent(damage);

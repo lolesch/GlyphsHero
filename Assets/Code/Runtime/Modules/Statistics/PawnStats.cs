@@ -38,8 +38,19 @@ namespace Code.Runtime.Modules.Statistics
             PawnStat.None or _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
 
-        public void ApplyMod(PawnStatModifier mod)  => GetStat(mod.PawnStat)?.AddModifier(mod.Modifier);
-        public void RemoveMod(PawnStatModifier mod) => GetStat(mod.PawnStat)?.TryRemoveModifier(mod.Modifier);
+        // PawnStat.None is the "no passive stat" sentinel; treat it as a no-op rather than letting
+        // GetStat throw, so an attachment without a passive can never crash stat application.
+        public void ApplyMod(PawnStatModifier mod)
+        {
+            if (mod.PawnStat == PawnStat.None) return;
+            GetStat(mod.PawnStat)?.AddModifier(mod.Modifier);
+        }
+
+        public void RemoveMod(PawnStatModifier mod)
+        {
+            if (mod.PawnStat == PawnStat.None) return;
+            GetStat(mod.PawnStat)?.TryRemoveModifier(mod.Modifier);
+        }
     }
 
     public interface IPawnStats

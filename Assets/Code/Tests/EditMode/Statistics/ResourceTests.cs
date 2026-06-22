@@ -95,6 +95,40 @@ namespace Code.Tests.EditMode.Statistics
         }
 
         [Test]
+        public void Regenerate_AddsRateScaledByDelta()
+        {
+            var health = new Resource(PawnStat.LifeMax, 100f);
+            health.ReduceCurrent(50f); // current = 50
+
+            health.Regenerate(10f, 0.1f); // +10/sec over 0.1s = +1
+
+            health.CurrentValue.Should().Be(51f);
+        }
+
+        [Test]
+        public void Regenerate_ClampsAtMax()
+        {
+            var health = new Resource(PawnStat.LifeMax, 100f);
+            health.ReduceCurrent(5f); // current = 95
+
+            health.Regenerate(100f, 1f); // would add 100, clamps to max
+
+            health.CurrentValue.Should().Be(100f);
+            health.IsFull.Should().BeTrue();
+        }
+
+        [Test]
+        public void Regenerate_ZeroRate_IsNoOp()
+        {
+            var health = new Resource(PawnStat.LifeMax, 100f);
+            health.ReduceCurrent(50f); // current = 50
+
+            health.Regenerate(0f, 0.1f);
+
+            health.CurrentValue.Should().Be(50f);
+        }
+
+        [Test]
         public void LoweringMaxBelowCurrent_ClampsCurrentDown()
         {
             var mana = new Resource(PawnStat.ManaMax, 100f);

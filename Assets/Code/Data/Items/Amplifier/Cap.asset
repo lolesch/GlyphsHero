@@ -30,5 +30,5 @@ MonoBehaviour:
     type: 1
   <outputStatMod>k__BackingField:
     stat: 0
-    value: 0
-    type: 0
+    value: 4
+    type: 1

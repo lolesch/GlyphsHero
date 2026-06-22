@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Data.Enums;
 using Code.Data.Items;
 using Code.Runtime.Modules.Statistics;
 using Submodules.Utility.Tools.ShapeInspector.RectShape;
@@ -128,8 +129,12 @@ namespace Code.Runtime.Modules.Inventory
     {
         protected AttachmentItem(AttachmentItemConfig config, RotationType rotation) : base(config, rotation)
         {
-            _affixes.Add(new PawnStatModifier(config.pawnStatMod.stat,
-                new Modifier(config.pawnStatMod.value, config.pawnStatMod.type, Guid)));
+            // PawnStat.None is the "no passive" sentinel — the default for an unset pawnStatMod.
+            // Don't fabricate a no-op affix for it: keep affixes empty so OnUnchained does nothing
+            // and the tooltip shows no phantom "unchained: None" line.
+            if (config.pawnStatMod.stat != PawnStat.None)
+                _affixes.Add(new PawnStatModifier(config.pawnStatMod.stat,
+                    new Modifier(config.pawnStatMod.value, config.pawnStatMod.type, Guid)));
         }
 
         public IReadOnlyList<PawnStatModifier> affixes => _affixes;

@@ -1711,6 +1711,7 @@ GameObject:
   - component: {fileID: 716019298}
   - component: {fileID: 716019302}
   - component: {fileID: 716019301}
+  - component: {fileID: 716019303}
   m_Layer: 5
   m_Name: UnitInventory
   m_TagString: Untagged
@@ -1884,6 +1885,19 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &716019303
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 716019292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 361081301e6f5cd49be40e99f20b053e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UI::Code.Runtime.UI.Inventory.PawnInventoryView
+  _view: {fileID: 716019294}
 --- !u!1 &809639548
 GameObject:
   m_ObjectHideFlags: 0
@@ -4202,6 +4216,7 @@ GameObject:
   - component: {fileID: 1331451183}
   - component: {fileID: 1331451182}
   - component: {fileID: 1331451181}
+  - component: {fileID: 1331451189}
   m_Layer: 5
   m_Name: StashInventory
   m_TagString: Untagged
@@ -4375,6 +4390,19 @@ MonoBehaviour:
   _dragController: {fileID: 65149619}
   _tooltipController: {fileID: 65149620}
   _slots: []
+--- !u!114 &1331451189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331451179}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80ba541e677817144ba8f1f8ca0f8aac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UI::Code.Runtime.UI.Inventory.PlayerStashView
+  _view: {fileID: 1331451188}
 --- !u!1 &1346236137
 GameObject:
   m_ObjectHideFlags: 0
@@ -4452,6 +4480,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameLoop::Code.Runtime.Core.Combat.CombatCoordinator
   _hexGrid: {fileID: 1769693922}
+  _tickInterval: 0.1
 --- !u!1 &1367802967
 GameObject:
   m_ObjectHideFlags: 0

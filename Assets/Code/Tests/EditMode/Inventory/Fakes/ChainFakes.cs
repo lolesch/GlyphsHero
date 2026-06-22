@@ -121,6 +121,30 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public WeaponOutputModifier outputMod { get; }
     }
 
+    /// <summary>
+    /// Dual-purpose amplifier mirroring the real AmplifierItem: it is BOTH an IAmplifierItem (a
+    /// weapon-output contributor when chained) and an IAttachmentItem (a passive pawn-stat affix when
+    /// loose). Lets a test exercise the chaining-vs-passive tradeoff on a single item.
+    /// </summary>
+    internal sealed class FakeDualAmplifier : FakeItem, IAmplifierItem, IAttachmentItem
+    {
+        public FakeDualAmplifier(string name, float damageBonus = 2f, float lifeBonus = 5f)
+            : base(name)
+        {
+            outputMod = new WeaponOutputModifier(WeaponOutputStat.Damage,
+                new Modifier(damageBonus, ModifierType.FlatAdd, Guid.NewGuid()));
+            Affix = new PawnStatModifier(PawnStat.LifeMax,
+                new Modifier(lifeBonus, ModifierType.FlatAdd, Guid.NewGuid()));
+        }
+
+        public WeaponOutputModifier outputMod { get; }
+        public PawnStatModifier     Affix     { get; }
+        public IReadOnlyList<PawnStatModifier> affixes => new[] { Affix };
+
+        public void OnUnchained(IPawnStats stats) => stats.ApplyMod(Affix);
+        public void OnChained(IPawnStats stats)   => stats.RemoveMod(Affix);
+    }
+
     internal sealed class FakeShifter : FakeItem, IShifterItem
     {
         public FakeShifter(string name, params Vector2Int[] connectorDirections)

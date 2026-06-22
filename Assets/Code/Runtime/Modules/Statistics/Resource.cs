@@ -46,7 +46,18 @@ namespace Code.Runtime.Modules.Statistics
             return amountToAdd - added;
         }
 
-        //public void Regenerate( float tickRate ) => _ = IncreaseCurrent( Regen * tickRate );
+        /// <summary>
+        /// Regenerates current by <paramref name="ratePerSecond"/> over <paramref name="deltaTime"/>
+        /// seconds, clamped at max. Driven per tick by the combat clock (the rate is the pawn's
+        /// healthRegen/manaRegen stat). A non-positive rate or delta is a no-op.
+        /// </summary>
+        public void Regenerate( float ratePerSecond, float deltaTime )
+        {
+            if( ratePerSecond <= 0f || deltaTime <= 0f )
+                return;
+
+            IncreaseCurrent( ratePerSecond * deltaTime );
+        }
 
         /// <summary>Tries to remove the amount from the current value</summary>
         /// <returns>The remaining amount that was not removed</returns>
