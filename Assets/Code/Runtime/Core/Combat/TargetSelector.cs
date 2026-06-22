@@ -39,6 +39,23 @@ namespace Code.Runtime.Core.Combat
                 yield return occupant;
             }
         }
+
+        /// <summary>
+        /// Every occupant standing on one of the <paramref name="coveredHexes"/> — the hex-occupancy
+        /// damage rule (ADR-0002). The covered set is the output of <see cref="DeliveryResolver"/>;
+        /// damage hits whoever stands on it, the aim anchor only shaped it. Optionally filtered to one
+        /// team (no filter = all teams, unlike <see cref="GetPawnsInRange"/>).
+        /// </summary>
+        public static IEnumerable<IPawn> PawnsOnHexes(IEnumerable<Hex> coveredHexes, IEnumerable<IPawn> occupants, PawnTeam? filter = null)
+        {
+            var covered = coveredHexes as HashSet<Hex> ?? new HashSet<Hex>(coveredHexes);
+            foreach (var occupant in occupants)
+            {
+                if (!covered.Contains(occupant.HexPosition)) continue;
+                if (filter.HasValue && occupant.Team != filter.Value) continue;
+                yield return occupant;
+            }
+        }
     }
 
     //public interface ITargetSelector

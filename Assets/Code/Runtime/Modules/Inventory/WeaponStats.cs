@@ -1,3 +1,5 @@
+using Code.Data.Enums;
+
 namespace Code.Runtime.Modules.Inventory
 {
     /// <summary>
@@ -12,13 +14,16 @@ namespace Code.Runtime.Modules.Inventory
         public float AttackSpeed      { get; }
         public float ResourceCost     { get; }
         public float ResourceGenOnHit { get; }
+        /// <summary>The resolved delivery pattern mask (a Converter would reclassify it here later).</summary>
+        public DeliveryPattern Delivery { get; }
 
-        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit)
+        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit, DeliveryPattern delivery)
         {
             Damage           = damage;
             AttackSpeed      = attackSpeed;
             ResourceCost     = resourceCost;
             ResourceGenOnHit = resourceGenOnHit;
+            Delivery         = delivery;
         }
     }
 }

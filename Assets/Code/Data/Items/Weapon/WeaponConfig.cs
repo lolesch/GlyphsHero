@@ -13,6 +13,10 @@ namespace Code.Data.Items.Weapon
         [field: SerializeField] public float ResourceCost { get; private set; }
         [field: SerializeField] public float ResourceGenOnHit { get; private set; }
 
+        // The weapon's root delivery pattern mask (stackable). Default Single = hit the locked target
+        // (current behavior). Weapons scale by the pawn's Reach and never author Aoe (payload-only).
+        [field: SerializeField] public DeliveryPattern Delivery { get; private set; } = DeliveryPattern.Single;
+
         public WeaponTags tags;
         public int range;
         

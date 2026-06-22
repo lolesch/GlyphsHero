@@ -226,14 +226,29 @@ namespace Code.Runtime.Core.Combat
         {
             if (_target == null) return;
             costResource.ReduceCurrent(stats.ResourceCost);
-            _target.TakeDamage(stats.Damage);
-            genResource.IncreaseCurrent(stats.ResourceGenOnHit);
+
+            // Hex-occupancy damage (ADR-0002): the weapon's delivery mask, anchored at the target,
+            // resolves to a set of covered hexes; every hostile standing on them is hit. A bare Single
+            // mask covers only the target's own hex, so the locked target is hit exactly as before —
+            // no direct-hit special case. (Caveat: hostile-only — a Self-pattern hits no one, since no
+            // enemy stands on the caster's hex; the deliberate self-hurt build-around is broken pending
+            // a self-targeted path. See KNOWN_ISSUES.) Materialise before dealing damage: a kill can
+            // cascade into a registry change, and we must not enumerate allPawns while it mutates.
+            var covered   = DeliveryResolver.CoveredHexes(_pawn.HexPosition, _target.HexPosition, stats.Delivery);
+            var hostiles  = TargetSelector.PawnsOnHexes(covered, _registry.allPawns, EnemyTeam).ToList();
 
             _eventBus.PublishAttacked(_pawn);
-            _eventBus.PublishHit(_pawn, _target);
+            foreach (var hostile in hostiles)
+            {
+                hostile.TakeDamage(stats.Damage);
+                genResource.IncreaseCurrent(stats.ResourceGenOnHit);
+                _eventBus.PublishHit(_pawn, hostile);
+            }
 
             FirePayloads(chain, weapon, stats, costResource, genResource);
         }
+
+        private PawnTeam EnemyTeam => _pawn.Team == PawnTeam.Player ? PawnTeam.Enemy : PawnTeam.Player;
 
         private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, WeaponStats rootStats, Resource costResource, Resource genResource)
         {
@@ -246,7 +261,14 @@ namespace Code.Runtime.Core.Combat
                 var behavior = payload.Payload;
                 costResource.ReduceCurrent(payload.ResourceCost);
 
-                var (targets, hexes) = ResolvePayloadTargets(behavior);
+                // A payload is a child delivery (ADR-0002): its own pattern mask + ShapeSize, anchored
+                // at the locked target, resolved by hex-occupancy like the root weapon. Aoe (a disk) is
+                // available here — it is not authored on weapons.
+                var pattern   = behavior?.Delivery  ?? DeliveryPattern.Single;
+                var shapeSize = behavior?.ShapeSize ?? 0;
+                var covered   = DeliveryResolver.CoveredHexes(_pawn.HexPosition, _target.HexPosition, pattern, shapeSize);
+                var targets   = TargetSelector.PawnsOnHexes(covered, _registry.allPawns, EnemyTeam).ToList();
+
                 foreach (var target in targets)
                 {
                     target.TakeDamage(payload.Damage);
@@ -256,54 +278,11 @@ namespace Code.Runtime.Core.Combat
 
                 if (behavior != null)
                     foreach (var effect in behavior.Effects)
-                        ExecuteEffect(effect, targets, hexes);
+                        ExecuteEffect(effect, targets, covered);
             }
         }
 
-        private (List<IPawn> targets, List<Hex> hexes) ResolvePayloadTargets(PayloadBehavior behavior)
-        {
-            if (behavior == null || _target == null)
-                return FallbackToSingleTarget();
-
-            var otherTeam = _target.Team == PawnTeam.Player ? PawnTeam.Enemy  : PawnTeam.Player;
-            switch (behavior.Targeting)
-            {
-                case PayloadTargeting.Single:
-                    return FallbackToSingleTarget();
-
-                case PayloadTargeting.Self:
-                    return (new List<IPawn> { _pawn }, new List<Hex> { _pawn.HexPosition });
-
-                case PayloadTargeting.Aoe:
-                {
-                    var aoeTargets = TargetSelector
-                        .GetPawnsInRange(_target.HexPosition, behavior.Range, _registry.allPawns, otherTeam).ToList();
-                    return aoeTargets.Count > 0 ? (aoeTargets, _target.HexPosition.HexRange(behavior.Range)) : FallbackToSingleTarget();
-                }
-
-                case PayloadTargeting.Line:
-                {
-                    if (_hexGrid == null) { LogMissingHexGrid(); return FallbackToSingleTarget(); }
-                    var lineHexes  = _pawn.HexPosition.HexLine(_target.HexPosition);
-                    var lineTargets = new List<IPawn>();
-                    foreach (var hex in lineHexes)
-                        foreach (var pawn in TargetSelector.GetPawnsInRange(hex, 0, _registry.allPawns, otherTeam))
-                            if ( !lineTargets.Contains(pawn))
-                                lineTargets.Add(pawn);
-                    return (lineTargets, lineHexes);
-                }
-
-                default:
-                    return FallbackToSingleTarget();
-            }
-        }
-
-        private (List<IPawn>, List<Hex>) FallbackToSingleTarget() =>
-            _target == null
-                ? (new List<IPawn>(), new List<Hex>())
-                : (new List<IPawn> { _target }, new List<Hex> { _target.HexPosition });
-
-        private void ExecuteEffect(PayloadEffect effect, List<IPawn> targets, List<Hex> hexes)
+        private void ExecuteEffect(PayloadEffect effect, List<IPawn> targets, IReadOnlyList<Hex> hexes)
         {
             switch (effect)
             {
@@ -348,7 +327,7 @@ namespace Code.Runtime.Core.Combat
             target.MoveTo(target.HexPosition.Add(step.Scale(effect.Distance)));
         }
 
-        private void ApplyTerrainEffect(TerrainPayloadEffect effect, List<Hex> hexes)
+        private void ApplyTerrainEffect(TerrainPayloadEffect effect, IReadOnlyList<Hex> hexes)
         {
             if (_hexGrid == null) { LogMissingHexGrid(); return; }
             foreach (var hex in hexes)

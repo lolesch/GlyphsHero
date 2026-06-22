@@ -64,3 +64,10 @@ deterministic targeting on both sides).
   target-selection one; renaming/relocating it is owed cleanup.
 - "Range" must be split into **Reach** (acquisition distance, the ADR-0001 pawn stat) and a delivery's
   **shape size** (pattern parameter). The two must never share the word.
+
+**Update (ADR-0003, 2026-06-23):** the three owed-cleanup items above are resolved. The weapon grew a
+stackable `DeliveryPattern` axis; `PayloadTargeting` was renamed to `DeliveryPattern`; `Cone` was
+replaced by `Cleave` (with real hex math). The shape-size knob was *dropped*, not split out — size-free
+patterns scale by Reach (the acquisition gate), and only the payload-side `Aoe` keeps a radius. The
+`Single` direct-hit special case named above is also gone: damage is now uniformly hex-occupancy. See
+**ADR-0003**.

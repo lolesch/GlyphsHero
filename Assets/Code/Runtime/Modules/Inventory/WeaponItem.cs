@@ -1,3 +1,4 @@
+using Code.Data.Enums;
 using Code.Data.Items.Weapon;
 using Code.Runtime.Modules.Statistics;
 
@@ -9,6 +10,7 @@ namespace Code.Runtime.Modules.Inventory
         public MutableFloat          AttackSpeed               { get; }
         public MutableFloat          ResourceCost              { get; }
         public MutableFloat          ResourceGenOnHit          { get; }
+        public DeliveryPattern       Delivery                  { get; }
         public PayloadBehavior       Payload                   { get; }
         public WeaponItem(WeaponConfig config, RotationType rotation = RotationType.None) : base(config, rotation)
         {
@@ -16,10 +18,11 @@ namespace Code.Runtime.Modules.Inventory
             AttackSpeed               = new MutableFloat(config.AttackSpeed);
             ResourceCost              = new MutableFloat(config.ResourceCost);
             ResourceGenOnHit          = new MutableFloat(config.ResourceGenOnHit);
+            Delivery                  = config.Delivery;
             Payload                   = config.Payload;
         }
     }
-    
+
     public interface IWeaponItem : ITetrisItem
     {
         //MutableInt           Range                     { get; }
@@ -27,6 +30,7 @@ namespace Code.Runtime.Modules.Inventory
         MutableFloat         AttackSpeed               { get; }
         MutableFloat         ResourceCost              { get; } // probably needs healthCost and manaCost separately
         MutableFloat         ResourceGenOnHit          { get; }
+        DeliveryPattern      Delivery                  { get; }
         PayloadBehavior Payload { get; }
     }
 }

@@ -107,6 +107,7 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public MutableFloat    AttackSpeed      { get; } = new(1f);
         public MutableFloat    ResourceCost     { get; } = new(0f);
         public MutableFloat    ResourceGenOnHit { get; } = new(0f);
+        public DeliveryPattern Delivery         => DeliveryPattern.Single;
         public PayloadBehavior Payload          => null;
     }
 

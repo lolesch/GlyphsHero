@@ -73,7 +73,8 @@ namespace Code.Runtime.Modules.Inventory
                 }
             }
 
-            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit);
+            // Delivery is carried through unmodified for now; a Converter will reclassify it here.
+            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit, weapon.Delivery);
         }
     }
 }

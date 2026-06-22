@@ -382,9 +382,9 @@ namespace Code.Runtime.Core.Combat
         /// <summary>
         /// Minimum effective reach across the unit's active weapons (ADR-0001, Decision 3): a pawn
         /// closes until <em>all</em> its weapons can fire. Reach is a pawn stat (Decision 2) — a
-        /// range-fixed weapon (melee/adjacent, intrinsic Payload.Range ≤ 1) reaches 1; a range-scaling
-        /// weapon reaches the pawn's range stat. v1 classifies range-fixed by the weapon's existing
-        /// Payload.Range; the full delivery-pattern split (Projectile/Beam/Arc) is the Decision 2b follow-up.
+        /// range-fixed weapon (melee/adjacent) reaches 1; a range-scaling weapon reaches the pawn's
+        /// range stat. v1 still classifies range-fixed by the payload's ShapeSize ≤ 1 placeholder;
+        /// reach classification from the delivery pattern / WeaponTags is the Decision 2c follow-up.
         /// </summary>
         private static int ResolveMinReach(IPawn unit)
         {
@@ -394,7 +394,7 @@ namespace Code.Runtime.Core.Combat
             var minReach = int.MaxValue;
             foreach (var chain in chains)
             {
-                var rangeFixed = chain.Weapon.Payload.Range <= 1;
+                var rangeFixed = chain.Weapon.Payload.ShapeSize <= 1;
                 var reach      = rangeFixed ? 1 : pawnRange;
                 if (reach < minReach) minReach = reach;
             }
