@@ -213,8 +213,12 @@ namespace Code.Runtime.Core.Combat
                 if (!res.Stepped) continue;
 
                 _claimedHexes[unit] = res.Position;
-                // Glide the view over one tick so it lands as the next tick fires (ADR-0001 lerp polish).
-                unit.MoveTo(res.Position, _clock.TickInterval);
+                // Glide the view across the whole inter-step interval so the pawn moves continuously
+                // instead of dashing one hex per tick and idling until the next step. Readiness accrues
+                // at movementSpeed per second, so a cost-c hex takes c / movementSpeed seconds to earn —
+                // glide over exactly that, and the step lands as the next one begins (ADR-0001 lerp polish).
+                var speed = Mathf.Max(unit.Stats.movementSpeed, 0.01f);
+                unit.MoveTo(res.Position, StepCost(unit, res.Position) / speed);
 
                 if (LogMovement)
                     Debug.Log($"[Move] {_pawnIds[unit]} stepped to {res.Position}");

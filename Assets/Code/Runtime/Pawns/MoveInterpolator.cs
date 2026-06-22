@@ -7,10 +7,10 @@ namespace Code.Runtime.Pawns
     /// View-side glide: eases a world position from <c>from</c> to <c>to</c> over a fixed duration.
     /// Pure (no MonoBehaviour, no Grid) so the step lifecycle and clamping are unit-testable; the
     /// easing shape is injected by the caller (a serialized curve at runtime, a plain function in
-    /// tests). The duration is tick-locked by the caller to the <see cref="Core.Combat.CombatClock"/>
-    /// interval, so the glide lands exactly as the next tick fires (ADR-0001 lerp polish). Damage and
-    /// positioning never read this — the simulation is authoritative on the hex (ADR-0002); this is
-    /// cosmetic interpolation between hex states.
+    /// tests). The duration is locked by the caller to the pawn's per-step cadence (hex cost ÷ move
+    /// speed), so the glide spans the whole interval between steps and lands as the next one begins
+    /// (ADR-0001 lerp polish). Damage and positioning never read this — the simulation is authoritative
+    /// on the hex (ADR-0002); this is cosmetic interpolation between hex states.
     /// </summary>
     public sealed class MoveInterpolator
     {

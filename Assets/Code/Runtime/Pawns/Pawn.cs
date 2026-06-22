@@ -20,7 +20,7 @@ namespace Code.Runtime.Pawns
         private Grid _grid;
 
         // View-side glide between hex states. The sim stays authoritative on HexPosition (ADR-0002);
-        // this is cosmetic interpolation, tick-locked by the caller to the CombatClock interval.
+        // this is cosmetic interpolation, locked by the caller to the pawn's per-step cadence.
         private readonly MoveInterpolator _move = new();
         private Func<float, float> _ease;
 
@@ -143,8 +143,8 @@ namespace Code.Runtime.Pawns
         }
 
         // Timed move: commits the logical hex and eases the view from the previous hex over `duration`
-        // seconds (tick-locked by the caller to the CombatClock interval). Damage/range read the hex,
-        // never this glide (ADR-0002).
+        // seconds (the caller locks this to the pawn's per-step cadence so the glide is continuous).
+        // Damage/range read the hex, never this glide (ADR-0002).
         public void MoveTo(Hex hex, float duration)
         {
             var from    = HexPosition;
@@ -152,7 +152,12 @@ namespace Code.Runtime.Pawns
             StepFrom    = from;
             StepTo      = hex;
             if (_grid != null)
-                _move.Begin(from.ToWorld(_grid), hex.ToWorld(_grid), duration);
+            {
+                // Start from where the pawn is actually rendered, not the logical from-hex, so a step
+                // that fires before the previous glide finished continues smoothly instead of snapping.
+                var start = _move.IsMoving ? _move.Position : from.ToWorld(_grid);
+                _move.Begin(start, hex.ToWorld(_grid), duration);
+            }
         }
 
         // View follows model: glide toward the logical hex with an eased, tick-locked step; snap when
