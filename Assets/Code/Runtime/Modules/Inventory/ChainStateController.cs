@@ -30,6 +30,9 @@ namespace Code.Runtime.Modules.Inventory
             foreach (var item in _inventory.Contents.Values)
             {
                 _allTracked.Add(item);
+                // A loose item at startup was never "unchained" from anything; we reuse the
+                // unchained handler because its job is "apply this item's passive pawn-stat" —
+                // the same effect a loose item should have. (Not a transition, just initial apply.)
                 if (!nowChained.Contains(item) && item is IAttachmentItem att)
                     att.OnUnchained(_stats);
             }
