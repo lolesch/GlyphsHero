@@ -213,7 +213,8 @@ namespace Code.Runtime.Core.Combat
                 if (!res.Stepped) continue;
 
                 _claimedHexes[unit] = res.Position;
-                unit.MoveTo(res.Position);
+                // Glide the view over one tick so it lands as the next tick fires (ADR-0001 lerp polish).
+                unit.MoveTo(res.Position, _clock.TickInterval);
 
                 if (LogMovement)
                     Debug.Log($"[Move] {_pawnIds[unit]} stepped to {res.Position}");

@@ -16,8 +16,18 @@ namespace Code.Runtime.Pawns
         [SerializeField, ReadOnly, PreviewIcon] private Sprite _icon;
         // TODO: move pawn effect into config!
         [SerializeField] private PawnEffect _pawnEffects;
-        [SerializeField] private float _moveLerpSpeed = 8f;
+        [SerializeField] private AnimationCurve _moveEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
         private Grid _grid;
+
+        // View-side glide between hex states. The sim stays authoritative on HexPosition (ADR-0002);
+        // this is cosmetic interpolation, tick-locked by the caller to the CombatClock interval.
+        private readonly MoveInterpolator _move = new();
+        private Func<float, float> _ease;
+
+        // The current visual step, exposed read-only so a future telegraph can draw planned movement.
+        public Hex  StepFrom   { get; private set; }
+        public Hex  StepTo     { get; private set; }
+        public bool IsStepping => _move.IsMoving;
 
         //[field: SerializeField] public PawnConfig        Config        { get; private set; }
         [field: SerializeField, ReadOnly] public PawnTeam          Team          { get; private set; }
@@ -122,14 +132,39 @@ namespace Code.Runtime.Pawns
 
         public void TakeDamage(float damage) => Stats.health.ReduceCurrent(damage);
         
-        public void MoveTo(Hex hex) => HexPosition = hex;
+        // Instantaneous move: commits the logical hex and cancels any glide (spawn, teleport, knockback).
+        public void MoveTo(Hex hex)
+        {
+            HexPosition = hex;
+            StepFrom    = hex;
+            StepTo      = hex;
+            if (_grid != null)
+                _move.Begin(hex.ToWorld(_grid), hex.ToWorld(_grid), 0f);
+        }
 
-        // View follows model: smoothly track the logical hex position each frame.
+        // Timed move: commits the logical hex and eases the view from the previous hex over `duration`
+        // seconds (tick-locked by the caller to the CombatClock interval). Damage/range read the hex,
+        // never this glide (ADR-0002).
+        public void MoveTo(Hex hex, float duration)
+        {
+            var from    = HexPosition;
+            HexPosition = hex;
+            StepFrom    = from;
+            StepTo      = hex;
+            if (_grid != null)
+                _move.Begin(from.ToWorld(_grid), hex.ToWorld(_grid), duration);
+        }
+
+        // View follows model: glide toward the logical hex with an eased, tick-locked step; snap when
+        // idle or after a teleport. The sim is authoritative on the hex (ADR-0002).
         private void Update()
         {
             if (_grid == null) return;
-            var targetPos = HexPosition.ToWorld(_grid);
-            transform.position = Vector3.Lerp(transform.position, targetPos, _moveLerpSpeed * Time.deltaTime);
+            _ease ??= _moveEase != null ? _moveEase.Evaluate : t => t;
+
+            transform.position = _move.IsMoving
+                ? _move.Advance(Time.deltaTime, _ease)
+                : HexPosition.ToWorld(_grid);
         }
     }
 
@@ -151,6 +186,7 @@ namespace Code.Runtime.Pawns
     {
         Hex HexPosition { get; }
         void MoveTo(Hex hex);
+        void MoveTo(Hex hex, float duration);
         TerrainCostConfig   MovementCosts { get; }
     }
 }
