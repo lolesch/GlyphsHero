@@ -10,9 +10,12 @@ date: 2026-06-23
 
 # ADR-0003 — Delivery patterns are reach-gated, stackable, and resolve on covered hexes
 
-**Status:** Accepted (2026-06-23)
+**Status:** Accepted (2026-06-23) — *partially refined by ADR-0004 (same day): the `Self` delivery flag
+is relocated to a standalone **Affinity** axis (hostile/friendly/self) + a self/origin **Anchor**
+option; `Single`/`Line`/`Cleave`/`Aoe` remain the canonical patterns.*
 **Companion:** ADR-0002 (hex-occupancy damage + telegraph contract), ADR-0001 (combat tick, Reach as a
-pawn stat). Implements [[architecture-review-2026-06]] Candidate #5 Decision 2b (the delivery-pattern
+pawn stat), [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] (the consolidated model).
+Implements [[architecture-review-2026-06]] Candidate #5 Decision 2b (the delivery-pattern
 split) and resolves the three owed-cleanup items in ADR-0002's Consequences.
 **Context:** ADR-0002 ratified hex-occupancy damage but left the Delivery Pattern axis half-built — the
 root weapon `Fire` was hard-locked `Single`, `PayloadTargeting` was a mis-named enum, and `Cone` had no

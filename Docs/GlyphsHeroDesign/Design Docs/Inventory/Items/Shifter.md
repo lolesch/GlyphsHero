@@ -45,6 +45,8 @@ tags:
 
 One firing stat against one output stat. Every bonus costs something on another axis.
 
+> **Scope:** the Shifter is *only* the economy-trade item. It does **not** modify Target Selection — that is the [[Converter]]'s job (ADR-0004 §1 corrects the earlier mis-assignment). Magnitude is the [[Amplifier]]; type reclassification is the [[Converter]].
+
 | Trade                                   | Meaning                                          |
 | --------------------------------------- | ------------------------------------------------ |
 | `AttackSpeed` ↓ → `Damage` ↑            | Slow but hits hard                               |

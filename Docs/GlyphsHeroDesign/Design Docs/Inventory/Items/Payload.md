@@ -47,13 +47,27 @@ A payload must enable at least one behavior that cannot exist if both weapons ar
 
 ---
 
-# Effect Axes
+# A payload is a child delivery node
 
-| Axis                | Dimensions                                                                                          |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| **Spatial** (where) | Shape · Targeting type · Delivery (instant / projectile) · Constraints (LoS, randomness)            |
-| **Temporal** (when) | Instant · Delayed · Repeating · Duration                                                            |
-| **Effect** (what)   | Status effects · Positioning (push/pull/stun) · Propagation (pierce/split/attach) · Terrain changes |
+A payload doesn't have its own bespoke axes — it is a **child [[Attack Targeting#Delivery|delivery node]]** that recurses through the full attack model (Target Selection × Delivery Pattern × Layers × Affinity × Anchor), triggered on the parent's impact. See [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §4.
+
+The old "propagation behaviors" are just child configurations:
+
+| Behavior  | = child configured as                                              |
+| --------- | ----------------------------------------------------------------- |
+| `Explode` | a child with the `Aoe` pattern                                     |
+| `Return`  | a child with anchor = origin                                       |
+| `Split`   | child count = N parallel — requires a [[Splitter & Merger\|Splitter]] |
+| `Chain`   | nested payloads detonating in sequence (no exclude-already-hit)    |
+| `Fork`    | **removed** (redundant with Split)                                 |
+| `Pierce`  | **moved** to a Delivery Layer (it's about *hitting*, not on-hit)   |
+
+# Effect Axes (what a payload adds beyond geometry)
+
+| Axis                | Dimensions                                                                      |
+| ------------------- | ------------------------------------------------------------------------------- |
+| **Temporal** (when) | Instant · Delayed · Repeating · Duration                                        |
+| **Effect** (what)   | Status effects · Positioning (push/pull/stun) · Terrain changes                 |
 
 ---
 # Affinity Tags

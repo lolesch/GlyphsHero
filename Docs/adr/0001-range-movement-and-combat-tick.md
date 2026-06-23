@@ -63,6 +63,10 @@ This decision forces three commitments, accepted on purpose:
   Arc) reach out to the pawn's range; *range-fixed* deliveries (Adjacent, Dash) are intrinsically
   range-1 regardless of the pawn's range. A Converter that turns Adjacent→Projectile therefore
   *unlocks the pawn's range for that weapon* — an intended build moment.
+  > **WITHDRAWN by [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §2 (2026-06-23).**
+  > Reach is a **single uniform pawn stat**; there is no per-pattern range behaviour and no
+  > Converter "range unlock." "Melee" vs "ranged" is just Reach = 1 vs > 1. Dash is a movement
+  > action, not a delivery. The Converter reshapes *coverage*, not distance.
 - **2c. Range is capped and priced.** Range does **not** scale infinitely and is **not** a freely
   Amplifier-pumpable output stat (that would be monotonic dominance — "+range" is otherwise always
   correct: hit first, get hit last, win the closing race). It is pumpable only via **passive item
@@ -78,7 +82,11 @@ This decision forces three commitments, accepted on purpose:
 ### 3. Movement rule — monotone closing to minimum effective reach — Accepted
 During Resolution a pawn closes to the **minimum effective reach across its active weapons** (so *all*
 of them can fire), with the pawn's range stat as the ceiling for range-scaling deliveries. Movement is
-**monotone closing only — no kiting/retreat in v1.** *Why:* closing-to-minimum guarantees no weapon is
+**monotone closing only — no kiting/retreat in v1.**
+> **AMENDED by [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §2 (2026-06-23):**
+> Reach is uniform across a pawn's weapons, so there is nothing to minimise — a pawn closes to **the
+> pawn's Reach**. The "across active weapons" clause and "the weapon mix authors engagement distance"
+> premise are dropped; the weapon mix authors *coverage/effect*, not distance. *Why:* closing-to-minimum guarantees no weapon is
 dead weight and gives one unambiguous movement target per pawn; the player authors the engagement
 profile (sniper vs. brawler) purely through the weapon mix. Monotone closing eliminates the
 mutual-kite **oscillation deadlock** class entirely (two ranged units can't back-pedal forever), so no

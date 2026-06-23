@@ -45,10 +45,9 @@ Each unit arrives with a unique starter weapon that defines its combat character
 
 ---
 
-# Delivery Mode
+# Trigger
 
-Fires on its own timer by default. Can be modified via [[Item Chaining]].
-Resource costs are paid each time the weapon fires. Acts as a threshold gate
+*When/how often* the weapon fires (renamed from "Delivery Mode" to end the "delivery" overload — see [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §5). Fires on its own timer by default; a [[Reactor]] can replace the timer with a combat event, and a [[Shifter]] trades attack speed. Resource costs are paid each time the weapon fires — a threshold gate.
 ## Weapon Stats
 ### Input Economy
 
@@ -72,10 +71,11 @@ define what the attack produces.
 > Range moved to the **pawn**. Weapons no longer carry a range identity; they vary by payload, shape,
 > and economy.
 
-#### Range (now a pawn stat)
+#### Reach (a pawn stat)
 
-Range lives on the **pawn**, not the weapon — it is the pawn's archetype identity (sniper vs. brawler)
-and the **ceiling for range-scaling deliveries** (Projectile/Beam/Arc). Range-fixed deliveries
-(Adjacent/Dash) ignore it and stay range-1. What a *weapon* still controls is **shape/delivery** (via
-[[Converter]]), so a range-3 pawn can fire a beam, cone, etc. Range is capped, not infinitely scalable,
-and bought only via passive item stats that cost grid space.
+**Reach** lives on the **pawn**, not the weapon — a single, uniform acquisition gate and the pawn's
+archetype identity. **"Melee" vs "ranged" is just Reach = 1 vs Reach > 1** (ADR-0004 §2); there is no
+per-weapon reach and no range-scaling/range-fixed split (ADR-0001 §2b is withdrawn). What a *weapon*
+still controls is the **delivery pattern** (via [[Converter]]) — a Reach-3 pawn can fire a `Line`,
+`Cleave`, etc., but the pattern never changes how far it stands. Reach is capped, not infinitely
+scalable, and bought only via passive item stats that cost grid space.

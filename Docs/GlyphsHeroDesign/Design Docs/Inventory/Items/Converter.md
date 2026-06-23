@@ -40,17 +40,21 @@ tags:
 
 ## Signal Types and Conversion
 
-- **Typed signals** exist for: damage type, target type, delivery mode, resource type
-- Converters change typed signals locally — nearest upstream action node only
-- weapons can have types/Tags that could be converted, converting a 'heavy' hammer to a 'swift' one
+The Converter is the **type-reclassifier** — it changes *what kind* a signal is on any axis, never *how much* (that's the [[Amplifier]]) and never *the trade between stats* (that's the [[Shifter]]). See [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §1.
 
+- **Typed signals** exist for: damage type, **target strategy**, **delivery pattern**, resource type, optionally trigger **event** type.
+- Converters change typed signals locally — nearest upstream action node only.
+- Weapons can carry types/Tags that get converted — converting a 'heavy' hammer to a 'swift' one.
 
-**Converter types for output:**
+**Converter types:**
 
-| Output               | Conversion                               | Notes                                   |
-| -------------------- | ---------------------------------------- | --------------------------------------- |
-| Damage type          | physical → fire / ice / poison / etc.    | Changes damage scaling and interactions |
-| Target pattern       | single → line → AoE                      | Hex-based spread                        |
-| Delivery mode        | instant → projectile → accumulated burst | Trading frequency for impact            |
-| Resource type (gen)  | mana-on-hit → health-on-hit              | Changes what `ResourceGenOnHit` fills   |
-| Resource type (cost) | mana cost → health cost                  | Changes what `ResourceCost` spends      |
+| Axis                 | Conversion                            | Notes                                                  |
+| -------------------- | ------------------------------------- | ------------------------------------------------------ |
+| Damage type          | physical → fire / ice / poison / …    | Changes damage scaling and interactions                |
+| Target strategy      | Nearest → LowestHP → …                | The [[Attack Targeting#Target Selection]] axis (was mis-assigned to the Shifter) |
+| Delivery pattern     | Single → Line → Cleave → …            | Hex coverage geometry — *not* "shape size"             |
+| Resource type (gen)  | mana-on-hit → health-on-hit           | Changes what `ResourceGenOnHit` fills                  |
+| Resource type (cost) | mana cost → health cost               | Changes what `ResourceCost` spends                     |
+| Trigger event        | on-hit → on-crit                      | Reclassifies an *existing* event type; never frequency. Borders the [[Reactor]] (which *installs* an event trigger) |
+
+> **Not the Converter's job:** firing *frequency*/cadence (Weapon timer / [[Reactor]] / [[Shifter]] speed), and stat *magnitude* ([[Amplifier]]). The old "delivery mode: instant → projectile → accumulated burst" row conflated cadence with coverage — removed.

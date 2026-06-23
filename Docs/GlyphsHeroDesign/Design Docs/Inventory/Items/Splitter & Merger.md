@@ -7,6 +7,8 @@ tags:
 
 - **Bidirectional builds** — Amplifiers doing double duty in cycles
 
+> **Role (ADR-0004 §4):** the Splitter is the **enabler of `Split` propagation** — it is what lets a delivery spawn **N parallel child deliveries** instead of one. Without a Splitter in the chain, a [[Payload]] adds a single child delivery node; with one, the impact fans out.
+
 ---
 
 ## Bidirectionality and Cycles
