@@ -230,25 +230,43 @@ namespace Code.Runtime.Core.Combat
             // Hex-occupancy damage (ADR-0002): the weapon's delivery mask, anchored at the target,
             // resolves to a set of covered hexes; every hostile standing on them is hit. A bare Single
             // mask covers only the target's own hex, so the locked target is hit exactly as before —
-            // no direct-hit special case. (Caveat: hostile-only — a Self-pattern hits no one, since no
-            // enemy stands on the caster's hex; the deliberate self-hurt build-around is broken pending
-            // a self-targeted path. See KNOWN_ISSUES.) Materialise before dealing damage: a kill can
-            // cascade into a registry change, and we must not enumerate allPawns while it mutates.
-            var covered   = DeliveryResolver.CoveredHexes(_pawn.HexPosition, _target.HexPosition, stats.Delivery);
-            var hostiles  = TargetSelector.PawnsOnHexes(covered, _registry.allPawns, EnemyTeam).ToList();
+            // no direct-hit special case. The Self flag is self-affinity (ADR-0003): its hexes resolve
+            // against the caster's own team, so the deliberate self-hurt build-around hits the firing
+            // pawn (hostile occupancy can't, since no enemy stands on the caster's hex). Materialise
+            // before dealing damage: a kill can cascade into a registry change, and we must not
+            // enumerate allPawns while it mutates.
+            var covered = DeliveryResolver.CoveredHexes(_pawn.HexPosition, _target.HexPosition, stats.Delivery);
+            var targets = ResolveTargets(covered, stats.Delivery, _pawn.HexPosition, _target.HexPosition);
 
             _eventBus.PublishAttacked(_pawn);
-            foreach (var hostile in hostiles)
+            foreach (var target in targets)
             {
-                hostile.TakeDamage(stats.Damage);
+                target.TakeDamage(stats.Damage);
                 genResource.IncreaseCurrent(stats.ResourceGenOnHit);
-                _eventBus.PublishHit(_pawn, hostile);
+                _eventBus.PublishHit(_pawn, target);
             }
 
             FirePayloads(chain, weapon, stats, costResource, genResource);
         }
 
         private PawnTeam EnemyTeam => _pawn.Team == PawnTeam.Player ? PawnTeam.Enemy : PawnTeam.Player;
+
+        /// <summary>
+        /// The pawns a delivery hits: hostiles standing on the covered footprint, plus any self-affinity
+        /// hits (the caster, for a Self pattern) resolved against the caster's own team (ADR-0003). One
+        /// list so damage and effects treat every hit uniformly. <paramref name="covered"/> is the full
+        /// footprint (the hostile pass naturally skips the caster's own hex — no enemy stands there).
+        /// </summary>
+        private List<IPawn> ResolveTargets(IReadOnlyList<Hex> covered, DeliveryPattern pattern, Hex origin, Hex anchor)
+        {
+            var targets = TargetSelector.PawnsOnHexes(covered, _registry.allPawns, EnemyTeam).ToList();
+
+            var selfHexes = DeliveryResolver.SelfHexes(origin, anchor, pattern);
+            if (selfHexes.Count > 0)
+                targets.AddRange(TargetSelector.PawnsOnHexes(selfHexes, _registry.allPawns, _pawn.Team));
+
+            return targets;
+        }
 
         private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, WeaponStats rootStats, Resource costResource, Resource genResource)
         {
@@ -263,11 +281,11 @@ namespace Code.Runtime.Core.Combat
 
                 // A payload is a child delivery (ADR-0002): its own pattern mask + ShapeSize, anchored
                 // at the locked target, resolved by hex-occupancy like the root weapon. Aoe (a disk) is
-                // available here — it is not authored on weapons.
+                // available here — it is not authored on weapons. Self-affinity hits the caster (ADR-0003).
                 var pattern   = behavior?.Delivery  ?? DeliveryPattern.Single;
                 var shapeSize = behavior?.ShapeSize ?? 0;
                 var covered   = DeliveryResolver.CoveredHexes(_pawn.HexPosition, _target.HexPosition, pattern, shapeSize);
-                var targets   = TargetSelector.PawnsOnHexes(covered, _registry.allPawns, EnemyTeam).ToList();
+                var targets   = ResolveTargets(covered, pattern, _pawn.HexPosition, _target.HexPosition);
 
                 foreach (var target in targets)
                 {

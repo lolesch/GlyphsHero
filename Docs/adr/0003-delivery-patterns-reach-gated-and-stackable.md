@@ -67,12 +67,16 @@ one rule, which is exactly what ADR-0002 asked for.
 - The root weapon now carries a `DeliveryPattern` (default `Single` = unchanged behaviour), so a
   "Beam/Cleave weapon" is expressible. New pure seam `DeliveryResolver` + `DeliveryResolverTests`
   (mutation-proven); `TargetSelector.PawnsOnHexes` is the shared occupancy step.
-- **`Self` self-damage is a regression — flagged for likely revert.** The self-hurt was a *deliberate*
-  mechanic: a player builds around taking damage to drive `OnSelfHit`/threshold effects. Under uniform
-  hostile-occupancy, `Self` covers the caster's own hex, but no enemy ever stands there, so it now hits
-  no one. Restoring it means treating `Self` as a *self-targeted* delivery (hit the caster — an exception
-  to hostile-occupancy, the friendly/self side of the same axis the aura work will need), not filtering
-  it by enemy team. Tracked in KNOWN_ISSUES.
+- **`Self` self-damage was a regression — FIXED (2026-06-23).** The self-hurt is a *deliberate* mechanic:
+  a player builds around taking damage to drive `OnSelfHit`/threshold effects. Under uniform
+  hostile-occupancy, `Self` covers the caster's own hex, but no enemy ever stands there, so it hit no one.
+  Fixed by giving the delivery axis a **self/hostile affinity split**: the new pure
+  `DeliveryResolver.SelfHexes(origin, anchor, mask)` returns the self-affinity subset of the footprint
+  (`mask & SelfAffinity`, today just the origin hex). `PawnCombatController.ResolveTargets` resolves
+  occupancy in two passes — the full footprint filtered to the *enemy* team (hostiles), plus the
+  self-affinity hexes filtered to the caster's *own* team — so a `Self` weapon/payload hits the firing
+  pawn while `Line`/`Cleave`/`Aoe` never strike allies. This is the friendly/self side of the same axis
+  the aura/buff work will extend. Red-green covered by `DeliveryResolverTests.SelfHexes_*`.
 - **Still deferred:** Converter reclassification of the mask; `Homing`; recursive payload child-delivery
   anchoring at the parent's impact hex (payloads still anchor on the locked target); and the
   melee/ranged Reach classification in `CombatCoordinator.ResolveMinReach`, which still uses the
