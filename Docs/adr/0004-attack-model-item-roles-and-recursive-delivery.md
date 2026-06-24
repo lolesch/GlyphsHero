@@ -217,5 +217,7 @@ A `Single` is anchor-locked and ignores pawn occupancy; pawn-blocking is a `Line
   green.** `ChainResolverTests` untouched.
 
 **Still deferred**: the Delivery **Layers** (Pierce/LoS/Homing), the **remaining Converter axes** (damage
-type, target strategy, resource type, trigger event — each blocked on its data system), recursive payload
-anchoring at the impact hex, and `Friendly`-affinity content.
+type, target strategy, trigger event — each blocked on its data system), recursive payload
+anchoring at the impact hex, and `Friendly`-affinity content. *(The **resource-type** axis is taken up
+by **ADR-0005**, which decomposes the economy into Cost / Gain-on-hit / Magnitude and points the
+Converter at the **cost pool**.)*

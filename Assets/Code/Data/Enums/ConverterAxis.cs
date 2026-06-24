@@ -21,5 +21,8 @@ namespace Code.Data.Enums
 
         /// <summary>Reclassify the anchor (e.g. Target → Origin).</summary>
         Anchor,
+
+        /// <summary>Reclassify the cost pool (e.g. Mana → Health = blood magic, ADR-0005 §2).</summary>
+        Resource,
     }
 }

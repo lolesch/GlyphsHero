@@ -9,6 +9,7 @@ namespace Code.Runtime.Modules.Inventory
         public DeliveryPattern ToDelivery { get; }
         public Affinity        ToAffinity { get; }
         public Anchor          ToAnchor   { get; }
+        public ResourceType    ToResource { get; }
 
         public ConverterItem(ConverterConfig config, RotationType rotation = RotationType.None) : base(config, rotation)
         {
@@ -16,13 +17,15 @@ namespace Code.Runtime.Modules.Inventory
             ToDelivery = config.ToDelivery;
             ToAffinity = config.ToAffinity;
             ToAnchor   = config.ToAnchor;
+            ToResource = config.ToResource;
         }
     }
 
     /// <summary>
-    /// The type-reclassifier (ADR-0004 §1): changes the <em>kind</em> of the nearest upstream weapon's
-    /// attack on one axis (<see cref="Axis"/>), never the amount. <see cref="WeaponStatResolver"/> reads
-    /// <see cref="Axis"/> and applies the matching <c>To*</c> value (replace, last-wins).
+    /// The type-reclassifier (ADR-0004 §1, ADR-0005 §2): changes the <em>kind</em> of the nearest
+    /// upstream weapon's attack on one axis (<see cref="Axis"/>), never the amount.
+    /// <see cref="WeaponStatResolver"/> reads <see cref="Axis"/> and applies the matching <c>To*</c>
+    /// value (replace, last-wins).
     /// </summary>
     public interface IConverterItem : ITetrisItem
     {
@@ -30,5 +33,6 @@ namespace Code.Runtime.Modules.Inventory
         DeliveryPattern ToDelivery { get; }
         Affinity        ToAffinity { get; }
         Anchor          ToAnchor   { get; }
+        ResourceType    ToResource { get; }
     }
 }

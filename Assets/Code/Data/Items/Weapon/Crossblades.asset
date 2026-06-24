@@ -28,7 +28,6 @@ MonoBehaviour:
   <BaseDamage>k__BackingField: 5
   <AttackSpeed>k__BackingField: 1
   <ResourceCost>k__BackingField: 10
-  <ResourceGenOnHit>k__BackingField: 2
   tags: 0
   range: 0
   <Payload>k__BackingField:
@@ -38,7 +37,14 @@ MonoBehaviour:
     <Range>k__BackingField: 1
     <Timing>k__BackingField: 0
     <TimingValue>k__BackingField: 0
-    _effects: []
+    _effects:
+    - {rid: 2}
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 2
+      type: {class: ResourcePayloadEffect, ns: Code.Data.Items.Weapon, asm: Data}
+      data:
+        <Pool>k__BackingField: 0
+        <PercentOfDamage>k__BackingField: 0
+        <FlatAmount>k__BackingField: 2

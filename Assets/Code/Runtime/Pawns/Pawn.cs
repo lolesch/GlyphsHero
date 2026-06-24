@@ -51,11 +51,11 @@ namespace Code.Runtime.Pawns
         [Serializable]
         private struct ResolvedAttack
         {
-            public string weapon;
-            public float  damage;
-            public float  attackSpeed;      // attacks per second (fire interval = 1 / attackSpeed)
-            public float  resourceCost;
-            public float  resourceGenOnHit;
+            public string       weapon;
+            public float        damage;
+            public float        attackSpeed;  // attacks per second (fire interval = 1 / attackSpeed)
+            public float        resourceCost;
+            public ResourceType costResource;
         }
 
         // Owns the attachment chain-state seam for this pawn's whole lifetime (placement included):
@@ -121,11 +121,11 @@ namespace Code.Runtime.Pawns
                 var stats = WeaponStatResolver.Resolve(chain);
                 _attacks.Add(new ResolvedAttack
                 {
-                    weapon           = chain.Weapon?.Name ?? "(no weapon)",
-                    damage           = stats.Damage,
-                    attackSpeed      = stats.AttackSpeed,
-                    resourceCost     = stats.ResourceCost,
-                    resourceGenOnHit = stats.ResourceGenOnHit,
+                    weapon       = chain.Weapon?.Name ?? "(no weapon)",
+                    damage       = stats.Damage,
+                    attackSpeed  = stats.AttackSpeed,
+                    resourceCost = stats.ResourceCost,
+                    costResource = stats.CostResource,
                 });
             }
         }

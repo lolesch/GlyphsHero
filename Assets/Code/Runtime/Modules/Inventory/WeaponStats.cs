@@ -10,26 +10,28 @@ namespace Code.Runtime.Modules.Inventory
     /// </summary>
     public readonly struct WeaponStats
     {
-        public float Damage           { get; }
-        public float AttackSpeed      { get; }
-        public float ResourceCost     { get; }
-        public float ResourceGenOnHit { get; }
-        /// <summary>The resolved delivery pattern mask (a Converter would reclassify it here later).</summary>
-        public DeliveryPattern Delivery { get; }
-        /// <summary>Whose side this delivery resolves against (ADR-0004 §3); a Converter would reclassify it here later.</summary>
-        public Affinity Affinity { get; }
-        /// <summary>What the delivery's geometry centres on (ADR-0004 §3), independent of Affinity; a Converter would reclassify it here later.</summary>
-        public Anchor Anchor { get; }
+        public float Damage       { get; }
+        public float AttackSpeed  { get; }
+        public float ResourceCost { get; }
+        /// <summary>Which pool the weapon spends from (ADR-0005 §2). A Converter reclassifies this via ConverterAxis.Resource.</summary>
+        public ResourceType    CostResource { get; }
+        /// <summary>The resolved delivery pattern mask — reclassified by a Delivery Converter (ADR-0004 §1).</summary>
+        public DeliveryPattern Delivery     { get; }
+        /// <summary>Whose side this delivery resolves against (ADR-0004 §3) — reclassified by an Affinity Converter.</summary>
+        public Affinity        Affinity     { get; }
+        /// <summary>What the delivery's geometry centres on (ADR-0004 §3), independent of Affinity — reclassified by an Anchor Converter.</summary>
+        public Anchor          Anchor       { get; }
 
-        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit, DeliveryPattern delivery, Affinity affinity, Anchor anchor)
+        public WeaponStats(float damage, float attackSpeed, float resourceCost, ResourceType costResource,
+            DeliveryPattern delivery, Affinity affinity, Anchor anchor)
         {
-            Damage           = damage;
-            AttackSpeed      = attackSpeed;
-            ResourceCost     = resourceCost;
-            ResourceGenOnHit = resourceGenOnHit;
-            Delivery         = delivery;
-            Affinity         = affinity;
-            Anchor           = anchor;
+            Damage       = damage;
+            AttackSpeed  = attackSpeed;
+            ResourceCost = resourceCost;
+            CostResource = costResource;
+            Delivery     = delivery;
+            Affinity     = affinity;
+            Anchor       = anchor;
         }
     }
 }

@@ -16,6 +16,7 @@ namespace Code.Data.Items.Converter
         [field: SerializeField] public DeliveryPattern ToDelivery  { get; private set; } = DeliveryPattern.Single;
         [field: SerializeField] public Affinity        ToAffinity  { get; private set; } = Affinity.Hostile;
         [field: SerializeField] public Anchor          ToAnchor    { get; private set; } = Anchor.Target;
+        [field: SerializeField] public ResourceType    ToResource  { get; private set; } = ResourceType.Mana;
 
         public override int MaxConnectors => 2;
     }

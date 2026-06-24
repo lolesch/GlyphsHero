@@ -28,6 +28,6 @@ MonoBehaviour:
     value: 5
     type: 1
   <outputStatMod>k__BackingField:
-    stat: 1
+    stat: 0
     value: 3
     type: 1

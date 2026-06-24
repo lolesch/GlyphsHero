@@ -24,22 +24,22 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     internal sealed class StatWeapon : FakeItem, IWeaponItem
     {
         public StatWeapon(float damage = 0f, float attackSpeed = 0f, float resourceCost = 0f,
-            float resourceGenOnHit = 0f, string name = "Weapon") : base(name)
+            ResourceType costResource = ResourceType.Mana, string name = "Weapon") : base(name)
         {
-            Damage           = new MutableFloat(damage);
-            AttackSpeed      = new MutableFloat(attackSpeed);
-            ResourceCost     = new MutableFloat(resourceCost);
-            ResourceGenOnHit = new MutableFloat(resourceGenOnHit);
+            Damage       = new MutableFloat(damage);
+            AttackSpeed  = new MutableFloat(attackSpeed);
+            ResourceCost = new MutableFloat(resourceCost);
+            CostResource = costResource;
         }
 
-        public MutableFloat    Damage           { get; }
-        public MutableFloat    AttackSpeed      { get; }
-        public MutableFloat    ResourceCost     { get; }
-        public MutableFloat    ResourceGenOnHit { get; }
-        public DeliveryPattern Delivery         => DeliveryPattern.Single;
-        public Affinity        Affinity         => Affinity.Hostile;
-        public Anchor          Anchor           => Anchor.Target;
-        public PayloadBehavior Payload          => null;
+        public MutableFloat    Damage       { get; }
+        public MutableFloat    AttackSpeed  { get; }
+        public MutableFloat    ResourceCost { get; }
+        public ResourceType    CostResource { get; }
+        public DeliveryPattern Delivery     => DeliveryPattern.Single;
+        public Affinity        Affinity     => Affinity.Hostile;
+        public Anchor          Anchor       => Anchor.Target;
+        public PayloadBehavior Payload      => null;
     }
 
     internal sealed class StatAmplifier : FakeItem, IAmplifierItem
@@ -66,19 +66,22 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     internal sealed class StatConverter : FakeItem, IConverterItem
     {
         public StatConverter(ConverterAxis axis, DeliveryPattern toDelivery = DeliveryPattern.Single,
-            Affinity toAffinity = Affinity.Hostile, Anchor toAnchor = Anchor.Target, string name = "Converter")
+            Affinity toAffinity = Affinity.Hostile, Anchor toAnchor = Anchor.Target,
+            ResourceType toResource = ResourceType.Mana, string name = "Converter")
             : base(name)
         {
             Axis       = axis;
             ToDelivery = toDelivery;
             ToAffinity = toAffinity;
             ToAnchor   = toAnchor;
+            ToResource = toResource;
         }
 
         public ConverterAxis   Axis       { get; }
         public DeliveryPattern ToDelivery { get; }
         public Affinity        ToAffinity { get; }
         public Anchor          ToAnchor   { get; }
+        public ResourceType    ToResource { get; }
     }
 
     internal sealed class StatReactor : FakeItem, IReactorItem

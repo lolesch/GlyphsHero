@@ -4452,6 +4452,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 07e8abe6d3f44cf6baa6daf80e8f8e9d, type: 2}
   - {fileID: 11400000, guid: f6619da53e6140628fd4dd67213c9866, type: 2}
   - {fileID: 11400000, guid: 7a841dc11f0746a0869a8a7c2270c995, type: 2}
+  - {fileID: 11400000, guid: 52131fb51d194ad28ade9a27cb8b5c39, type: 2}
   lootCount: 3
   <Current>k__BackingField: 0
   currentEncounter: {fileID: 11400000, guid: d9958fecc0ec52949a41a801fc19221c, type: 2}

@@ -118,8 +118,8 @@ namespace Code.Runtime.Core.Combat
 
         private void BuildTimedChain(IItemChain chain, WeaponStats stats)
         {
-            var weapon = chain.Weapon;
-            var (costResource, genResource) = ResolveChainResources(chain);
+            var weapon       = chain.Weapon;
+            var costResource = ResolveChainResources(stats);
 
             // Attack cadence rides the combat clock (Candidate #7): Tick advances this metronome by
             // the master tick interval, firing 0..N times per tick (carrying the remainder), so
@@ -129,7 +129,7 @@ namespace Code.Runtime.Core.Combat
             cadence.OnTick += () =>
             {
                 if (CanFire(stats.ResourceCost, costResource))
-                    Fire(chain, weapon, stats, costResource, genResource);
+                    Fire(chain, weapon, stats, costResource);
             };
 
             _cadences.Add(cadence);
@@ -137,8 +137,8 @@ namespace Code.Runtime.Core.Combat
 
         private void BuildReactor(IReactorItem reactor, IItemChain chain, WeaponStats stats)
         {
-            var weapon = chain.Weapon;
-            var (costResource, genResource) = ResolveChainResources(chain);
+            var weapon       = chain.Weapon;
+            var costResource = ResolveChainResources(stats);
 
             switch (reactor.ReactorType)
             {
@@ -147,7 +147,7 @@ namespace Code.Runtime.Core.Combat
                     void OnHealthChanged(float prev, float curr, float _)
                     {
                         if (curr < prev && CanFire(stats.ResourceCost, costResource))
-                            Fire(chain, weapon, stats, costResource, genResource);
+                            Fire(chain, weapon, stats, costResource);
                     }
                     _pawn.Stats.health.OnCurrentChanged += OnHealthChanged;
                     _cleanupActions.Add(() => _pawn.Stats.health.OnCurrentChanged -= OnHealthChanged);
@@ -158,7 +158,7 @@ namespace Code.Runtime.Core.Combat
                     void OnManaDeplete()
                     {
                         if (CanFire(stats.ResourceCost, costResource))
-                            Fire(chain, weapon, stats, costResource, genResource);
+                            Fire(chain, weapon, stats, costResource);
                     }
                     _pawn.Stats.mana.OnDepleted += OnManaDeplete;
                     _cleanupActions.Add(() => _pawn.Stats.mana.OnDepleted -= OnManaDeplete);
@@ -170,7 +170,7 @@ namespace Code.Runtime.Core.Combat
                     {
                         if (unit.Team == _pawn.Team) return;
                         if (CanFire(stats.ResourceCost, costResource))
-                            Fire(chain, weapon, stats, costResource, genResource);
+                            Fire(chain, weapon, stats, costResource);
                     }
                     _eventBus.OnUnitDefeated += OnDefeated;
                     _cleanupActions.Add(() => _eventBus.OnUnitDefeated -= OnDefeated);
@@ -182,7 +182,7 @@ namespace Code.Runtime.Core.Combat
                     {
                         if (unit.Team != _pawn.Team || unit == _pawn) return;
                         if (CanFire(stats.ResourceCost, costResource))
-                            Fire(chain, weapon, stats, costResource, genResource);
+                            Fire(chain, weapon, stats, costResource);
                     }
                     _eventBus.OnUnitAttacked += OnAllyAttacked;
                     _cleanupActions.Add(() => _eventBus.OnUnitAttacked -= OnAllyAttacked);
@@ -194,7 +194,7 @@ namespace Code.Runtime.Core.Combat
                     {
                         if (unit.Team != _pawn.Team || unit == _pawn) return;
                         if (CanFire(stats.ResourceCost, costResource))
-                            Fire(chain, weapon, stats, costResource, genResource);
+                            Fire(chain, weapon, stats, costResource);
                     }
                     // OnAllyKills = ally attacks that result in a defeat.
                     // The kill event isn't separately tracked; subscribe to OnUnitDefeated
@@ -213,7 +213,7 @@ namespace Code.Runtime.Core.Combat
                         if (_hexGrid == null) return;
                         if (_pawn.HexPosition.Distance(unit.HexPosition) > /*reactor.Range*/ 1) return;
                         if (CanFire(stats.ResourceCost, costResource))
-                            Fire(chain, weapon, stats, costResource, genResource);
+                            Fire(chain, weapon, stats, costResource);
                     }
                     _eventBus.OnUnitDefeated += OnNearbyEnemyDefeated;
                     _cleanupActions.Add(() => _eventBus.OnUnitDefeated -= OnNearbyEnemyDefeated);
@@ -222,7 +222,7 @@ namespace Code.Runtime.Core.Combat
             }
         }
 
-        private void Fire(IItemChain chain, IWeaponItem weapon, WeaponStats stats, Resource costResource, Resource genResource)
+        private void Fire(IItemChain chain, IWeaponItem weapon, WeaponStats stats, Resource costResource)
         {
             if (_target == null) return;
             costResource.ReduceCurrent(stats.ResourceCost);
@@ -242,11 +242,17 @@ namespace Code.Runtime.Core.Combat
             foreach (var target in targets)
             {
                 target.TakeDamage(stats.Damage);
-                genResource.IncreaseCurrent(stats.ResourceGenOnHit);
                 _eventBus.PublishHit(_pawn, target);
             }
 
-            FirePayloads(chain, weapon, stats, costResource, genResource);
+            // Apply the root weapon's on-hit payload effects (e.g. ResourcePayloadEffect for leech/gen).
+            // Gain-on-hit is now authored as an effect on the weapon's Payload.Effects list (ADR-0005 §3).
+            var rootEffects = weapon.Payload?.Effects;
+            if (rootEffects != null)
+                foreach (var effect in rootEffects)
+                    ExecuteEffect(effect, targets, covered, stats.Damage);
+
+            FirePayloads(chain, weapon, stats, costResource);
         }
 
         private PawnTeam EnemyTeam => _pawn.Team == PawnTeam.Player ? PawnTeam.Enemy : PawnTeam.Player;
@@ -263,7 +269,7 @@ namespace Code.Runtime.Core.Combat
             return TargetSelector.PawnsOnHexes(covered, _registry.allPawns, team).ToList();
         }
 
-        private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, WeaponStats rootStats, Resource costResource, Resource genResource)
+        private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, WeaponStats rootStats, Resource costResource)
         {
             foreach (var item in chain.Modifiers)
             {
@@ -278,31 +284,43 @@ namespace Code.Runtime.Core.Combat
                 // Affinity + Anchor, centred on that Anchor (target by default, the firing pawn for
                 // anchor-Origin — a Return) and resolved by hex-occupancy like the root weapon. Anchor is
                 // independent of Affinity (ADR-0004 §3). Aoe (a disk) is available here — not on weapons.
-                var pattern   = behavior?.Delivery  ?? DeliveryPattern.Single;
-                var affinity  = behavior?.Affinity  ?? Affinity.Hostile;
+                var pattern    = behavior?.Delivery ?? DeliveryPattern.Single;
+                var affinity   = behavior?.Affinity ?? Affinity.Hostile;
                 var anchorAxis = behavior?.Anchor   ?? Anchor.Target;
-                var shapeSize = behavior?.ShapeSize ?? 0;
-                var anchor    = DeliveryAnchor.Resolve(_pawn.HexPosition, _target.HexPosition, anchorAxis);
-                var covered   = DeliveryResolver.CoveredHexes(_pawn.HexPosition, anchor, pattern, shapeSize);
-                var targets   = ResolveTargets(covered, affinity);
+                var shapeSize  = behavior?.ShapeSize ?? 0;
+                var anchor     = DeliveryAnchor.Resolve(_pawn.HexPosition, _target.HexPosition, anchorAxis);
+                var covered    = DeliveryResolver.CoveredHexes(_pawn.HexPosition, anchor, pattern, shapeSize);
+                var targets    = ResolveTargets(covered, affinity);
+                var damage     = (float)payload.Damage;
 
                 foreach (var target in targets)
                 {
-                    target.TakeDamage(payload.Damage);
-                    genResource.IncreaseCurrent(payload.ResourceGenOnHit);
+                    target.TakeDamage(damage);
                     _eventBus.PublishHit(_pawn, target);
                 }
 
                 if (behavior != null)
                     foreach (var effect in behavior.Effects)
-                        ExecuteEffect(effect, targets, covered);
+                        ExecuteEffect(effect, targets, covered, damage);
             }
         }
 
-        private void ExecuteEffect(PayloadEffect effect, List<IPawn> targets, IReadOnlyList<Hex> hexes)
+        private void ExecuteEffect(PayloadEffect effect, List<IPawn> targets, IReadOnlyList<Hex> hexes, float damageDealt = 0f)
         {
             switch (effect)
             {
+                case ResourcePayloadEffect resourceEffect:
+                {
+                    // Gain-on-hit: the caster recovers resources once per target hit (ADR-0005 §3).
+                    var pool = resourceEffect.Pool switch
+                    {
+                        ResourceType.Health => _pawn.Stats.health,
+                        _                   => _pawn.Stats.mana,
+                    };
+                    foreach (var _ in targets)
+                        pool.IncreaseCurrent(resourceEffect.ComputeGain(damageDealt));
+                    break;
+                }
                 case StatusPayloadEffect:
                     Debug.LogWarning("[Combat] StatusPayloadEffect not yet wired — status system pending.");
                     break;
@@ -370,11 +388,12 @@ namespace Code.Runtime.Core.Combat
         private static bool CanFire(float resourceCost, Resource costResource) =>
             costResource.CanSpend(resourceCost);
 
-        private (Resource costResource, Resource genResource) ResolveChainResources(IItemChain chain)
-        {
-            // Converter will override resource targets here when implemented.
-            return (_pawn.Stats.mana, _pawn.Stats.mana);
-        }
+        private Resource ResolveChainResources(WeaponStats stats) =>
+            stats.CostResource switch
+            {
+                ResourceType.Health => _pawn.Stats.health,
+                _                   => _pawn.Stats.mana,
+            };
 
         private static void LogMissingHexGrid() =>
             Debug.LogWarning("[Combat] IHexGrid not set — payload targeting falls back to single-target.");

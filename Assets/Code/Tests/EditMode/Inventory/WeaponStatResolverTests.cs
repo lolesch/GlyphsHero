@@ -22,14 +22,13 @@ namespace Code.Tests.EditMode.Inventory
         [Test]
         public void LoneWeapon_ResolvesToWeaponBaseStats()
         {
-            var weapon = new FakeWeapon("Weapon"); // base: dmg 1, spd 1, cost 0, gen 0
+            var weapon = new FakeWeapon("Weapon"); // base: dmg 1, spd 1, cost 0
 
             var stats = WeaponStatResolver.Resolve(weapon, Array.Empty<ITetrisItem>());
 
             stats.Damage.Should().BeApproximately(1f, Tolerance);
             stats.AttackSpeed.Should().BeApproximately(1f, Tolerance);
             stats.ResourceCost.Should().BeApproximately(0f, Tolerance);
-            stats.ResourceGenOnHit.Should().BeApproximately(0f, Tolerance);
         }
 
         [Test]
@@ -42,21 +41,6 @@ namespace Code.Tests.EditMode.Inventory
 
             stats.Damage.Should().BeApproximately(2f, Tolerance);
             stats.AttackSpeed.Should().BeApproximately(1f, Tolerance);
-            stats.ResourceCost.Should().BeApproximately(0f, Tolerance);
-            stats.ResourceGenOnHit.Should().BeApproximately(0f, Tolerance);
-        }
-
-        [Test]
-        public void AmplifierOnResourceGenOnHit_RaisesGenOnly()
-        {
-            var weapon = new StatWeapon(damage: 5f, resourceGenOnHit: 1f);
-            var amp    = new StatAmplifier(Mods.Output(WeaponOutputStat.ResourceGenOnHit, Mods.Flat(2f)));
-
-            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { amp });
-
-            stats.ResourceGenOnHit.Should().BeApproximately(3f, Tolerance);
-            stats.Damage.Should().BeApproximately(5f, Tolerance);
-            stats.AttackSpeed.Should().BeApproximately(0f, Tolerance);
             stats.ResourceCost.Should().BeApproximately(0f, Tolerance);
         }
 
@@ -128,13 +112,12 @@ namespace Code.Tests.EditMode.Inventory
         }
 
         [Test]
-        public void UnbackedInputStat_IsIgnored_NotThrown()
+        public void UnbackedInputStat_ProcChance_IsIgnored_NotThrown()
         {
-            // LifeCost/ProcChance have no WeaponStats field. WeaponUtils throws for them; the resolver
-            // must instead drop them silently so an exotic shifter never crashes combat.
+            // ProcChance has no WeaponStats field — drop it silently so an exotic shifter never crashes.
             var weapon  = new StatWeapon(damage: 5f, attackSpeed: 1f);
             var shifter = new StatShifter(
-                Mods.Input(WeaponInputStat.LifeCost, Mods.Flat(99f)),
+                Mods.Input(WeaponInputStat.ProcChance, Mods.Flat(99f)),
                 Mods.Output(WeaponOutputStat.Damage, Mods.Flat(0f)));
 
             Action act = () => WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { shifter });
@@ -228,6 +211,51 @@ namespace Code.Tests.EditMode.Inventory
             var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { first, second });
 
             stats.Delivery.Should().Be(DeliveryPattern.Line);
+        }
+
+        // ── Converter: Resource axis — cost-pool reclassification (ADR-0005 §2) ──────────
+
+        [Test]
+        public void Converter_Resource_ReclassifiesCostPool()
+        {
+            // Blood-magic: a Mana-cost weapon + a Resource Converter → spends Health instead.
+            // The Converter changes the *kind* (Mana → Health), never the *amount* — Damage untouched.
+            var weapon    = new StatWeapon(damage: 5f, resourceCost: 3f); // CostResource = Mana (default)
+            var converter = new StatConverter(ConverterAxis.Resource, toResource: ResourceType.Health);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.CostResource.Should().Be(ResourceType.Health);
+            stats.Damage.Should().BeApproximately(5f, Tolerance);        // amount unchanged
+            stats.ResourceCost.Should().BeApproximately(3f, Tolerance);  // magnitude unchanged
+        }
+
+        [Test]
+        public void Converter_Resource_OnlyTouchesItsOwnAxis()
+        {
+            // A Resource converter must not bleed into Delivery, Affinity, or Anchor.
+            var weapon    = new StatWeapon();
+            var converter = new StatConverter(ConverterAxis.Resource,
+                toDelivery: DeliveryPattern.Cleave, toAffinity: Affinity.Self,
+                toAnchor: Anchor.Origin, toResource: ResourceType.Health);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.CostResource.Should().Be(ResourceType.Health);
+            stats.Delivery.Should().Be(DeliveryPattern.Single);   // NOT the converter's Cleave
+            stats.Affinity.Should().Be(Affinity.Hostile);         // NOT the converter's Self
+            stats.Anchor.Should().Be(Anchor.Target);              // NOT the converter's Origin
+        }
+
+        [Test]
+        public void Converter_Resource_LoneWeapon_DefaultsToMana()
+        {
+            // A weapon with no Converter keeps its authored CostResource (default Mana).
+            var weapon = new StatWeapon();
+
+            var stats = WeaponStatResolver.Resolve(weapon, Array.Empty<ITetrisItem>());
+
+            stats.CostResource.Should().Be(ResourceType.Mana);
         }
     }
 }

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dd7d6d75d7c40e7a4cb293df48e6610, type: 3}
   m_Name: Converter_Cleave
   m_EditorClassIdentifier: Data::Code.Data.Items.Converter.ConverterConfig
-  <Icon>k__BackingField: {fileID: -978266203, guid: 4197085e07bf81a4a9f3d1a784fc9e91, type: 3}
+  <Icon>k__BackingField: {fileID: -400750722, guid: e7a76feb61718b54eb0968e5dd5c79ec, type: 3}
   <Shape>k__BackingField:
     shapeSize: {x: 1, y: 1}
     cellSize: {x: 16, y: 16}

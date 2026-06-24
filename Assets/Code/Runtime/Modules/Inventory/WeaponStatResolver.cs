@@ -31,29 +31,26 @@ namespace Code.Runtime.Modules.Inventory
 
         public static WeaponStats Resolve(IWeaponItem weapon, IEnumerable<ITetrisItem> contributors)
         {
-            var damage           = new MutableFloat(weapon.Damage);
-            var attackSpeed      = new MutableFloat(weapon.AttackSpeed);
-            var resourceCost     = new MutableFloat(weapon.ResourceCost);
-            var resourceGenOnHit = new MutableFloat(weapon.ResourceGenOnHit);
+            var damage       = new MutableFloat(weapon.Damage);
+            var attackSpeed  = new MutableFloat(weapon.AttackSpeed);
+            var resourceCost = new MutableFloat(weapon.ResourceCost);
 
             // The type axes are seeded from the weapon and reclassified by any chained Converter
-            // (ADR-0004 §1) — kind, never amount. Replace, last-wins: two Delivery converters in a
-            // chain leave the downstream one's value.
-            var delivery = weapon.Delivery;
-            var affinity = weapon.Affinity;
-            var anchor   = weapon.Anchor;
+            // (ADR-0004 §1, ADR-0005 §2) — kind, never amount. Replace, last-wins.
+            var delivery     = weapon.Delivery;
+            var affinity     = weapon.Affinity;
+            var anchor       = weapon.Anchor;
+            var costResource = weapon.CostResource;
 
             void ApplyOutput(WeaponOutputModifier mod)
             {
                 switch (mod.stat)
                 {
-                    case WeaponOutputStat.Damage:           damage.AddModifier(mod.modifier);           break;
-                    case WeaponOutputStat.ResourceGenOnHit: resourceGenOnHit.AddModifier(mod.modifier); break;
+                    case WeaponOutputStat.Damage: damage.AddModifier(mod.modifier); break;
                 }
             }
 
-            // LifeCost/ProcChance have no WeaponStats field — drop them silently rather than throw
-            // (unlike WeaponUtils), so an exotic shifter never crashes stat resolution.
+            // ProcChance has no WeaponStats field — drop it silently so an exotic shifter never crashes.
             void ApplyInput(WeaponInputModifier mod)
             {
                 switch (mod.stat)
@@ -68,9 +65,10 @@ namespace Code.Runtime.Modules.Inventory
             {
                 switch (converter.Axis)
                 {
-                    case ConverterAxis.Delivery: delivery = converter.ToDelivery; break;
-                    case ConverterAxis.Affinity: affinity = converter.ToAffinity; break;
-                    case ConverterAxis.Anchor:   anchor   = converter.ToAnchor;   break;
+                    case ConverterAxis.Delivery: delivery     = converter.ToDelivery; break;
+                    case ConverterAxis.Affinity: affinity     = converter.ToAffinity; break;
+                    case ConverterAxis.Anchor:   anchor       = converter.ToAnchor;   break;
+                    case ConverterAxis.Resource: costResource = converter.ToResource; break;
                 }
             }
 
@@ -94,7 +92,7 @@ namespace Code.Runtime.Modules.Inventory
                 }
             }
 
-            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit, delivery, affinity, anchor);
+            return new WeaponStats(damage, attackSpeed, resourceCost, costResource, delivery, affinity, anchor);
         }
     }
 }

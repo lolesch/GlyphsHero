@@ -11,7 +11,8 @@ namespace Code.Data.Items.Weapon
         [field: SerializeField] public float BaseDamage   { get; private set; }
         [field: SerializeField] public float AttackSpeed  { get; private set; }
         [field: SerializeField] public float ResourceCost { get; private set; }
-        [field: SerializeField] public float ResourceGenOnHit { get; private set; }
+        // Which pool the weapon spends from (ADR-0005 §2). A Converter reclassifies this.
+        [field: SerializeField] public ResourceType CostResource { get; private set; } = ResourceType.Mana;
 
         // The weapon's root delivery pattern mask (stackable). Default Single = hit the locked target
         // (current behavior). Weapons scale by the pawn's Reach and never author Aoe (payload-only).

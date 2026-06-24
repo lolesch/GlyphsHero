@@ -103,14 +103,14 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public FakeWeapon(string name, int width, int height, params Vector2Int[] connectorDirections)
             : base(name, width, height, connectorDirections) { }
 
-        public MutableFloat    Damage           { get; } = new(1f);
-        public MutableFloat    AttackSpeed      { get; } = new(1f);
-        public MutableFloat    ResourceCost     { get; } = new(0f);
-        public MutableFloat    ResourceGenOnHit { get; } = new(0f);
-        public DeliveryPattern Delivery         => DeliveryPattern.Single;
-        public Affinity        Affinity         => Affinity.Hostile;
-        public Anchor          Anchor           => Anchor.Target;
-        public PayloadBehavior Payload          => null;
+        public MutableFloat    Damage       { get; } = new(1f);
+        public MutableFloat    AttackSpeed  { get; } = new(1f);
+        public MutableFloat    ResourceCost { get; } = new(0f);
+        public ResourceType    CostResource => ResourceType.Mana;
+        public DeliveryPattern Delivery     => DeliveryPattern.Single;
+        public Affinity        Affinity     => Affinity.Hostile;
+        public Anchor          Anchor       => Anchor.Target;
+        public PayloadBehavior Payload      => null;
     }
 
     internal sealed class FakeAmplifier : FakeItem, IAmplifierItem

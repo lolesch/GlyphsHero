@@ -6,10 +6,10 @@ The canonical glossary for the auto-battler. Definitions are what a term **is**,
 
 Each item touches one axis (ADR-0004 §1):
 
-- **Weapon** — the chain root; the **base** of every axis (base target strategy, delivery pattern, trigger, the stat economy, an optional payload).
-- **Amplifier** — **magnitude**: scales output stats up.
+- **Weapon** — the chain root; the **base** of every axis (base target strategy, delivery pattern, trigger, the **Cost** side of the economy, an optional payload). It does **not** own Gain-on-hit — that is an on-hit effect (ADR-0005).
+- **Amplifier** — **magnitude**: scales the weapon's output (Damage) up. Gain/leech is **not** a separate output — it scales *through* Damage (ADR-0005 §5). Scaling effects themselves (leech %, status, Aoe) is a deferred *effect-magnitude* axis, not the Amplifier's job.
 - **Shifter** — **economy trade**: moves magnitude between input/output stats. *Nothing else* — it does **not** touch Target Selection.
-- **Converter** — **type reclassification on any axis**: damage type, target strategy, delivery pattern, resource type, optionally a trigger event type. Changes the *kind*, never the *amount*.
+- **Converter** — **type reclassification on any axis**: damage type, target strategy, delivery pattern, **cost pool** (ADR-0005), optionally a trigger event type. Changes the *kind*, never the *amount*.
 - **Payload** — **propagation**: spawns a child delivery node on impact.
 - **Reactor** — **trigger**: replaces the weapon's timer with a combat event.
 
@@ -63,6 +63,29 @@ A delivery whose anchor **re-resolves to the (possibly moved) target at impact**
 
 **Trigger**:
 *When/how often* a weapon fires (was "Delivery Mode" — renamed to end the "delivery" overload, ADR-0004 §5). Owned by the **Weapon** (its timer), the **Reactor** (an event override), and the **Shifter** (attack-speed trades). A **Converter** may reclassify a trigger *event type* (on-hit→on-crit) but never its *frequency*.
+
+## Resource economy
+
+The economy is **three independent axes** (ADR-0005), not one welded pair. *What a weapon spends* and
+*what the caster recovers* are unrelated, and recovery rides the hit.
+
+**Cost**:
+The activation price of a fire — a **pool** (`CostResource`: Mana / Health / …) plus a magnitude — paid
+**once per fire** as the gate that decides whether the attack happens. Owned by the **Weapon/Trigger**
+(the fuel). The **Converter** reclassifies the *pool* (Mana → Health = blood magic); the **Shifter**
+trades the magnitude.
+_Avoid_: assuming Cost is mana — it is whichever pool `CostResource` names.
+
+**Gain-on-hit** (or **Leech / Recovery**):
+What the caster **recovers per hit**, riding the damage event over each covered-hex occupant. **An
+on-hit effect, not a weapon stat** (ADR-0005) — it lives in the Payload-effect family, is grantable and
+stackable like a support, and carries **its own pool**, independent of Cost's. Primary form is **leech =
+a fraction of damage dealt** (composes with damage magnitude); flat-per-hit is the degenerate case.
+_Avoid_: "resource gen on the weapon" — gain left the weapon; a mana-cost weapon can leech health.
+
+**Resource Pool**:
+A pawn-side reservoir an attack spends from or restores to (`ResourceType` — Mana, Health, …). Cost and
+Gain each name a pool independently. `Resource.CanSpend` already guards spending Health as a resource.
 
 ## Space & range
 

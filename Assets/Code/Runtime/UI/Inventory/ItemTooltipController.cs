@@ -188,7 +188,7 @@ namespace Code.Runtime.UI.Inventory
                     sb.AppendLine();
                     sb.AppendLine("<b>Attack:</b>");
                     sb.AppendLine($"  dmg  {(float)w.Damage:F1}   every {(float)w.AttackSpeed:F1}s");
-                    sb.AppendLine($"  cost {(float)w.ResourceCost:F1}   gen  {(float)w.ResourceGenOnHit:F1}");
+                    sb.AppendLine($"  cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
                 }
                 return sb.ToString().TrimEnd();
             }
@@ -264,8 +264,10 @@ namespace Code.Runtime.UI.Inventory
             sb.AppendLine("<b>Attack:</b>");
             sb.AppendLine($"  dmg  {Stat(before.Damage, with.Damage, detailed)}   " +
                           $"{FireRate(chain, before.AttackSpeed, with.AttackSpeed, detailed)}");
-            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}   " +
-                          $"gen  {Stat(before.ResourceGenOnHit, with.ResourceGenOnHit, detailed)}");
+            var poolStr = with.CostResource != before.CostResource
+                ? $" [{before.CostResource}→{with.CostResource}]"
+                : $" [{with.CostResource}]";
+            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}{poolStr}");
         }
 
         // ── Stat formatting ───────────────────────────────────────────────
@@ -290,7 +292,7 @@ namespace Code.Runtime.UI.Inventory
             {
                 case IWeaponItem w:
                     sb.AppendLine($"  dmg  {(float)w.Damage:F1}   spd  {(float)w.AttackSpeed:F1}");
-                    sb.AppendLine($"  cost {(float)w.ResourceCost:F1}   gen  {(float)w.ResourceGenOnHit:F1}");
+                    sb.AppendLine($"  cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
                     if (w.Payload.Condition != ConditionType.None)
                     {
                         sb.AppendLine();
@@ -361,6 +363,7 @@ namespace Code.Runtime.UI.Inventory
                 ConverterAxis.Delivery => $"delivery → {converter.ToDelivery}",
                 ConverterAxis.Affinity => $"affinity → {converter.ToAffinity}",
                 ConverterAxis.Anchor   => $"anchor → {converter.ToAnchor}",
+                ConverterAxis.Resource => $"cost pool → {converter.ToResource}",
                 _                      => converter.Axis.ToString(),
             },
 

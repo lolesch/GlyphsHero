@@ -31,7 +31,6 @@ MonoBehaviour:
   <BaseDamage>k__BackingField: 2
   <AttackSpeed>k__BackingField: 2.5
   <ResourceCost>k__BackingField: 0
-  <ResourceGenOnHit>k__BackingField: 0
   tags: 0
   range: 0
   <Payload>k__BackingField:
