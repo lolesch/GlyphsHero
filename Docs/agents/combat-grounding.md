@@ -28,8 +28,9 @@ Code seams:
   (was `Self`).
 - **`Assets/Code/Runtime/Core/Combat/DeliveryResolver.cs`** — pure geometry, `CoveredHexes(...)`. Where a
   new Pattern (or geometry for a Layer) goes.
-- **`Assets/Code/Runtime/Core/Combat/DeliveryAffinity.cs`** — pure affinity + anchor rules. Where the
-  **independent Anchor axis** (a deferred item) lands; today Self is coupled to self-anchor here.
+- **`Assets/Code/Runtime/Core/Combat/DeliveryAffinity.cs`** — pure affinity rule (`TargetsCasterSide`).
+  The **Anchor axis** is now its own pure seam, **`DeliveryAnchor.cs`** (`Resolve(origin, target, anchor)`),
+  independent of affinity (built 2026-06-24, ADR-0004); a Converter would reclassify either downstream.
 - **`Assets/Code/Runtime/Core/Combat/PawnCombatController.cs`** — the integration point:
   `Fire` / `FirePayloads` / `ResolveTargets` wire pattern + affinity + anchor into damage, and payloads
   recurse here. Where Layers (Pierce/LoS) and recursive payload anchoring get wired.

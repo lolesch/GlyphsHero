@@ -18,8 +18,10 @@ namespace Code.Runtime.Modules.Inventory
         public DeliveryPattern Delivery { get; }
         /// <summary>Whose side this delivery resolves against (ADR-0004 §3); a Converter would reclassify it here later.</summary>
         public Affinity Affinity { get; }
+        /// <summary>What the delivery's geometry centres on (ADR-0004 §3), independent of Affinity; a Converter would reclassify it here later.</summary>
+        public Anchor Anchor { get; }
 
-        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit, DeliveryPattern delivery, Affinity affinity)
+        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit, DeliveryPattern delivery, Affinity affinity, Anchor anchor)
         {
             Damage           = damage;
             AttackSpeed      = attackSpeed;
@@ -27,6 +29,7 @@ namespace Code.Runtime.Modules.Inventory
             ResourceGenOnHit = resourceGenOnHit;
             Delivery         = delivery;
             Affinity         = affinity;
+            Anchor           = anchor;
         }
     }
 }

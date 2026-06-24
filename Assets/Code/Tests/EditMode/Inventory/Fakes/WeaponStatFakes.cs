@@ -38,6 +38,7 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public MutableFloat    ResourceGenOnHit { get; }
         public DeliveryPattern Delivery         => DeliveryPattern.Single;
         public Affinity        Affinity         => Affinity.Hostile;
+        public Anchor          Anchor           => Anchor.Target;
         public PayloadBehavior Payload          => null;
     }
 

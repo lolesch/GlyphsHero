@@ -227,14 +227,14 @@ namespace Code.Runtime.Core.Combat
             if (_target == null) return;
             costResource.ReduceCurrent(stats.ResourceCost);
 
-            // Hex-occupancy damage (ADR-0002/0004): the weapon's delivery mask, anchored per its
-            // Affinity (hostile/friendly → the target; self → the firing pawn), resolves to a set of
-            // covered hexes; every pawn of the affinity's side standing on them is hit. A bare Single
-            // mask covers only the anchor's hex, so a hostile Single hits the locked target exactly as
-            // before. A Self-affinity weapon is self-anchored and hits the caster — the deliberate
-            // self-hurt build-around. Materialise before dealing damage: a kill can cascade into a
-            // registry change, and we must not enumerate allPawns while it mutates.
-            var anchor  = DeliveryAffinity.Anchor(_pawn.HexPosition, _target.HexPosition, stats.Affinity);
+            // Hex-occupancy damage (ADR-0002/0004): the weapon's delivery mask, centred on its Anchor
+            // (target by default, the firing pawn for anchor-Origin) and resolved against its Affinity's
+            // side, gives a set of covered hexes; every pawn of that side standing on them is hit.
+            // Anchor and Affinity are independent (ADR-0004 §3): a bare hostile Single anchored on the
+            // target hits the locked target as before; anchor-Origin + Self is the deliberate self-hurt
+            // build-around (centres on, and hits, the caster). Materialise before dealing damage: a kill
+            // can cascade into a registry change, and we must not enumerate allPawns while it mutates.
+            var anchor  = DeliveryAnchor.Resolve(_pawn.HexPosition, _target.HexPosition, stats.Anchor);
             var covered = DeliveryResolver.CoveredHexes(_pawn.HexPosition, anchor, stats.Delivery);
             var targets = ResolveTargets(covered, stats.Affinity);
 
@@ -254,7 +254,7 @@ namespace Code.Runtime.Core.Combat
         /// <summary>
         /// The pawns a delivery hits: those of its <see cref="Affinity"/> side standing on the covered
         /// footprint (ADR-0004 §3). Hostile resolves against the enemy team; Friendly/Self against the
-        /// caster's own team — so a self-anchored Self delivery hits the firing pawn (the deliberate
+        /// caster's own team — so an Origin-anchored Self delivery hits the firing pawn (the deliberate
         /// self-hurt build-around). Materialised here so a kill-cascade can't mutate allPawns mid-enumerate.
         /// </summary>
         private List<IPawn> ResolveTargets(IReadOnlyList<Hex> covered, Affinity affinity)
@@ -274,13 +274,15 @@ namespace Code.Runtime.Core.Combat
                 var behavior = payload.Payload;
                 costResource.ReduceCurrent(payload.ResourceCost);
 
-                // A payload is a child delivery (ADR-0002/0004): its own pattern mask + ShapeSize + Affinity,
-                // anchored per that affinity (target, or the firing pawn for Self), resolved by hex-occupancy
-                // like the root weapon. Aoe (a disk) is available here — it is not authored on weapons.
+                // A payload is a child delivery (ADR-0002/0004): its own pattern mask + ShapeSize +
+                // Affinity + Anchor, centred on that Anchor (target by default, the firing pawn for
+                // anchor-Origin — a Return) and resolved by hex-occupancy like the root weapon. Anchor is
+                // independent of Affinity (ADR-0004 §3). Aoe (a disk) is available here — not on weapons.
                 var pattern   = behavior?.Delivery  ?? DeliveryPattern.Single;
                 var affinity  = behavior?.Affinity  ?? Affinity.Hostile;
+                var anchorAxis = behavior?.Anchor   ?? Anchor.Target;
                 var shapeSize = behavior?.ShapeSize ?? 0;
-                var anchor    = DeliveryAffinity.Anchor(_pawn.HexPosition, _target.HexPosition, affinity);
+                var anchor    = DeliveryAnchor.Resolve(_pawn.HexPosition, _target.HexPosition, anchorAxis);
                 var covered   = DeliveryResolver.CoveredHexes(_pawn.HexPosition, anchor, pattern, shapeSize);
                 var targets   = ResolveTargets(covered, affinity);
 

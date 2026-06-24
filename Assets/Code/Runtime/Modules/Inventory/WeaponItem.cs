@@ -12,6 +12,7 @@ namespace Code.Runtime.Modules.Inventory
         public MutableFloat          ResourceGenOnHit          { get; }
         public DeliveryPattern       Delivery                  { get; }
         public Affinity              Affinity                  { get; }
+        public Anchor                Anchor                    { get; }
         public PayloadBehavior       Payload                   { get; }
         public WeaponItem(WeaponConfig config, RotationType rotation = RotationType.None) : base(config, rotation)
         {
@@ -21,6 +22,7 @@ namespace Code.Runtime.Modules.Inventory
             ResourceGenOnHit          = new MutableFloat(config.ResourceGenOnHit);
             Delivery                  = config.Delivery;
             Affinity                  = config.Affinity;
+            Anchor                    = config.Anchor;
             Payload                   = config.Payload;
         }
     }
@@ -34,6 +36,7 @@ namespace Code.Runtime.Modules.Inventory
         MutableFloat         ResourceGenOnHit          { get; }
         DeliveryPattern      Delivery                  { get; }
         Affinity             Affinity                  { get; }
+        Anchor               Anchor                    { get; }
         PayloadBehavior Payload { get; }
     }
 }

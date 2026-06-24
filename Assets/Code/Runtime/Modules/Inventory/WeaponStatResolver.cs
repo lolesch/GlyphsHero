@@ -73,8 +73,8 @@ namespace Code.Runtime.Modules.Inventory
                 }
             }
 
-            // Delivery + Affinity are carried through unmodified for now; a Converter will reclassify them here.
-            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit, weapon.Delivery, weapon.Affinity);
+            // Delivery + Affinity + Anchor are carried through unmodified for now; a Converter will reclassify them here.
+            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit, weapon.Delivery, weapon.Affinity, weapon.Anchor);
         }
     }
 }

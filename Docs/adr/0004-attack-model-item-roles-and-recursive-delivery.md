@@ -179,6 +179,21 @@ A `Single` is anchor-locked and ignores pawn occupancy; pawn-blocking is a `Line
   Splitter & Merger.md, Weapon.md, and the ADR-0001/0003 amendment notes.
 - `ChainResolverTests` kept green throughout.
 
-**Still deferred** (unchanged): the Delivery **Layers** (Pierce/LoS/Homing), the independent **Anchor**
-axis (anchor-self for any affinity, e.g. heal-around-me — v1 couples Self→self-anchored), Converter
-reclassification, recursive payload anchoring at the impact hex, and `Friendly`-affinity content.
+### Independent Anchor axis (implemented 2026-06-24, test-first)
+
+- **Done.** Anchor is now its own axis, no longer derived from Affinity. New `Anchor` enum
+  (`Target`/`Origin`, default `Target`) authored on `WeaponConfig`/`PayloadBehavior` and threaded through
+  `WeaponItem`/`IWeaponItem`/`WeaponStats`/`WeaponStatResolver` (mirroring the Affinity threading). The
+  v1 coupling is gone: the anchor logic moved out of `DeliveryAffinity` (slimmed to `TargetsCasterSide`
+  only) into a new pure `DeliveryAnchor.Resolve(origin, target, anchor)`; `PawnCombatController.Fire`/
+  `FirePayloads` centre geometry on `stats.Anchor`/`behavior.Anchor`. Anchor-Origin now combines with
+  **any** affinity — anchor-Origin + Hostile + Aoe = a damage nova, + Friendly = a heal-around-me, +
+  Self = the deliberate self-hurt build-around (which now authors `Anchor.Origin` explicitly rather than
+  getting it implicitly from `Affinity.Self`). No content authored `Affinity.Self`, so nothing relied on
+  the old implicit coupling — clean cut.
+- Red-green via new `DeliveryAnchorTests` (mutation-proven: an "always return target" mutation failed
+  exactly the two Origin tests, the Target test correctly stayed green); the obsolete anchor cases moved
+  out of `DeliveryAffinityTests`. **102/102 green.** `ChainResolverTests` untouched.
+
+**Still deferred**: the Delivery **Layers** (Pierce/LoS/Homing), Converter reclassification, recursive
+payload anchoring at the impact hex, and `Friendly`-affinity content.

@@ -16,7 +16,7 @@ namespace Code.Runtime.Core.Combat
     /// size-free patterns derive their footprint from the origin→anchor geometry alone (Reach gates
     /// acquisition upstream); only <see cref="DeliveryPattern.Aoe"/> consumes
     /// <paramref name="shapeSize"/>. Self-targeting (hit the firing pawn) is the caller anchoring on the
-    /// origin (<see cref="DeliveryAffinity.Anchor"/>) — not a pattern flag.
+    /// origin (<see cref="DeliveryAnchor.Resolve"/>) — not a pattern flag.
     /// </summary>
     public static class DeliveryResolver
     {

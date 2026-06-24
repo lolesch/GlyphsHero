@@ -16,6 +16,9 @@ namespace Code.Data.Items.Weapon
         [field: SerializeField] public DeliveryPattern  Delivery           { get; private set; } = DeliveryPattern.Single;
         // Whose side this child delivery resolves against (ADR-0004 §3). Self = recoil onto the caster.
         [field: SerializeField] public Affinity         Affinity           { get; private set; } = Affinity.Hostile;
+        // Where this child delivery centres (ADR-0004 §3) — independent of Affinity. Origin = a return /
+        // self-anchored detonation on the firing pawn; Target = on the locked target (default).
+        [field: SerializeField] public Anchor           Anchor             { get; private set; } = Anchor.Target;
         [field: SerializeField] public int              ShapeSize          { get; private set; } = 1;
         [field: SerializeField] public PayloadTiming    Timing             { get; private set; }
         [field: SerializeField] public float            TimingValue        { get; private set; }
