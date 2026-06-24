@@ -12,6 +12,7 @@ date: 2026-06-24
 # ADR-0005 — The resource economy decomposes into Cost, Gain-on-hit, and Magnitude
 
 **Status:** Accepted (2026-06-24)
+**Lifecycle:** Implemented 2026-06-24 (both phases, test-first)
 **Companion:** ADR-0004 (attack model — item roles, the delivery decomposition).
 **Refines:** **ADR-0004 §1** — the Weapon "owns the stat economy" and the Converter's deferred
 "resource type" axis. This ADR says *what that economy is* and *which part the Converter reclassifies*.
@@ -141,43 +142,18 @@ multiplier) are blocked on the same damage-type/crit system as the damage-type C
   they are dissolved with the rest in ADR-0006, and a future gain-magnitude gate belongs to the
   **effect-magnitude axis** above.
 
-## Consequences — code deltas (implemented 2026-06-24, test-first; 110/110 green)
+## Consequences
 
-### Phase 1: Cost-pool Converter axis (implemented 2026-06-24, test-first)
+- **Positive:** mana-cost / health-leech (and the inverse) is now expressible — the two pools are
+  independent; leech composes with damage Amplifiers for free (no separate "amplify gain" stat); the
+  half-built typed-cost pair (`LifeCost` silently dropped) is gone; gain lands in the existing
+  `PayloadEffect` family where supports can grant/stack it.
+- **Negative / debts:** the Amplifier's output surface narrows to Damage (Decision 5, accepted); a
+  separate **effect-magnitude axis** (scale leech %, status, `Aoe`) is now owed (Deferred); flat-per-hit
+  gain is un-amplifiable, so the `%`-of-damage form is the intended one.
 
-- **Done.** New `ResourceType { Mana, Health }` enum (`Assets/Code/Data/Enums/ResourceType.cs`).
-- **Done.** `ConverterAxis.Resource` added; `ConverterConfig.ToResource` + `IConverterItem.ToResource` +
-  `ConverterItem.ToResource`. `WeaponConfig.CostResource` (default `Mana`) threaded through
-  `IWeaponItem`/`WeaponItem`/`WeaponStats`. `WeaponStatResolver` seeds `costResource` from the weapon;
-  an `ConverterAxis.Resource` Converter replaces it (last-wins), in the existing contributor loop.
-  `PawnCombatController.ResolveChainResources` now accepts `WeaponStats` and maps `stats.CostResource`
-  → the pawn's pool (`health` or `mana`) for the cost side; the gen side stays `mana` pending Phase 2.
-- **Done.** Tooltip shows `[Pool]` beside the cost line; chain diff shows `[Before→After]` on pool change.
-- **Done.** Inspector `ResolvedAttack` struct adds `costResource` field.
-- **Done.** `WeaponStatFakes`/`ChainFakes` updated (fakes carry `CostResource`).
-- **Done.** 3 new `WeaponStatResolverTests` (`Converter_Resource_*` — red-green, mutation-proven: a
-  no-op `ApplyConversion` Resource case failed exactly those 3, the other 10 stayed green). 110/110 green.
-- **Done.** Play-test asset `Converter_Resource` (Axis=Resource, ToResource=Health = blood-magic),
-  added to `GamePhaseController.itemPool` in SampleScene.
-
-### Phase 2: Gain-on-hit as a ResourcePayloadEffect (implemented 2026-06-24, test-first)
-
-- **Done.** `ResourcePayloadEffect : PayloadEffect { ResourceType Pool; float PercentOfDamage; float FlatAmount }`
-  added to `PayloadEffect.cs` (Data assembly). `ComputeGain(float damageDealt)` is a pure method:
-  leech-% takes priority; flat is the degenerate form. Pool resolution and `IncreaseCurrent` live in combat.
-- **Done.** `ResourceGenOnHit` removed from `WeaponConfig` / `WeaponStats` / `WeaponOutputStat.ResourceGenOnHit`
-  (enum entry gone) / `IWeaponItem` / `WeaponItem`. `genResource` tuple arm dropped from
-  `PawnCombatController.ResolveChainResources` (now returns one `Resource`). The per-hit
-  `genResource.IncreaseCurrent` in `Fire` / `FirePayloads` replaced by `ExecuteEffect` dispatching on
-  `ResourcePayloadEffect` (loops over hit targets, calls `ComputeGain`, calls `pool.IncreaseCurrent`).
-  Root weapon's payload effects applied in `Fire` after the target loop; payload weapon effects already
-  applied in `FirePayloads` after the hit loop.
-- **Done.** `WeaponInputStat.LifeCost` retired (Decision 4): enum value comment-removed, explicit ordinal
-  values kept so `ManaCost = 2` / `ProcChance = 3` don't shift and break authored assets.
-- **Done.** `UnbackedInputStat_IsIgnored` test updated to `ProcChance` (the surviving deferred input stat).
-- **Done.** Asset migration: `WoodenSword` (flat 3 mana/hit) and `Crossblades` (flat 2 mana/hit)
-  re-authored with `ResourcePayloadEffect` entries in `Payload.Effects`; `Stone` orphaned field removed.
-  `Blueberry` amplifier repurposed from `ResourceGenOnHit` (stat 1, now retired) to `Damage` (stat 0).
-- **Done.** Tooltip: `gen` line removed from unchained and chain-diff displays; `Resource` axis gets a
-  proper `cost pool → {pool}` label. 3 new `ResourcePayloadEffectTests` (red-green, mutation-proven:
-  a no-op `ComputeGain` failed all three). **110/110 green.** `ChainResolverTests` untouched.
+**Seams (where this lives in code):** `ConverterAxis.Resource` + `WeaponStats.CostResource`
+(cost-pool reclassification, in `WeaponStatResolver`); `ResourcePayloadEffect.ComputeGain`
+(`PayloadEffect.cs`, the pure on-hit gain seam); `PawnCombatController.ResolveChainResources` /
+`ExecuteEffect` (cost spend + per-hit gain dispatch). Build detail (file-by-file deltas, test counts,
+asset migrations) is in the 2026-06-24 commits — `git log --grep ADR-0005`.

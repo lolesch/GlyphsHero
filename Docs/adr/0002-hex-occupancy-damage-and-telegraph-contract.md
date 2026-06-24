@@ -12,6 +12,7 @@ date: 2026-06-22
 # ADR-0002 — The hex grid is the damage contract; deliveries resolve by occupancy and are telegraphed
 
 **Status:** Accepted (2026-06-22)
+**Lifecycle:** Implemented
 **Companion:** [[CONTEXT]] (Attack resolution vocabulary), ADR-0001 (combat tick, Reach as a pawn stat).
 **Context:** decided while designing the movement lerp polish, when "what is a Beam/Cone if attacks
 are target-locked?" exposed that the runtime had two contradictory damage models half-built.

@@ -2,6 +2,10 @@
 
 The canonical glossary for the auto-battler. Definitions are what a term **is**, not how it's coded. Combat vocabulary is the sharp end — an attack is a sentence across independent axes, "delivery" is recursive, and each chain item reclassifies exactly one axis (ADR-0004).
 
+> This glossary is the **current truth** of each concept. A `(ADR-NNNN)` tag points at the decision that
+> governs it — read the ADR for the *why*, but trust this entry (and the code) for *what is true now*; an
+> ADR body is frozen at decision time (see `Docs/adr/README.md`).
+
 ## Chain item roles
 
 Each item touches one axis (ADR-0004 §1):
@@ -15,14 +19,14 @@ Each item touches one axis (ADR-0004 §1):
 
 ## Attack resolution
 
-**Attack**:
+**Attack** (ADR-0004):
 One weapon firing, resolved as a sentence across independent axes — Target Selection → Delivery → Propagation. Each axis is reclassified by a different chain item without disturbing the others.
 
-**Aim Anchor** (or **Anchor**):
+**Aim Anchor** (or **Anchor**) (ADR-0004 §3):
 What an attack's delivery centres on — by default the chosen target (a pawn or hex), but a delivery may anchor on **self/origin** instead. Consumed by Delivery as **geometry that orients the pattern**, never as the list of who gets hit.
 _Avoid_: "the target" when you mean the anchor; the locked pawn is only hit because it stands on a covered hex.
 
-**Target Selection**:
+**Target Selection** (ADR-0004):
 The axis that picks the aim anchor (Nearest, LowestHP, RandomWithinShape, self/origin, …). One strategy per weapon at resolution time. Reclassified by a **Converter** (replaces, never stacks) — *not* the Shifter.
 
 **Delivery**:

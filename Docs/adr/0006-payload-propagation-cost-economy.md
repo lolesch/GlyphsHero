@@ -11,8 +11,10 @@ date: 2026-06-24
 
 # ADR-0006 — Payload propagation is a fail-forward cost economy; the `ConditionType` draft is dissolved
 
-**Status:** Accepted (2026-06-24) — **design only, not yet implemented** (unlike ADR-0004/0005, which
-landed same-day). Implementation is a set of bounded follow-up slices (see Consequences).
+**Status:** Accepted (2026-06-24)
+**Lifecycle:** **Design-only — not implemented** (unlike ADR-0004/0005, which landed same-day).
+Implementation is a set of bounded follow-up slices (see Consequences); the planned-deltas section
+below is therefore a **spec**, not a build log.
 **Companion:** ADR-0004 (attack model — §4 makes a Payload a child delivery node), ADR-0005 (the
 resource economy — Cost is one pool + magnitude).
 **Refines:** ADR-0004 §4 (what gates a child delivery node) and the half-built

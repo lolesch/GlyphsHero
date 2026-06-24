@@ -12,10 +12,11 @@ date: 2026-06-23
 # ADR-0004 — Attack model: item roles, the delivery decomposition, and the recursive-delivery collapse
 
 **Status:** Accepted (2026-06-23)
+**Lifecycle:** Implemented 2026-06-24
+**Amends:** ADR-0001 §2b (withdrawn), §3 (amended) — see Decision 2; ADR-0003 (`Self` delivery flag
+relocated to the new Affinity axis) — see Decision 3.
 **Companion:** ADR-0001 (combat tick, Reach as a pawn stat), ADR-0002 (hex-occupancy damage +
 telegraph), ADR-0003 (delivery patterns reach-gated + stackable).
-**Refines / supersedes:** **ADR-0001 §2b is withdrawn** and **§3 amended** (see Decision 2);
-**ADR-0003's `Self` delivery flag is relocated** to the new Affinity axis (see Decision 3).
 **Context:** the attack vocabulary had drifted across ADR-0002/0003 and several reworks. Two flat lists
 of "delivery patterns" coexisted (Attack Targeting.md's *Projectile/Beam/Arc/Dash/Adjacent/Homing* vs.
 the shipped *Single/Line/Cleave/Self/Aoe* mask), "delivery" named two different axes, target-selection

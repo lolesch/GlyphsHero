@@ -6,7 +6,10 @@ How the engineering skills should consume this repo's domain documentation when 
 
 - **`CLAUDE.md`** at the repo root — the current high-level architecture and domain reference (assembly layering, core runtime flows, the chain system, conventions). Read this first.
 - **`CONTEXT.md`** at the repo root, if it exists — the glossary / ubiquitous language.
-- **`Docs/adr/`**, if it exists — read ADRs that touch the area you're about to work in.
+- **`Docs/adr/`**, if it exists — read ADRs that touch the area you're about to work in. Read
+  **`Docs/adr/README.md`** first: an ADR **body is frozen at decision time**, so trust the **header**
+  (`Lifecycle`, `Amended-by`) for live state — a frozen Decision may have been withdrawn or amended by a
+  later ADR. The *current* truth of a concept lives in `CONTEXT.md`, which points at the governing ADR.
 
 If `CONTEXT.md` or `Docs/adr/` don't exist yet, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
 
