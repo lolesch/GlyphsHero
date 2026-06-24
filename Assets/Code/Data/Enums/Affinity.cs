@@ -1,29 +1,33 @@
+using System;
+
 namespace Code.Data.Enums
 {
     /// <summary>
     /// Whose occupancy a delivery counts — the Affinity axis (ADR-0004 §3), promoted out of the old
-    /// <c>DeliveryPattern.Self</c> flag. <see cref="Hostile"/> resolves against the enemy team;
-    /// <see cref="Friendly"/> and <see cref="Self"/> resolve against the caster's own side.
+    /// <c>DeliveryPattern.Self</c> flag.
     ///
-    /// <see cref="Friendly"/> and <see cref="Self"/> are intentionally separate values:
-    /// <see cref="Friendly"/> hits allies <em>excluding</em> the caster; <see cref="Self"/> hits only
-    /// the caster. An "all-friendlies-including-self" effect needs two deliveries (one Friendly, one
-    /// Self). A <c>[Flags]</c> upgrade would let callers combine them, but <see cref="Hostile"/> is
-    /// currently 0 — promoting to power-of-two values would break serialised asset data.
+    /// Values are powers of two so callers can combine them: <c>Friendly | Self</c> hits all allies
+    /// including the caster; <c>Hostile | Self</c> is a recoil that damages both an enemy and yourself.
+    /// Composite affinities require the combat side to call <see cref="DeliveryAffinity"/> methods
+    /// per-bit — <see cref="ResolveTargets"/> in <c>PawnCombatController</c> currently handles only
+    /// single-bit affinities (v1 limitation, see TODO there).
     ///
-    /// One affinity per delivery: a "recoil" (hit an enemy <em>and</em> hurt yourself) is expressed as a
-    /// self-affinity payload child delivery. Independent of the delivery <see cref="DeliveryPattern"/>
-    /// (geometry) and <see cref="Anchor"/> (where the geometry centres).
+    /// Independent of the delivery <see cref="DeliveryPattern"/> (geometry) and
+    /// <see cref="Anchor"/> (where the geometry centres).
     /// </summary>
+    [Flags]
     public enum Affinity
     {
-        /// <summary>Default (0) — hits the enemy team standing on the covered hexes.</summary>
-        Hostile,
+        /// <summary>Zero — no affinity. Not a valid delivery value; used as a default/sentinel only.</summary>
+        None = 0,
+
+        /// <summary>Hits the enemy team standing on the covered hexes.</summary>
+        Hostile = 1 << 0,
 
         /// <summary>Hits the caster's allies, <em>not</em> the caster itself — heals/buffs.</summary>
-        Friendly,
+        Friendly = 1 << 1,
 
         /// <summary>Hits only the caster — recoil or self-buff build-around.</summary>
-        Self,
+        Self = 1 << 2,
     }
 }

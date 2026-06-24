@@ -263,6 +263,8 @@ namespace Code.Runtime.Core.Combat
         /// caster's own team — so an Origin-anchored Self delivery hits the firing pawn (the deliberate
         /// self-hurt build-around). Materialised here so a kill-cascade can't mutate allPawns mid-enumerate.
         /// </summary>
+        // TODO: composite affinities (e.g. Hostile|Self for recoil) require iterating both teams and
+        // deduplicating. For now only single-bit affinities are supported; the caster-side check wins.
         private List<IPawn> ResolveTargets(IReadOnlyList<Hex> covered, Affinity affinity)
         {
             var team = DeliveryAffinity.TargetsCasterSide(affinity) ? _pawn.Team : EnemyTeam;

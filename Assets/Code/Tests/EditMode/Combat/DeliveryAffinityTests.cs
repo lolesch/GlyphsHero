@@ -16,9 +16,27 @@ namespace Code.Tests.EditMode.Combat
         [Test]
         public void TargetsCasterSide_OnlyForFriendlyAndSelf()
         {
+            DeliveryAffinity.TargetsCasterSide(Affinity.None).Should().BeFalse();
             DeliveryAffinity.TargetsCasterSide(Affinity.Hostile).Should().BeFalse();
             DeliveryAffinity.TargetsCasterSide(Affinity.Friendly).Should().BeTrue();
             DeliveryAffinity.TargetsCasterSide(Affinity.Self).Should().BeTrue();
+        }
+
+        [Test]
+        public void TargetsCasterSide_TrueForAnyCompositeContainingFriendlyOrSelf()
+        {
+            DeliveryAffinity.TargetsCasterSide(Affinity.Friendly | Affinity.Self).Should().BeTrue();
+            DeliveryAffinity.TargetsCasterSide(Affinity.Hostile | Affinity.Self).Should().BeTrue();
+        }
+
+        [Test]
+        public void TargetsEnemySide_OnlyForHostile()
+        {
+            DeliveryAffinity.TargetsEnemySide(Affinity.None).Should().BeFalse();
+            DeliveryAffinity.TargetsEnemySide(Affinity.Hostile).Should().BeTrue();
+            DeliveryAffinity.TargetsEnemySide(Affinity.Friendly).Should().BeFalse();
+            DeliveryAffinity.TargetsEnemySide(Affinity.Self).Should().BeFalse();
+            DeliveryAffinity.TargetsEnemySide(Affinity.Hostile | Affinity.Self).Should().BeTrue();
         }
     }
 }

@@ -9,10 +9,12 @@ namespace Code.Runtime.Core.Combat
     /// </summary>
     public static class DeliveryAffinity
     {
-        /// <summary>
-        /// True when the delivery resolves against the caster's <b>own side</b> (friendly or self)
-        /// rather than the enemy team.
-        /// </summary>
-        public static bool TargetsCasterSide(Affinity affinity) => affinity != Affinity.Hostile;
+        /// <summary>True when any bit in the affinity resolves against the caster's own side.</summary>
+        public static bool TargetsCasterSide(Affinity affinity)
+            => (affinity & (Affinity.Friendly | Affinity.Self)) != 0;
+
+        /// <summary>True when any bit in the affinity resolves against the enemy team.</summary>
+        public static bool TargetsEnemySide(Affinity affinity)
+            => (affinity & Affinity.Hostile) != 0;
     }
 }

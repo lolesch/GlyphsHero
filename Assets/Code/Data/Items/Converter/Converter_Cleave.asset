@@ -29,5 +29,5 @@ MonoBehaviour:
     type: 0
   <Axis>k__BackingField: 0
   <ToDelivery>k__BackingField: 4
-  <ToAffinity>k__BackingField: 0
+  <ToAffinity>k__BackingField: 1
   <ToAnchor>k__BackingField: 0
