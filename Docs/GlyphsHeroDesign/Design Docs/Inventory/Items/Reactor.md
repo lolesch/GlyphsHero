@@ -41,7 +41,22 @@ tags:
 
 ---
 
-### Notable Patterns (from reference games)
+### Cost lever — event frequency taxes the fire
+
+A Reactor doesn't fire for free: it applies a **cost multiplier scaled by how common its event is**
+(common event → bigger multiplier), so cheap high-frequency triggering is taxed and a weapon on a Reactor
+still can't fire without the (scaled) resource to spend ([[0006-payload-propagation-cost-economy|ADR-0006]]
+§6). Mechanically the Reactor is just a **cost `Modifier`** on the weapon's base cost — the same kind of
+thing a Payload is, differing only in *where it sits* (the root/trigger) and *what sets its value* (event
+rarity). This is the Reactor's balance lever; it is **not** a threshold/predicate.
+
+### Watch-conditions (deferred — the Trigger-axis condition model)
+
+The patterns below are **watch-conditions** — they observe a value and fire when it crosses. They are the
+home of the old `ConditionType` watch predicates (`ResourceBelow/Above/Full/Depleted`), which ADR-0006
+removed from the Payload because they were never a payload concern. They belong here, on the Reactor /
+Trigger axis, and are **deferred to a future Trigger-condition ADR** (the `ReactorConfig.ConditionType`
+field is stubbed out, waiting for it).
 
 **Every X seconds during [state]** _(Backpack Battles)_ — a timer that only runs while a condition is active. Creates a build goal: enter the state, then the Reactor fires.
 
@@ -53,6 +68,6 @@ tags:
 
 ## Deferred
 
-**Counter-based triggers** (every N hits/kills) — valid as a condition on Reactor or Payload, not as a standalone trigger on root chains. Explore as a condition type when payload conditions are extended.
+**Counter-based triggers** (every N hits/kills) — a watch-condition on the **Reactor** (the Payload gate is now purely economic, ADR-0006). Explore as part of the deferred Trigger-condition ADR above.
 
 **Response delay** — fire X seconds after the condition is met. Underexplored in all reference games. Revisit when chain resolution timing is designed.

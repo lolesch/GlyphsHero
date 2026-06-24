@@ -134,7 +134,12 @@ multiplier) are blocked on the same damage-type/crit system as the damage-type C
   distinct axis from the Amplifier's weapon-output magnitude; waits on the Phase-2 effect system. Future
   weapon-output stats (crit) are blocked on a crit/damage-type system.
 - The mana-hardcoded **payload conditions** (`ConditionType.ResourceFull/Below/Above` read
-  `_pawn.Stats.mana`) — a separate generalisation, untouched here.
+  `_pawn.Stats.mana`) — **superseded by [[0006-payload-propagation-cost-economy|ADR-0006]]**, which
+  dissolves the whole `ConditionType` draft rather than generalising it (the watch predicates move to the
+  Reactor/Trigger axis, the payload gate becomes economic). This Phase also **orphaned**
+  `ConditionType.ResourceGenBelow/Above` — they gated on the now-removed `ResourceGenOnHit` weapon stat;
+  they are dissolved with the rest in ADR-0006, and a future gain-magnitude gate belongs to the
+  **effect-magnitude axis** above.
 
 ## Consequences — code deltas (implemented 2026-06-24, test-first; 110/110 green)
 

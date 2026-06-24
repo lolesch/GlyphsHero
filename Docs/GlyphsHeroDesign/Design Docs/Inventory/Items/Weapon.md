@@ -47,7 +47,7 @@ Each unit arrives with a unique starter weapon that defines its combat character
 
 # Trigger
 
-*When/how often* the weapon fires (renamed from "Delivery Mode" to end the "delivery" overload — see [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §5). Fires on its own timer by default; a [[Reactor]] can replace the timer with a combat event, and a [[Shifter]] trades attack speed. Resource costs are paid each time the weapon fires — a threshold gate.
+*When/how often* the weapon fires (renamed from "Delivery Mode" to end the "delivery" overload — see [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] §5). Fires on its own timer by default; a [[Reactor]] can replace the timer with a combat event, and a [[Shifter]] trades attack speed. The fire cost is paid each time — the gate that decides whether the attack happens.
 ## Weapon Stats
 ### Input Economy
 
@@ -55,17 +55,18 @@ define when and at what cost the weapon attacks.
 A weapons internal timer based on Attack Speed can be overwritten by a [[Reactor]], forcing it to instead fire on external [[Combat#Combat Events|Combat Events]].
 
 - Attack Speed
-- Life Cost
-- Mana Cost
-- Proc Chance -> Reliability of secondary effects — payload firing chance, gen proc chance.
+- **Cost** — one magnitude over the **`CostResource`** pool (Mana / Health / …; a [[Converter]] reclassifies the pool — ADR-0005 §1–2). The half-built `LifeCost`/`ManaCost` pair is retired (ADR-0005 §4). At fire time this base seeds a `MutableFloat` that [[Reactor]] and [[Payload]] **cost modifiers** scale, drained fail-forward across the propagation tree ([[0006-payload-propagation-cost-economy|ADR-0006]]).
+- Proc Chance — **parked** (kept, unimplemented) for the future weapon-economy ADR. *No longer* the payload-firing gate — payloads are gated **economically** (ADR-0006), not by a roll.
 ### Output Economy
 
 define what the attack produces.
 
 - Damage
-- Life On Hit / Leech
-- Mana On Hit
 - StatusApplication
+
+> **Gain / leech is not a weapon output stat** (ADR-0005 §3). Recovery-on-hit left the weapon and became a
+> per-hit **`ResourcePayloadEffect`** (leech = % of damage, so a Damage [[Amplifier]] *is* a sustain
+> amplifier). A mana-cost weapon can leech health — Cost's pool and Gain's pool are independent.
 
 > **Range is NOT a weapon output stat** — see [[0001-range-movement-and-combat-tick|ADR-0001]] §2.
 > Range moved to the **pawn**. Weapons no longer carry a range identity; they vary by payload, shape,

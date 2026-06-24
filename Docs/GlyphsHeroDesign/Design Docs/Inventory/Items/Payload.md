@@ -5,8 +5,7 @@ tags:
   - Inventory
 ---
 
-**Condition:** proc chance and resource cost are the default gates. Chain propagation stops if unmet. 
-A payload must enable at least one behavior that cannot exist if both weapons are used independently.
+**Gate:** a payload is gated **economically**, not by a predicate (see [[0006-payload-propagation-cost-economy|ADR-0006]]). It adds a **cost modifier** to the attack; propagation pays as it walks the tree and **fail-forwards** — if the running pool can't cover a payload's marginal cost, that payload *and its subtree* fizzle while the rest of the attack still fires. A payload must enable at least one behavior that cannot exist if both weapons are used independently.
 # Definition
 
 > [!tldr]+ Description
@@ -21,7 +20,7 @@ A payload must enable at least one behavior that cannot exist if both weapons ar
 
 > [!warning]- Risk - *What are the punishments*
 > [[Payload#Affinity Tags|Affinity Tags]] mismatch lowers the impact.
-> Stopping [[Item Chaining|Chain Propagation]] by unmet condition.
+> Out-pricing the pool — the payload (and its subtree) fizzles while the rest of the attack fires (fail-forward, [[0006-payload-propagation-cost-economy|ADR-0006]]).
 > Bad resource management 
 
 > [!fail]- Opposition - *What counters this?*
@@ -30,7 +29,7 @@ A payload must enable at least one behavior that cannot exist if both weapons ar
 
 > [!error]- Polarity - *What increases its weakness?*
 > Small pools with shared [[Payload#Affinity Tags|Affinity Tags]] -> more mismatch.
-> High conditions to meet. 
+> Deep chains behind `PercentMult` cost modifiers -> the payload costs more the deeper it sits.
 > High activation penalties. 
 
 > [!example]- Progress - *What is the goal*
@@ -61,6 +60,12 @@ The old "propagation behaviors" are just child configurations:
 | `Chain`   | nested payloads detonating in sequence (no exclude-already-hit)    |
 | `Fork`    | **removed** (redundant with Split)                                 |
 | `Pierce`  | **moved** to a Delivery Layer (it's about *hitting*, not on-hit)   |
+
+# Propagation cost (the gate)
+
+A payload's only gate is **cost** ([[0006-payload-propagation-cost-economy|ADR-0006]]). It carries a cost **`Modifier`** (`FlatAdd` / `PercentAdd` / `PercentMult`) on the weapon's per-fire cost — *not* a pool of its own, *not* a predicate. The attack is a **tree**; resolution walks it depth-first paying from the weapon's one `CostResource` pool, and **fail-forwards**: an unaffordable node is skipped and its subtree pruned (spending nothing), so the rest of the attack still fires. A [[Splitter & Merger|Splitter]] funds its branches **highest-cost-first** off the shared pool. `PercentAdd` measures off the effective base (no compounding); `PercentMult` compounds — the deliberate "deeper costs more" lever. The cost **uses** the stat system's `MutableFloat`, so it composes exactly like every other stat.
+
+> Proc-chance is **parked** (kept, not deleted) for the future weapon-economy ADR — not a propagation gate, to keep combat deterministic ([[0001-range-movement-and-combat-tick|ADR-0001]]).
 
 # Effect Axes (what a payload adds beyond geometry)
 

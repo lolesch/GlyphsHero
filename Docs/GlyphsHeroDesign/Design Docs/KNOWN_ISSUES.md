@@ -73,7 +73,7 @@
 ## Deferred (Out of Scope — Revisit Later)
 
 - [ ] Splitter / Merger — branching and merging chains, highest complexity debt
-- [ ] Counter-based conditions (every N hits/kills) — valid as a condition type on Reactor or Payload, not as a standalone root trigger. Explore as condition type extension when payload conditions are expanded.
+- [ ] Counter-based conditions (every N hits/kills) — a watch-condition on the **Reactor** (the Payload gate is purely economic since ADR-0006), not a standalone root trigger. Explore in the deferred Trigger-condition ADR.
 
 ---
 

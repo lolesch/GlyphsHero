@@ -53,8 +53,12 @@ The hex set a delivery affects. **Damage is resolved by occupancy of this set**,
 **Propagation**:
 What an attack spawns **on impact** — child delivery nodes, added by Payloads (ADR-0004 §4). **Not a behavior enum**: the only primitive is **child count** (1, or N via the Splitter item). The old behaviors are child configurations — **Split** = N parallel children (needs a Splitter), **Chain** = nested payloads detonating in sequence (no exclude-already-hit — each still damages everyone in its footprint), **Explode** = an `Aoe`-pattern child, **Return** = an origin-anchored child. **Fork** is removed; **Pierce** moved to a delivery Layer.
 
+**Propagation Cost** (fail-forward):
+What gates whether a child delivery node fires (ADR-0006). An attack is a **tree** of delivery nodes; resolution walks it depth-first, **paying as it goes** from the weapon's one `CostResource` pool. A node whose **marginal** cost the pool can't cover is **skipped, pruning its subtree** (it spends nothing) — *fail-forward*: "the weapon fired, but not the extra bomb." Linear order is propagation order; a **Splitter** funds siblings **highest-(subtree)-cost-first** off the shared pool. The per-fire cost **uses** a `MutableFloat` seeded with the weapon's base cost; **Reactors and Payloads are cost `Modifier`s** (FlatAdd/PercentAdd/PercentMult) on it — "deeper costs more" is the opt-in `PercentMult`. There is **no** payload predicate/`ConditionType` (dissolved in ADR-0006); watch-conditions are a Reactor/Trigger concern, status is its own system.
+_Avoid_: "payload condition" for a predicate — the gate is economic.
+
 **Payload**:
-A chained item that adds a **child delivery node** (its own four delivery things) triggered on impact. A nested delivery node, not a free-firing second weapon.
+A chained item that adds a **child delivery node** (its own four delivery things) triggered on impact. A nested delivery node, not a free-firing second weapon. Whether it fires is gated by the **propagation cost** (ADR-0006): its cost `Modifier` must be affordable from the running pool, else it and its subtree fizzle. It carries **no pool and no predicate** — only a cost modifier.
 
 **Homing**:
 A delivery whose anchor **re-resolves to the (possibly moved) target at impact** instead of freezing at fire time. The deliberate exception to hex-occupancy resolution. (Deferred.)
@@ -62,7 +66,7 @@ A delivery whose anchor **re-resolves to the (possibly moved) target at impact**
 ## Triggering
 
 **Trigger**:
-*When/how often* a weapon fires (was "Delivery Mode" — renamed to end the "delivery" overload, ADR-0004 §5). Owned by the **Weapon** (its timer), the **Reactor** (an event override), and the **Shifter** (attack-speed trades). A **Converter** may reclassify a trigger *event type* (on-hit→on-crit) but never its *frequency*.
+*When/how often* a weapon fires (was "Delivery Mode" — renamed to end the "delivery" overload, ADR-0004 §5). Owned by the **Weapon** (its timer), the **Reactor** (an event override), and the **Shifter** (attack-speed trades). A **Converter** may reclassify a trigger *event type* (on-hit→on-crit) but never its *frequency*. A **Reactor**'s event-firing carries a **cost multiplier scaled by event frequency** (common event → bigger multiplier; ADR-0006 §6) — its balance lever, not a threshold. *Watch*-conditions ("opponent reaches X resource," "before defeat," counters) are a **deferred** Trigger-axis concern (ADR-0006), the home of the dissolved `ConditionType` watch predicates.
 
 ## Resource economy
 
@@ -73,7 +77,9 @@ The economy is **three independent axes** (ADR-0005), not one welded pair. *What
 The activation price of a fire — a **pool** (`CostResource`: Mana / Health / …) plus a magnitude — paid
 **once per fire** as the gate that decides whether the attack happens. Owned by the **Weapon/Trigger**
 (the fuel). The **Converter** reclassifies the *pool* (Mana → Health = blood magic); the **Shifter**
-trades the magnitude.
+trades the magnitude. The magnitude is a **`MutableFloat`** over the weapon base, scaled by **Reactor and
+Payload cost `Modifier`s** (ADR-0006) — so the "fire cost" is really the running cost of the whole
+propagation tree, drained fail-forward (see **Propagation Cost**).
 _Avoid_: assuming Cost is mana — it is whichever pool `CostResource` names.
 
 **Gain-on-hit** (or **Leech / Recovery**):

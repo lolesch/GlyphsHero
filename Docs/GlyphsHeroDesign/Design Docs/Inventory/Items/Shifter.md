@@ -47,11 +47,14 @@ One firing stat against one output stat. Every bonus costs something on another 
 
 > **Scope:** the Shifter is *only* the economy-trade item. It does **not** modify Target Selection — that is the [[Converter]]'s job (ADR-0004 §1 corrects the earlier mis-assignment). Magnitude is the [[Amplifier]]; type reclassification is the [[Converter]].
 
-| Trade                                   | Meaning                                          |
-| --------------------------------------- | ------------------------------------------------ |
-| `AttackSpeed` ↓ → `Damage` ↑            | Slow but hits hard                               |
-| `AttackSpeed` ↑ → `Damage` ↓            | Fast but soft - generator build                  |
-| `ResourceCost` ↑ → `Damage` ↑           | Expensive but powerful                           |
-| `ResourceCost` ↓ → `Damage` ↓           | Cheap and soft                                   |
-| `ResourceCost` ↑ → `ResourceGenOnHit` ↑ | Costs more but feeds the pool harder on each hit |
-| `AttackSpeed` ↓ → `ResourceGenOnHit` ↑  | Slower but each hit generates more               |
+| Trade                          | Meaning                          |
+| ------------------------------ | -------------------------------- |
+| `AttackSpeed` ↓ → `Damage` ↑   | Slow but hits hard               |
+| `AttackSpeed` ↑ → `Damage` ↓   | Fast but soft - generator build  |
+| `Cost` ↑ → `Damage` ↑          | Expensive but powerful           |
+| `Cost` ↓ → `Damage` ↓          | Cheap and soft                   |
+
+> The Shifter trades the **magnitude** of a weapon stat (ADR-0004 §1). It trades the **`Cost`** magnitude
+> (one pool, ADR-0005 §4), *not* gain — gain left the weapon to become a per-hit `ResourcePayloadEffect`
+> (ADR-0005 §3), so there is no `ResourceGenOnHit` weapon stat to trade against. Scaling the *effect* (leech
+> %) is the deferred effect-magnitude axis, not the Shifter.

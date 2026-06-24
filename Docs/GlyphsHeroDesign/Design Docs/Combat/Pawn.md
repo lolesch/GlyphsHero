@@ -92,7 +92,7 @@ getting hit is part of the strategy
 
 ## AttackSpeed
 high OnHitEffect stacking
-- more hits = more ResourceGenOnHit
+- more hits = more on-hit effects (e.g. leech via `ResourcePayloadEffect`, ADR-0005)
 - can stack effects
 - can fuel/enable other strategies
 
