@@ -43,8 +43,8 @@ namespace Code.Runtime.Core.Combat
         private readonly Dictionary<IPawn, int>                  _pawnIds      = new();
         // Units currently firing (engaged) — guards against rebuilding chains every tick.
         private readonly HashSet<IPawn>                          _engaged      = new();
-        // Minimum active-weapon reach per unit — the ring a pawn closes to so all its weapons fire.
-        private readonly Dictionary<IPawn, int>                  _minReach     = new();
+        // Per-unit reach — the ring a pawn closes to before it can fire (one uniform pawn stat, ADR-0004 §2).
+        private readonly Dictionary<IPawn, int>                  _reach        = new();
         // Reused per-tick snapshot of controllers so a kill-cascade can't mutate the live enumerator.
         private readonly List<PawnCombatController>              _tickBuffer   = new();
 
@@ -106,7 +106,7 @@ namespace Code.Runtime.Core.Combat
             _readiness.Clear();
             _pawnIds.Clear();
             _engaged.Clear();
-            _minReach.Clear();
+            _reach.Clear();
             _nextPawnId = 0;
             _clock.Reset();
         }
@@ -132,7 +132,7 @@ namespace Code.Runtime.Core.Combat
         {
             _claimedHexes[unit] = unit.HexPosition;
             _readiness[unit]    = 0f;
-            _minReach[unit]     = ResolveMinReach(unit);
+            _reach[unit]        = ResolveReach(unit);
             _pawnIds[unit]      = _nextPawnId++;
             _controllers[unit]  = new PawnCombatController(unit, _hexGrid, _eventBus, _registry);
         }
@@ -147,7 +147,7 @@ namespace Code.Runtime.Core.Combat
         {
             if (!_isRunning) return false;
 
-            var target     = TargetSelector.Select(unit, opponents, _minReach[unit]);
+            var target     = TargetSelector.Select(unit, opponents, _reach[unit]);
             var controller = _controllers[unit];
 
             if (target != null)
@@ -264,7 +264,7 @@ namespace Code.Runtime.Core.Combat
                     Id            = _pawnIds[unit],
                     Position      = unit.HexPosition,
                     Target        = nearest.HexPosition,
-                    Reach         = _minReach[unit],
+                    Reach         = _reach[unit],
                     NextStep      = nextHexValid ? nextHex : Hex.Invalid,
                     NextStepCost  = stepCost,
                     Readiness     = _readiness[unit],
@@ -346,7 +346,7 @@ namespace Code.Runtime.Core.Combat
             _readiness.Remove(unit);
             _pawnIds.Remove(unit);
             _engaged.Remove(unit);
-            _minReach.Remove(unit);
+            _reach.Remove(unit);
 
             _eventBus.PublishDefeated(unit);
 
@@ -380,27 +380,11 @@ namespace Code.Runtime.Core.Combat
         }
 
         /// <summary>
-        /// Minimum effective reach across the unit's active weapons (ADR-0001, Decision 3): a pawn
-        /// closes until <em>all</em> its weapons can fire. Reach is a pawn stat (Decision 2) — a
-        /// range-fixed weapon (melee/adjacent) reaches 1; a range-scaling weapon reaches the pawn's
-        /// range stat. v1 still classifies range-fixed by the payload's ShapeSize ≤ 1 placeholder;
-        /// reach classification from the delivery pattern / WeaponTags is the Decision 2c follow-up.
+        /// The unit's reach — the single, uniform acquisition gate it closes to (ADR-0001 §2/§3 as
+        /// amended by ADR-0004 §2). Reach is one pawn stat; there is no per-weapon reach to minimise
+        /// over, and no melee/ranged classification ("melee" vs "ranged" is just Reach 1 vs &gt; 1).
         /// </summary>
-        private static int ResolveMinReach(IPawn unit)
-        {
-            var chains    = unit.Inventory.Topology.Chains;
-            var pawnRange = Mathf.Max(1, Mathf.RoundToInt(unit.Stats.range));
-
-            var minReach = int.MaxValue;
-            foreach (var chain in chains)
-            {
-                var rangeFixed = chain.Weapon.Payload.ShapeSize <= 1;
-                var reach      = rangeFixed ? 1 : pawnRange;
-                if (reach < minReach) minReach = reach;
-            }
-
-            return minReach == int.MaxValue ? 1 : minReach;
-        }
+        private static int ResolveReach(IPawn unit) => Mathf.Max(1, Mathf.RoundToInt(unit.Stats.range));
     }
 
     public interface ICombatCoordinator
