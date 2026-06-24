@@ -63,6 +63,24 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public WeaponOutputModifier outputMod { get; }
     }
 
+    internal sealed class StatConverter : FakeItem, IConverterItem
+    {
+        public StatConverter(ConverterAxis axis, DeliveryPattern toDelivery = DeliveryPattern.Single,
+            Affinity toAffinity = Affinity.Hostile, Anchor toAnchor = Anchor.Target, string name = "Converter")
+            : base(name)
+        {
+            Axis       = axis;
+            ToDelivery = toDelivery;
+            ToAffinity = toAffinity;
+            ToAnchor   = toAnchor;
+        }
+
+        public ConverterAxis   Axis       { get; }
+        public DeliveryPattern ToDelivery { get; }
+        public Affinity        ToAffinity { get; }
+        public Anchor          ToAnchor   { get; }
+    }
+
     internal sealed class StatReactor : FakeItem, IReactorItem
     {
         public StatReactor(WeaponInputModifier inputMod, ReactorType reactorType = ReactorType.OnSelfHit,

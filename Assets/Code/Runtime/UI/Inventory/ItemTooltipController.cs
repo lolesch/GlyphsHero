@@ -356,7 +356,13 @@ namespace Code.Runtime.UI.Inventory
                 $"chained:   {reactor.ReactorType}" +
                 "  when: ",
 
-            IConverterItem => "chained:   (converter — not yet implemented)",
+            IConverterItem converter => "chained:   " + converter.Axis switch
+            {
+                ConverterAxis.Delivery => $"delivery → {converter.ToDelivery}",
+                ConverterAxis.Affinity => $"affinity → {converter.ToAffinity}",
+                ConverterAxis.Anchor   => $"anchor → {converter.ToAnchor}",
+                _                      => converter.Axis.ToString(),
+            },
 
             _ => string.Empty,
         };

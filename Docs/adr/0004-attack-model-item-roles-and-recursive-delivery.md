@@ -195,5 +195,27 @@ A `Single` is anchor-locked and ignores pawn occupancy; pawn-blocking is a `Line
   exactly the two Origin tests, the Target test correctly stayed green); the obsolete anchor cases moved
   out of `DeliveryAffinityTests`. **102/102 green.** `ChainResolverTests` untouched.
 
-**Still deferred**: the Delivery **Layers** (Pierce/LoS/Homing), Converter reclassification, recursive
-payload anchoring at the impact hex, and `Friendly`-affinity content.
+### Converter — type reclassification on the WeaponStats axes (implemented 2026-06-24, test-first)
+
+- **Done (the three data-backed axes).** The Converter (ADR-0004 §1) now reclassifies the *kind* on one
+  axis, never the amount. New `ConverterAxis` enum (`Delivery`/`Affinity`/`Anchor`); `ConverterConfig`
+  drops its placeholder `from`/`to` for `Axis` + `ToDelivery`/`ToAffinity`/`ToAnchor`; `IConverterItem`/
+  `ConverterItem` carry them. `WeaponStatResolver` seeds delivery/affinity/anchor from the weapon and a
+  chained Converter's matching `To*` value **replaces** the seed (last-wins per axis), in the same
+  contributor loop as Amplifier/Shifter. A Converter was already a legal chain modifier
+  (`ChainResolver.IsValidConnection`) — only the resolver ignored it. Tooltip updated (was "not yet
+  implemented" → shows `axis → value`).
+- The other Converter.md axes stay deferred for lack of an underlying data system: **damage type**
+  (damage is untyped), **target strategy** (selection isn't data-driven — see the deferred
+  "target-selection strategies as data"), **resource type** (cost/gen are mana-only;
+  `PawnCombatController.ResolveChainResources` still returns mana/mana with a Converter TODO), and
+  **trigger event** reclassification.
+- Red-green via 5 new `WeaponStatResolverTests` (mutation-proven: a no-op `ApplyConversion` failed
+  exactly those 5, the other 10 stayed green). Three play-test assets authored —
+  `Converter_Cleave` (Delivery→Cleave), `Converter_Line` (Delivery→Line), `Converter_AnchorSelf`
+  (Anchor→Origin) — and added to `GamePhaseController.itemPool` so they drop into the stash. **107/107
+  green.** `ChainResolverTests` untouched.
+
+**Still deferred**: the Delivery **Layers** (Pierce/LoS/Homing), the **remaining Converter axes** (damage
+type, target strategy, resource type, trigger event — each blocked on its data system), recursive payload
+anchoring at the impact hex, and `Friendly`-affinity content.

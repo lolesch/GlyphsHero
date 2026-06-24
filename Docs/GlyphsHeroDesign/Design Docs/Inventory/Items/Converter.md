@@ -58,3 +58,7 @@ The Converter is the **type-reclassifier** — it changes *what kind* a signal i
 | Trigger event        | on-hit → on-crit                      | Reclassifies an *existing* event type; never frequency. Borders the [[Reactor]] (which *installs* an event trigger) |
 
 > **Not the Converter's job:** firing *frequency*/cadence (Weapon timer / [[Reactor]] / [[Shifter]] speed), and stat *magnitude* ([[Amplifier]]). The old "delivery mode: instant → projectile → accumulated burst" row conflated cadence with coverage — removed.
+
+## Implementation status (2026-06-24)
+
+Built for the three axes that exist as data on `WeaponStats`: **Delivery pattern**, **Affinity**, **Anchor**. A `ConverterConfig` picks one `ConverterAxis` and the target value; `WeaponStatResolver` replaces that axis (last-wins) on the nearest upstream weapon's resolved stats. Deferred for lack of a data system: **damage type** (untyped), **target strategy** (not data-driven yet), **resource type** (mana-only cost/gen), **trigger event**. See [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] consequences.

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dd7d6d75d7c40e7a4cb293df48e6610, type: 3}
+  m_Name: Converter_AnchorSelf
+  m_EditorClassIdentifier: Data::Code.Data.Items.Converter.ConverterConfig
+  <Icon>k__BackingField: {fileID: -978266203, guid: 4197085e07bf81a4a9f3d1a784fc9e91, type: 3}
+  <Shape>k__BackingField:
+    shapeSize: {x: 1, y: 1}
+    cellSize: {x: 16, y: 16}
+    rows:
+    - row: 01
+  connectors:
+  - <position>k__BackingField: {x: 0, y: 0}
+    <direction>k__BackingField: 0
+  - <position>k__BackingField: {x: 0, y: 0}
+    <direction>k__BackingField: 2
+  pawnStatMod:
+    stat: 0
+    value: 0
+    type: 0
+  <Axis>k__BackingField: 2
+  <ToDelivery>k__BackingField: 1
+  <ToAffinity>k__BackingField: 0
+  <ToAnchor>k__BackingField: 1

@@ -161,5 +161,73 @@ namespace Code.Tests.EditMode.Inventory
             stats.Damage.Should().BeApproximately(15f, Tolerance);     // 10 base + 5 amp (modifier)
             stats.AttackSpeed.Should().BeApproximately(5f, Tolerance); // 1 base + 4 reactor (root)
         }
+
+        // ── Converter: type-reclassification on one axis (ADR-0004 §1) ──────────────
+
+        [Test]
+        public void Converter_Delivery_ReclassifiesPattern_NotAmount()
+        {
+            // The Converter changes the *kind* (Single → Cleave), never the *amount* — Damage is
+            // untouched, distinguishing it from the Amplifier.
+            var weapon    = new StatWeapon(damage: 7f); // base delivery Single (StatWeapon default)
+            var converter = new StatConverter(ConverterAxis.Delivery, toDelivery: DeliveryPattern.Cleave);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.Delivery.Should().Be(DeliveryPattern.Cleave);
+            stats.Damage.Should().BeApproximately(7f, Tolerance);
+        }
+
+        [Test]
+        public void Converter_Affinity_ReclassifiesSide()
+        {
+            var weapon    = new StatWeapon(); // base affinity Hostile
+            var converter = new StatConverter(ConverterAxis.Affinity, toAffinity: Affinity.Friendly);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.Affinity.Should().Be(Affinity.Friendly);
+        }
+
+        [Test]
+        public void Converter_Anchor_ReclassifiesCentre()
+        {
+            var weapon    = new StatWeapon(); // base anchor Target
+            var converter = new StatConverter(ConverterAxis.Anchor, toAnchor: Anchor.Origin);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.Anchor.Should().Be(Anchor.Origin);
+        }
+
+        [Test]
+        public void Converter_OnlyTouchesItsOwnAxis()
+        {
+            // A Delivery converter carries To* values for every axis, but must apply only the one its
+            // Axis selects — the other axes stay at the weapon's base (Hostile / Target).
+            var weapon    = new StatWeapon();
+            var converter = new StatConverter(ConverterAxis.Delivery,
+                toDelivery: DeliveryPattern.Line, toAffinity: Affinity.Self, toAnchor: Anchor.Origin);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.Delivery.Should().Be(DeliveryPattern.Line);
+            stats.Affinity.Should().Be(Affinity.Hostile); // NOT the converter's Self
+            stats.Anchor.Should().Be(Anchor.Target);      // NOT the converter's Origin
+        }
+
+        [Test]
+        public void Converter_LastWins_OnSameAxis()
+        {
+            // Reclassification replaces (it is not magnitude that stacks). Two Delivery converters
+            // leave the last one's value.
+            var weapon = new StatWeapon();
+            var first  = new StatConverter(ConverterAxis.Delivery, toDelivery: DeliveryPattern.Cleave);
+            var second = new StatConverter(ConverterAxis.Delivery, toDelivery: DeliveryPattern.Line);
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { first, second });
+
+            stats.Delivery.Should().Be(DeliveryPattern.Line);
+        }
     }
 }

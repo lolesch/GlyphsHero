@@ -6,18 +6,17 @@ namespace Code.Data.Items.Converter
     [CreateAssetMenu(fileName = "ConverterConfig", menuName = Const.ItemConfig + "Converter")]
     public sealed class ConverterConfig : AttachmentItemConfig
     {
-        /* "LifeLink' convert manaCost into healthCost
-         * sourceStatType -> converted to -> targetStatType
-         * and then define the conversion like:
-         * - convert 2 manaCost into 1 healthCost
-         * - convert damage type physical into fire
-         * so do all converters have a conversion rate? If it is just a type, then just convert.
-         * So the conversionRate converter might be a special case. for now just convert manaCost to HealthCost
-         */ 
-        [field: Header("Chained")]
-        [field: SerializeField] public WeaponInputStat from { get; private set; }
-        [field: SerializeField] public WeaponInputStat to { get; private set; }
-      
+        // The Converter reclassifies the *kind* on one attack axis of the nearest upstream weapon
+        // (ADR-0004 §1, Converter.md) — never the amount. v1 covers the three axes that exist as data
+        // on WeaponStats: Delivery / Affinity / Anchor. Only the target value matching Axis is used;
+        // WeaponStatResolver reads Axis and applies the corresponding To* value (replace, last-wins).
+        // Resource-type / damage-type / target-strategy reclassification is deferred (no data system).
+        [field: Header("Chained — reclassifies the upstream weapon")]
+        [field: SerializeField] public ConverterAxis   Axis        { get; private set; } = ConverterAxis.Delivery;
+        [field: SerializeField] public DeliveryPattern ToDelivery  { get; private set; } = DeliveryPattern.Single;
+        [field: SerializeField] public Affinity        ToAffinity  { get; private set; } = Affinity.Hostile;
+        [field: SerializeField] public Anchor          ToAnchor    { get; private set; } = Anchor.Target;
+
         public override int MaxConnectors => 2;
     }
 }

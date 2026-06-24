@@ -36,6 +36,13 @@ namespace Code.Runtime.Modules.Inventory
             var resourceCost     = new MutableFloat(weapon.ResourceCost);
             var resourceGenOnHit = new MutableFloat(weapon.ResourceGenOnHit);
 
+            // The type axes are seeded from the weapon and reclassified by any chained Converter
+            // (ADR-0004 §1) — kind, never amount. Replace, last-wins: two Delivery converters in a
+            // chain leave the downstream one's value.
+            var delivery = weapon.Delivery;
+            var affinity = weapon.Affinity;
+            var anchor   = weapon.Anchor;
+
             void ApplyOutput(WeaponOutputModifier mod)
             {
                 switch (mod.stat)
@@ -56,6 +63,17 @@ namespace Code.Runtime.Modules.Inventory
                 }
             }
 
+            // A Converter changes the kind on one axis only — the matching To* value replaces the seed.
+            void ApplyConversion(IConverterItem converter)
+            {
+                switch (converter.Axis)
+                {
+                    case ConverterAxis.Delivery: delivery = converter.ToDelivery; break;
+                    case ConverterAxis.Affinity: affinity = converter.ToAffinity; break;
+                    case ConverterAxis.Anchor:   anchor   = converter.ToAnchor;   break;
+                }
+            }
+
             foreach (var item in contributors)
             {
                 switch (item)
@@ -70,11 +88,13 @@ namespace Code.Runtime.Modules.Inventory
                     case IReactorItem reactor:
                         ApplyInput(reactor.inputMod);
                         break;
+                    case IConverterItem converter:
+                        ApplyConversion(converter);
+                        break;
                 }
             }
 
-            // Delivery + Affinity + Anchor are carried through unmodified for now; a Converter will reclassify them here.
-            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit, weapon.Delivery, weapon.Affinity, weapon.Anchor);
+            return new WeaponStats(damage, attackSpeed, resourceCost, resourceGenOnHit, delivery, affinity, anchor);
         }
     }
 }
