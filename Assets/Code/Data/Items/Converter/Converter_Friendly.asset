@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5dd7d6d75d7c40e7a4cb293df48e6610, type: 3}
-  m_Name: ConverterConfig
+  m_Name: Converter_Friendly
   m_EditorClassIdentifier: Data::Code.Data.Items.Shifter.ConverterConfig
   <Icon>k__BackingField: {fileID: -978266203, guid: 4197085e07bf81a4a9f3d1a784fc9e91, type: 3}
   <Shape>k__BackingField:
@@ -24,8 +24,10 @@ MonoBehaviour:
   - <position>k__BackingField: {x: 0, y: 0}
     <direction>k__BackingField: 2
   pawnStatMod:
-    stat: 2
-    value: 20
-    type: 3
-  <from>k__BackingField: 2
-  <to>k__BackingField: 1
+    stat: 0
+    value: 0
+    type: 0
+  <Axis>k__BackingField: 1
+  <ToDelivery>k__BackingField: 1
+  <ToAffinity>k__BackingField: 1
+  <ToAnchor>k__BackingField: 0
