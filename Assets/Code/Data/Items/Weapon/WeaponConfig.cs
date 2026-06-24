@@ -17,6 +17,10 @@ namespace Code.Data.Items.Weapon
         // (current behavior). Weapons scale by the pawn's Reach and never author Aoe (payload-only).
         [field: SerializeField] public DeliveryPattern Delivery { get; private set; } = DeliveryPattern.Single;
 
+        // Whose side this attack resolves against (ADR-0004 §3). Default Hostile = hit enemies. Self =
+        // the deliberate self-hurt build-around (self-anchored). Friendly = heals/buffs (content pending).
+        [field: SerializeField] public Affinity Affinity { get; private set; } = Affinity.Hostile;
+
         public WeaponTags tags;
         public int range;
         

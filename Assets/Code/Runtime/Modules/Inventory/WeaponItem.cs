@@ -11,6 +11,7 @@ namespace Code.Runtime.Modules.Inventory
         public MutableFloat          ResourceCost              { get; }
         public MutableFloat          ResourceGenOnHit          { get; }
         public DeliveryPattern       Delivery                  { get; }
+        public Affinity              Affinity                  { get; }
         public PayloadBehavior       Payload                   { get; }
         public WeaponItem(WeaponConfig config, RotationType rotation = RotationType.None) : base(config, rotation)
         {
@@ -19,6 +20,7 @@ namespace Code.Runtime.Modules.Inventory
             ResourceCost              = new MutableFloat(config.ResourceCost);
             ResourceGenOnHit          = new MutableFloat(config.ResourceGenOnHit);
             Delivery                  = config.Delivery;
+            Affinity                  = config.Affinity;
             Payload                   = config.Payload;
         }
     }
@@ -31,6 +33,7 @@ namespace Code.Runtime.Modules.Inventory
         MutableFloat         ResourceCost              { get; } // probably needs healthCost and manaCost separately
         MutableFloat         ResourceGenOnHit          { get; }
         DeliveryPattern      Delivery                  { get; }
+        Affinity             Affinity                  { get; }
         PayloadBehavior Payload { get; }
     }
 }

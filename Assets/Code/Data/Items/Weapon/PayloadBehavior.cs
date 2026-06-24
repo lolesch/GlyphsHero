@@ -14,6 +14,8 @@ namespace Code.Data.Items.Weapon
         // use Aoe (a disk) — weapons may not (see DeliveryPattern). ShapeSize is the Reach/shape-size
         // split: it is a pattern parameter, never the acquisition Reach.
         [field: SerializeField] public DeliveryPattern  Delivery           { get; private set; } = DeliveryPattern.Single;
+        // Whose side this child delivery resolves against (ADR-0004 §3). Self = recoil onto the caster.
+        [field: SerializeField] public Affinity         Affinity           { get; private set; } = Affinity.Hostile;
         [field: SerializeField] public int              ShapeSize          { get; private set; } = 1;
         [field: SerializeField] public PayloadTiming    Timing             { get; private set; }
         [field: SerializeField] public float            TimingValue        { get; private set; }

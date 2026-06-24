@@ -36,14 +36,6 @@ namespace Code.Tests.EditMode.Combat
         }
 
         [Test]
-        public void Self_CoversOriginOnly()
-        {
-            // Anchor is far away, but Self covers the firing pawn's own hex.
-            Cover(DeliveryPattern.Self, new Hex(3, 0))
-                .Should().BeEquivalentTo(new[] { Origin }, o => o.ComparingByValue<Hex>());
-        }
-
-        [Test]
         public void Line_CoversPathToAnchor_ExcludingOrigin()
         {
             Cover(DeliveryPattern.Line, new Hex(3, 0))
@@ -130,42 +122,5 @@ namespace Code.Tests.EditMode.Combat
                 o => o.ComparingByValue<Hex>());
         }
 
-        [Test]
-        public void SingleAndSelf_CoverBothAnchorAndOrigin()
-        {
-            Cover(DeliveryPattern.Single | DeliveryPattern.Self, new Hex(2, 0))
-                .Should().BeEquivalentTo(
-                    new[] { new Hex(2, 0), Origin },
-                    o => o.ComparingByValue<Hex>());
-        }
-
-        // ── Self-affinity split (ADR-0003 regression fix) ──────────────────────
-        // CoveredHexes is the full geometric footprint (hostile occupancy + effect geometry).
-        // SelfHexes is the subset a delivery resolves against the caster's own side, so the
-        // deliberate Self self-hurt build-around hits the firing pawn instead of no one.
-
-        [Test]
-        public void SelfHexes_ReturnsOrigin_WhenSelfFlagSet()
-        {
-            // Anchor far away; the self-affinity footprint is the firing pawn's own hex.
-            DeliveryResolver.SelfHexes(Origin, new Hex(3, 0), DeliveryPattern.Self)
-                .Should().BeEquivalentTo(new[] { Origin }, o => o.ComparingByValue<Hex>());
-        }
-
-        [Test]
-        public void SelfHexes_Empty_WhenSelfFlagAbsent()
-        {
-            // A purely hostile pattern has no self-affinity hexes — nothing resolves against the caster.
-            DeliveryResolver.SelfHexes(Origin, new Hex(3, 0), DeliveryPattern.Single | DeliveryPattern.Cleave)
-                .Should().BeEmpty();
-        }
-
-        [Test]
-        public void SelfHexes_IgnoresHostileFlags_WhenSelfStacked()
-        {
-            // Single|Self: the anchor (hostile-affinity) must NOT leak into the self footprint — only Origin.
-            DeliveryResolver.SelfHexes(Origin, new Hex(2, 0), DeliveryPattern.Single | DeliveryPattern.Self)
-                .Should().BeEquivalentTo(new[] { Origin }, o => o.ComparingByValue<Hex>());
-        }
     }
 }

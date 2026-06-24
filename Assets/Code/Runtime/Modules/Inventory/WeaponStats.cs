@@ -16,14 +16,17 @@ namespace Code.Runtime.Modules.Inventory
         public float ResourceGenOnHit { get; }
         /// <summary>The resolved delivery pattern mask (a Converter would reclassify it here later).</summary>
         public DeliveryPattern Delivery { get; }
+        /// <summary>Whose side this delivery resolves against (ADR-0004 §3); a Converter would reclassify it here later.</summary>
+        public Affinity Affinity { get; }
 
-        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit, DeliveryPattern delivery)
+        public WeaponStats(float damage, float attackSpeed, float resourceCost, float resourceGenOnHit, DeliveryPattern delivery, Affinity affinity)
         {
             Damage           = damage;
             AttackSpeed      = attackSpeed;
             ResourceCost     = resourceCost;
             ResourceGenOnHit = resourceGenOnHit;
             Delivery         = delivery;
+            Affinity         = affinity;
         }
     }
 }

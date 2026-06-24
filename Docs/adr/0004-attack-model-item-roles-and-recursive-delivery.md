@@ -165,13 +165,20 @@ A `Single` is anchor-locked and ignores pawn occupancy; pawn-blocking is a `Line
 - **Recursive payload anchoring at the impact hex** — payloads still anchor on the locked target
   (carried from ADR-0003).
 
-## Consequences — code deltas to implement next (test-first)
+## Consequences — code deltas (implemented 2026-06-24, test-first)
 
-- `CombatCoordinator.ResolveMinReach` → `max(1, round(pawn.range))`; delete the `ShapeSize ≤ 1` line and
-  the per-chain loop.
-- Move `Self` off the `DeliveryPattern` enum into an **Affinity** concept; refactor
-  `DeliveryResolver.SelfHexes` / the two-pass occupancy in `PawnCombatController.ResolveTargets`
-  accordingly.
+- **Done.** `CombatCoordinator.ResolveMinReach` → `ResolveReach` = `max(1, round(pawn.range))`; the
+  `ShapeSize ≤ 1` placeholder and per-chain loop deleted (`_minReach`→`_reach`). Verified 103/103 green.
+- **Done.** `Self` removed from the `DeliveryPattern` enum (bit `1 << 3` reserved); new `Affinity` enum
+  (`Hostile`/`Friendly`/`Self`) authored on `WeaponConfig`/`PayloadBehavior` and threaded through
+  `WeaponItem`/`IWeaponItem`/`WeaponStats`/`WeaponStatResolver`. `DeliveryResolver` is now pure geometry
+  (dropped `SelfAffinity`/`SelfHexes`). New pure `DeliveryAffinity` (anchor + caster-side rules, v1:
+  Self is self-anchored) drives `PawnCombatController.Fire`/`FirePayloads`/`ResolveTargets`. Red-green via
+  `DeliveryAffinityTests` (mutation-proven); obsolete `DeliveryResolverTests.Self*` removed. **101/101 green.**
 - Docs synced: CONTEXT.md, Attack Targeting.md, Converter.md, Shifter.md, Payload.md,
   Splitter & Merger.md, Weapon.md, and the ADR-0001/0003 amendment notes.
-- Keep `ChainResolverTests` green throughout.
+- `ChainResolverTests` kept green throughout.
+
+**Still deferred** (unchanged): the Delivery **Layers** (Pierce/LoS/Homing), the independent **Anchor**
+axis (anchor-self for any affinity, e.g. heal-around-me — v1 couples Self→self-anchored), Converter
+reclassification, recursive payload anchoring at the impact hex, and `Friendly`-affinity content.
