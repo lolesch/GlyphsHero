@@ -136,7 +136,7 @@ multiplier) are blocked on the same damage-type/crit system as the damage-type C
 - The mana-hardcoded **payload conditions** (`ConditionType.ResourceFull/Below/Above` read
   `_pawn.Stats.mana`) — a separate generalisation, untouched here.
 
-## Consequences — code deltas
+## Consequences — code deltas (implemented 2026-06-24, test-first; 110/110 green)
 
 ### Phase 1: Cost-pool Converter axis (implemented 2026-06-24, test-first)
 
@@ -150,7 +150,8 @@ multiplier) are blocked on the same damage-type/crit system as the damage-type C
 - **Done.** Tooltip shows `[Pool]` beside the cost line; chain diff shows `[Before→After]` on pool change.
 - **Done.** Inspector `ResolvedAttack` struct adds `costResource` field.
 - **Done.** `WeaponStatFakes`/`ChainFakes` updated (fakes carry `CostResource`).
-- **Done.** 3 new `WeaponStatResolverTests` (red-green, mutation-proven pending Unity Test Runner run).
+- **Done.** 3 new `WeaponStatResolverTests` (`Converter_Resource_*` — red-green, mutation-proven: a
+  no-op `ApplyConversion` Resource case failed exactly those 3, the other 10 stayed green). 110/110 green.
 - **Done.** Play-test asset `Converter_Resource` (Axis=Resource, ToResource=Health = blood-magic),
   added to `GamePhaseController.itemPool` in SampleScene.
 
@@ -174,4 +175,4 @@ multiplier) are blocked on the same damage-type/crit system as the damage-type C
   `Blueberry` amplifier repurposed from `ResourceGenOnHit` (stat 1, now retired) to `Damage` (stat 0).
 - **Done.** Tooltip: `gen` line removed from unchained and chain-diff displays; `Resource` axis gets a
   proper `cost pool → {pool}` label. 3 new `ResourcePayloadEffectTests` (red-green, mutation-proven:
-  a no-op `ComputeGain` fails all three). Tests pending Unity Test Runner run.
+  a no-op `ComputeGain` failed all three). **110/110 green.** `ChainResolverTests` untouched.

@@ -12,7 +12,12 @@ you're touching.
 - **`Docs/adr/0004-attack-model-item-roles-and-recursive-delivery.md`** — the consolidated model:
   item roles (Converter = type-reclassifier, Shifter = economy-trade only), **Delivery = Pattern ×
   Layers × Affinity × Anchor**, Reach = one uniform pawn stat, Propagation = recursive child-delivery.
-  Its "Still deferred" list is the work queue.
+  Its "Still deferred" list is the delivery/layer work queue.
+- **`Docs/adr/0005-resource-economy-cost-gain-magnitude.md`** — the resource economy decomposition:
+  **Cost** (pool + magnitude, once-per-fire, Converter-reclassifiable via `ConverterAxis.Resource`) /
+  **Gain-on-hit** (`ResourcePayloadEffect`, leech-% of damage, per target hit) / **Magnitude**
+  (Amplifier/Shifter unchanged). Both phases fully implemented (110/110 green). Its Deferred list is
+  the economy work queue.
 
 ## Core (the minimum)
 
@@ -33,14 +38,19 @@ Code seams:
   independent of affinity (built 2026-06-24, ADR-0004); a Converter would reclassify either downstream.
 - **`Assets/Code/Runtime/Core/Combat/PawnCombatController.cs`** — the integration point:
   `Fire` / `FirePayloads` / `ResolveTargets` wire pattern + affinity + anchor into damage, and payloads
-  recurse here. Where Layers (Pierce/LoS) and recursive payload anchoring get wired.
+  recurse here. Where Layers (Pierce/LoS) and recursive payload anchoring get wired. Also owns
+  `ResolveChainResources` (maps `stats.CostResource` → the pawn's pool) and `ExecuteEffect`
+  (dispatches `ResourcePayloadEffect` → `pool.IncreaseCurrent`; ADR-0005).
 
 ## As needed
 
 - **`CombatCoordinator.cs`** — if touching reach / movement / the tick: `ResolveReach`, the `CombatClock`,
   movement orchestration.
 - **`WeaponStats.cs`** + **`WeaponStatResolver.cs`** — if touching the **Converter** (the resolver is
-  where a Converter would reclassify Delivery/Affinity).
+  where Delivery/Affinity/Anchor/Resource are seeded from the weapon and reclassified last-wins).
+  `WeaponStats.CostResource` is the resolved cost pool; `ResourceGenOnHit` was removed (ADR-0005).
+- **`Assets/Code/Data/Items/Weapon/PayloadEffect.cs`** — the `ResourcePayloadEffect` seam
+  (`ComputeGain(float damageDealt)` = leech-% or flat). For adding new on-hit effect types.
 - **ADR-0001** (reach/movement/tick), **ADR-0002** (hex-occupancy + telegraph), **ADR-0003** (delivery
   patterns) — ADR-0004's companions; read the one nearest your change. (0001 §2b withdrawn, §3 amended,
   0003's `Self` relocated — all by 0004.)
@@ -49,8 +59,13 @@ Code seams:
 
 ## Tests (behavioral locks + red-green templates)
 
-- **`Assets/Code/Tests/EditMode/Combat/DeliveryResolverTests.cs`** + **`DeliveryAffinityTests.cs`** — the
-  pure-seam locks; copy their shape for new pure logic (red-green / mutation-proven).
+- **`Assets/Code/Tests/EditMode/Combat/DeliveryResolverTests.cs`** + **`DeliveryAffinityTests.cs`** +
+  **`DeliveryAnchorTests.cs`** — pure-seam locks for the delivery axes; copy their shape for new pure
+  logic (red-green / mutation-proven).
+- **`Assets/Code/Tests/EditMode/Combat/ResourcePayloadEffectTests.cs`** — pure-seam lock for
+  `ComputeGain` (leech-% priority, flat fallback, percent-priority). Copy for new effect types.
+- **`Assets/Code/Tests/EditMode/Inventory/WeaponStatResolverTests.cs`** — includes the
+  `Converter_Resource_*` tests; the template for all Converter-axis reclassification tests.
 - **`ChainResolverTests.cs`** — must stay green when touching chain resolution (per `CLAUDE.md`).
 - Note: `CombatCoordinator` / `PawnCombatController` have **no** unit harness (no FakePawn/registry
   fakes), so verify integration via the full EditMode suite (Unity MCP — see the architecture-review
