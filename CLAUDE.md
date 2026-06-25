@@ -60,6 +60,10 @@ Issues, PRDs, and triage live in GitHub Issues at `lolesch/glyphshero` (via the 
 
 Canonical label vocabulary, unmapped: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `Docs/agents/triage-labels.md`.
 
+### Night shift
+
+Unattended overnight runs work the backlog AFK. The day shift (interactive, on `main`/`laptopLab`) has authority and curates which issues are `ready-for-agent`; the runner machinery lives only on the **`night-base`** branch (so it never clutters `main` or fires a SessionStart banner in interactive work). See `Docs/agents/night-shift.md`.
+
 ### Domain docs
 
 Single-context repo. `CLAUDE.md` is the current architecture reference; `CONTEXT.md` / `Docs/adr/` are created lazily as terms and decisions get resolved. See `Docs/agents/domain.md`.
