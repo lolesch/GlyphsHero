@@ -63,3 +63,5 @@ Canonical label vocabulary, unmapped: `needs-triage`, `needs-info`, `ready-for-a
 ### Domain docs
 
 Single-context repo. `CLAUDE.md` is the current architecture reference; `CONTEXT.md` / `Docs/adr/` are created lazily as terms and decisions get resolved. See `Docs/agents/domain.md`.
+
+**ADRs are append-only.** "Update/sync the docs" means `CONTEXT.md`, the design docs, and ADR *headers* (`Lifecycle`/`Amended-by`) — **never** an accepted ADR's Decision body, which is frozen at decision time. A changed decision is a *new* ADR; the current truth of a concept lives in `CONTEXT.md`, which points at the governing ADR. See `Docs/adr/README.md`.
