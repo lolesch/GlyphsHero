@@ -33,14 +33,17 @@ MonoBehaviour:
     <direction>k__BackingField: 0
   <BaseDamage>k__BackingField: 3
   <AttackSpeed>k__BackingField: 1.4
-  <ResourceCost>k__BackingField: 0
+  <ResourceCost>k__BackingField: 12
+  <CostResource>k__BackingField: 0
   tags: 0
   range: 0
   <Payload>k__BackingField:
-    <Condition>k__BackingField: 0
-    <ConditionThreshold>k__BackingField: 0.5
-    <Targeting>k__BackingField: 0
-    <Range>k__BackingField: 1
+    <CostValue>k__BackingField: 15
+    <CostType>k__BackingField: 1
+    <Delivery>k__BackingField: 1
+    <Affinity>k__BackingField: 1
+    <Anchor>k__BackingField: 0
+    <ShapeSize>k__BackingField: 1
     <Timing>k__BackingField: 0
     <TimingValue>k__BackingField: 0
     _effects:

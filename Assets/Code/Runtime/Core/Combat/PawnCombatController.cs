@@ -225,7 +225,19 @@ namespace Code.Runtime.Core.Combat
         private void Fire(IItemChain chain, IWeaponItem weapon, WeaponStats stats, Resource costResource)
         {
             if (_target == null) return;
-            costResource.ReduceCurrent(stats.ResourceCost);
+
+            // ADR-0006: one fail-forward walk decides the whole attack's spend. The weapon's resolved cost
+            // is the root gate; each payload adds a marginal cost over the shared pool; an unaffordable node
+            // prunes its subtree. Decide first, spend once, then detonate only what the walk funded.
+            // reactorMods is null because the Reactor's cost modifier (Decision 6 — a ManaCost input mod,
+            // typically PercentMult to tax frequent triggers) is already folded into stats.ResourceCost by
+            // WeaponStatResolver, so it is the effective base here; passing it again would double-count.
+            var (roots, ordered) = BuildPayloadCostTree(chain, weapon);
+            var poolBalance = SpendableBalance(costResource, stats.CostResource);
+            var result = PropagationCostResolver.Resolve(stats.ResourceCost, null, roots, poolBalance);
+
+            if (!result.RootFired) return;
+            costResource.ReduceCurrent(result.TotalSpent);
 
             // Hex-occupancy damage (ADR-0002/0004): the weapon's delivery mask, centred on its Anchor
             // (target by default, the firing pawn for anchor-Origin) and resolved against its Affinity's
@@ -252,7 +264,7 @@ namespace Code.Runtime.Core.Combat
                 foreach (var effect in rootEffects)
                     ExecuteEffect(effect, targets, covered, stats.Damage);
 
-            FirePayloads(chain, weapon, stats, costResource);
+            FirePayloads(result.FiredNodes, ordered);
         }
 
         private PawnTeam EnemyTeam => _pawn.Team == PawnTeam.Player ? PawnTeam.Enemy : PawnTeam.Player;
@@ -271,21 +283,20 @@ namespace Code.Runtime.Core.Combat
             return TargetSelector.PawnsOnHexes(covered, _registry.allPawns, team).ToList();
         }
 
-        private void FirePayloads(IItemChain chain, IWeaponItem rootWeapon, WeaponStats rootStats, Resource costResource)
+        private void FirePayloads(IReadOnlyCollection<CostNode> firedNodes,
+            IReadOnlyList<(CostNode node, IWeaponItem payload)> ordered)
         {
-            foreach (var item in chain.Modifiers)
+            // The walker already chose which payloads the pool funded and spent for them; here we only
+            // detonate those, in propagation order. A payload is a child delivery (ADR-0002/0004): its own
+            // pattern mask + ShapeSize + Affinity + Anchor, centred on that Anchor (target by default, the
+            // firing pawn for anchor-Origin — a Return) and resolved by hex-occupancy like the root weapon.
+            // Anchor is independent of Affinity (ADR-0004 §3). Aoe (a disk) is available here, not on weapons.
+            var fired = firedNodes as ISet<CostNode> ?? new HashSet<CostNode>(firedNodes);
+            foreach (var (node, payload) in ordered)
             {
-                if (item is not IWeaponItem payload || item == rootWeapon) continue;
-                if (!CanFire(payload.ResourceCost, costResource)) continue;
-                if (!EvaluatePayloadCondition(payload, rootStats.Damage)) continue;
+                if (!fired.Contains(node)) continue;
 
-                var behavior = payload.Payload;
-                costResource.ReduceCurrent(payload.ResourceCost);
-
-                // A payload is a child delivery (ADR-0002/0004): its own pattern mask + ShapeSize +
-                // Affinity + Anchor, centred on that Anchor (target by default, the firing pawn for
-                // anchor-Origin — a Return) and resolved by hex-occupancy like the root weapon. Anchor is
-                // independent of Affinity (ADR-0004 §3). Aoe (a disk) is available here — not on weapons.
+                var behavior   = payload.Payload;
                 var pattern    = behavior?.Delivery ?? DeliveryPattern.Single;
                 var affinity   = behavior?.Affinity ?? Affinity.Hostile;
                 var anchorAxis = behavior?.Anchor   ?? Anchor.Target;
@@ -306,6 +317,37 @@ namespace Code.Runtime.Core.Combat
                         ExecuteEffect(effect, targets, covered, damage);
             }
         }
+
+        /// <summary>
+        /// Extracts the chain's payloads (every weapon modifier that isn't the root) into the cost tree the
+        /// <see cref="PropagationCostResolver"/> walks — each payload's authored cost
+        /// (<see cref="Code.Data.Items.Weapon.PayloadBehavior.CostValue"/>/<c>CostType</c>) becomes a
+        /// <see cref="Modifier"/> here, since the Data assembly is dependency-free. Propagation order is
+        /// chain order; with no Splitter authored yet this is one linear lineage (ADR-0006).
+        /// </summary>
+        private static (IReadOnlyList<CostNode> roots, IReadOnlyList<(CostNode node, IWeaponItem payload)> ordered)
+            BuildPayloadCostTree(IItemChain chain, IWeaponItem rootWeapon)
+        {
+            var payloads = new List<(Modifier cost, IWeaponItem payload)>();
+            foreach (var item in chain.Modifiers)
+            {
+                if (item is not IWeaponItem w || w == rootWeapon) continue;
+                var behavior = w.Payload;
+                var cost = new Modifier(behavior?.CostValue ?? 0f, behavior?.CostType ?? ModifierType.FlatAdd, Guid.NewGuid());
+                payloads.Add((cost, w));
+            }
+            return PayloadCostTree.BuildLineage(payloads);
+        }
+
+        /// <summary>
+        /// The pool balance the walker may spend. Mirrors <see cref="Resource.CanSpend"/>: a Health cost
+        /// pool (blood magic) must never be spent to 0, so the walker sees a hair under full health; Mana
+        /// spends down to empty.
+        /// </summary>
+        private static float SpendableBalance(Resource costResource, ResourceType pool) =>
+            pool == ResourceType.Health
+                ? Mathf.Max(0f, costResource.CurrentValue - 0.0001f)
+                : costResource.CurrentValue;
 
         private void ExecuteEffect(PayloadEffect effect, List<IPawn> targets, IReadOnlyList<Hex> hexes, float damageDealt = 0f)
         {
@@ -369,22 +411,6 @@ namespace Code.Runtime.Core.Combat
             if (_hexGrid == null) { LogMissingHexGrid(); return; }
             foreach (var hex in hexes)
                 _hexGrid.SetTerrain(hex, effect.TerrainType);
-        }
-
-        private bool EvaluatePayloadCondition(IWeaponItem payload, float rootDamage)
-        {
-            var behavior = payload.Payload;
-            if (behavior == null) return true;
-            return behavior.Condition switch
-            {
-                ConditionType.None            => true,
-                ConditionType.ResourceFull    => _pawn.Stats.mana.IsFull,
-                ConditionType.ResourceBelow   => _pawn.Stats.mana.Percentage < behavior.ConditionThreshold,
-                ConditionType.ResourceAbove   => _pawn.Stats.mana.Percentage > behavior.ConditionThreshold,
-                ConditionType.DamageAbove     => rootDamage >= behavior.ConditionThreshold,
-                ConditionType.HasStatusEffect => false,
-                _                             => false,
-            };
         }
 
         private static bool CanFire(float resourceCost, Resource costResource) =>

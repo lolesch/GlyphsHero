@@ -56,29 +56,60 @@ namespace Code.Runtime.Modules.Inventory
             // the sources (each fires on its own event); with none, the weapon fires itself on its
             // timer. One firing per source — never one per connector — so a weapon amplified on both
             // sides is a single firing carrying both amps (the double-fire is gone at the source).
+            //
+            // Reactors are the only firing boundary between weapons (ADR-0006). A weapon with a reactor
+            // anywhere upstream is reactor-driven and fires on its event; a timer weapon sitting
+            // downstream of another weapon with no reactor between is that firing's PAYLOAD (a child
+            // delivery, ADR-0004 §4) and does not fire independently — it is claimed below.
+            var reactorDriven = new List<(IWeaponItem weapon, List<ITetrisItem> sources)>();
+            var timerWeapons  = new List<IWeaponItem>();
             foreach (var weapon in container.Contents.Values.OfType<IWeaponItem>())
             {
                 var sources = FiringSources(weapon, adjacency);
-                if (sources.Count == 0)
-                    sources.Add(weapon); // no reactor → timer-driven, the weapon is its own source
+                if (sources.Count > 0) reactorDriven.Add((weapon, sources));
+                else                   timerWeapons.Add(weapon);
+            }
 
-                foreach (var source in sources)
+            var reactorDrivenSet = new HashSet<ITetrisItem>(reactorDriven.Select(x => x.weapon));
+            var claimedPayloads  = new HashSet<ITetrisItem>();
+
+            void BuildFiring(ITetrisItem source, IWeaponItem weapon)
+            {
+                var modifiers = GatherModifiers(source, weapon, positionOf[source], adjacency, container,
+                    connectedEdges, upstreamConnectors, downstreamConnectors, reactorDrivenSet);
+
+                // A reactor source must reach this weapon; defensive only — FiringSources found it
+                // by walking the trigger graph back from the weapon, so the path always exists.
+                if (source is not IWeaponItem && !modifiers.Exists(m => m is IWeaponItem))
                 {
-                    var modifiers = GatherModifiers(source, weapon, positionOf[source], adjacency, container,
-                        connectedEdges, upstreamConnectors, downstreamConnectors);
-
-                    // A reactor source must reach this weapon; defensive only — FiringSources found it
-                    // by walking the trigger graph back from the weapon, so the path always exists.
-                    if (source is not IWeaponItem && !modifiers.Exists(m => m is IWeaponItem))
-                    {
-                        Debug.LogWarning($"[ChainResolver] Firing source '{source.Name}' reached no weapon — skipped.");
-                        continue;
-                    }
-
-                    roots.Add(source);
-                    chains.Add(new ItemChain(source, modifiers));
-                    //LogChain(chains[^1]);
+                    Debug.LogWarning($"[ChainResolver] Firing source '{source.Name}' reached no weapon — skipped.");
+                    return;
                 }
+
+                roots.Add(source);
+                chains.Add(new ItemChain(source, modifiers));
+                //LogChain(chains[^1]);
+
+                // Any weapon gathered downstream is a timer-weapon payload (reactor-driven ones are
+                // walled out in GatherModifiers); claim it so it does not also fire on its own timer.
+                foreach (var modifier in modifiers)
+                    if (modifier is IWeaponItem payload && payload != weapon)
+                        claimedPayloads.Add(payload);
+            }
+
+            // Reactor firings first, so they claim their downstream timer payloads before the timer pass
+            // decides which weapons still fire on their own.
+            foreach (var (weapon, sources) in reactorDriven)
+                foreach (var source in sources)
+                    BuildFiring(source, weapon);
+
+            // Timer firings in deterministic position order (lower-left first): a weapon already claimed
+            // as a payload upstream is skipped, and the upstream-most weapon of a bare weapon→weapon run
+            // owns the firing.
+            foreach (var weapon in timerWeapons.OrderBy(w => positionOf[w].y).ThenBy(w => positionOf[w].x))
+            {
+                if (claimedPayloads.Contains(weapon)) continue;
+                BuildFiring(weapon, weapon);
             }
 
             if (chains.Count == 0)
@@ -128,10 +159,12 @@ namespace Code.Runtime.Modules.Inventory
 
         /// <summary>
         /// Gathers a firing's contributors by BFS from its <paramref name="source"/>. Two walls keep
-        /// firings scoped: a different weapon ends the branch (it is its own firing), and a trigger
-        /// cannot be entered from a non-trigger (existing rule) so each reactor claims only its own
-        /// side's shifters. The first hop skips the trigger-wall so the source reaches its immediate
-        /// shifter. Connectors/edges are recorded here for the overlay.
+        /// firings scoped: a reactor-driven weapon ends the branch (it is its own firing — the reactor
+        /// is the firing boundary between weapons, ADR-0006), and a trigger cannot be entered from a
+        /// non-trigger (existing rule) so each reactor claims only its own side's shifters. A weapon
+        /// reached with no reactor between it and the source is kept as a payload modifier. The first
+        /// hop skips the trigger-wall so the source reaches its immediate shifter. Connectors/edges are
+        /// recorded here for the overlay.
         /// </summary>
         private static List<ITetrisItem> GatherModifiers(
             ITetrisItem                                                source,
@@ -141,7 +174,8 @@ namespace Code.Runtime.Modules.Inventory
             ITetrisContainer                                           container,
             HashSet<(Vector2Int, Vector2Int)>                          connectedEdges,
             Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>> upstreamConnectors,
-            Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>> downstreamConnectors)
+            Dictionary<ITetrisItem, HashSet<(Vector2Int, Vector2Int)>> downstreamConnectors,
+            HashSet<ITetrisItem>                                       reactorDrivenSet)
         {
             var modifiers = new List<ITetrisItem>();
             var visited   = new HashSet<ITetrisItem> { source };
@@ -151,7 +185,7 @@ namespace Code.Runtime.Modules.Inventory
             {
                 if (!TryGetValidNeighbour(adjacency, container, source, slotPos, direction,
                         out var firstNeighbour, out var firstOrigin)) continue;
-                if (firstNeighbour is IWeaponItem && firstNeighbour != weapon) continue;
+                if (IsOtherFiringsWeapon(firstNeighbour, weapon, reactorDrivenSet)) continue;
 
                 connectedEdges.Add(MakeKey(slotPos, slotPos + direction));
                 MarkConnector(upstreamConnectors, source, slotPos, direction);
@@ -171,8 +205,8 @@ namespace Code.Runtime.Modules.Inventory
                     if (!TryGetValidNeighbour(adjacency, container, current, slotPos, direction,
                             out var next, out var nextOrigin)) continue;
                     if (visited.Contains(next)) continue;
-                    if (next is IWeaponItem && next != weapon) continue;     // other weapon = its own firing
-                    if (IsTrigger(next) && !IsTrigger(current)) continue;    // trigger wall
+                    if (IsOtherFiringsWeapon(next, weapon, reactorDrivenSet)) continue; // reactor-driven = its own firing
+                    if (IsTrigger(next) && !IsTrigger(current)) continue;               // trigger wall
 
                     connectedEdges.Add(MakeKey(slotPos, slotPos + direction));
                     MarkConnector(upstreamConnectors, current, slotPos, direction);
@@ -182,6 +216,14 @@ namespace Code.Runtime.Modules.Inventory
 
             return modifiers;
         }
+
+        /// <summary>
+        /// A weapon other than this firing's <paramref name="weapon"/> ends the branch only when it is
+        /// reactor-driven — it owns its own firing, so the reactor between is the boundary. A timer
+        /// weapon downstream (no reactor between) is allowed through as a payload modifier (ADR-0006).
+        /// </summary>
+        private static bool IsOtherFiringsWeapon(ITetrisItem item, IWeaponItem weapon, HashSet<ITetrisItem> reactorDrivenSet)
+            => item is IWeaponItem && item != weapon && reactorDrivenSet.Contains(item);
 
         /// <summary>
         /// Builds an undirected connection graph filtered by connection validity rules.
@@ -233,7 +275,7 @@ namespace Code.Runtime.Modules.Inventory
                 var isPayload = item is IWeaponItem w && w != weapon;
                 sb.Append($" → {GetSemanticLabel(item, false, isPayload)}({item.Name}");
                 if (isPayload)
-                    sb.Append($"|{((IWeaponItem)item).Payload.Condition}");
+                    sb.Append($"|{((IWeaponItem)item).Payload.Delivery}");
                 sb.Append(")");
             }
             return sb.ToString();

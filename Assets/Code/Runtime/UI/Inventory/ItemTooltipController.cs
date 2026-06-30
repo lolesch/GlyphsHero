@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Code.Data.Enums;
+using Code.Data.Items.Weapon;
 using Code.Runtime.Modules.Inventory;
+using Code.Runtime.Modules.Statistics;
 using Submodules.Utility.Extensions;
 using TMPro;
 using UnityEngine;
@@ -167,29 +170,29 @@ namespace Code.Runtime.UI.Inventory
         {
             var sb = new StringBuilder();
 
-            var itemColor    = ChainComponentColors.GetColor(item, item is IWeaponItem);
-            var componentStr = $"[{ComponentLabel(item)}]".Colored(itemColor);
+            var chains       = topology.Chains
+                .Where(c => c.Root == item || c.Modifiers.Contains(item))
+                .ToList();
+            var isChained    = chains.Count > 0;
+            var primaryChain = PrimaryChain(item, topology);
+            var isPayload    = item is IWeaponItem && primaryChain != null && IsPayload(item, primaryChain);
+            var isWeaponRoot = item is IWeaponItem && !isPayload;
+
+            // Header: name + component tag, coloured by true root/payload state (red root, purple
+            // payload) — not by "is a weapon", which mis-painted every payload with the root colour.
+            var labelColor   = ChainComponentColors.GetColor(item, isWeaponRoot);
+            var componentStr = $"[{ComponentLabel(item, isPayload)}]".Colored(labelColor);
             sb.AppendLine($"<align=left><b>{item.Name}</b><align=right> {componentStr}</align>");
             sb.AppendLine(new string('─', 24));
 
-            var chains    = topology.Chains
-                .Where(c => c.Root == item || c.Modifiers.Contains(item))
-                .ToList();
-            var isChained = chains.Count > 0;
-            
-            var primaryChainForPayload = topology.Chains.FirstOrDefault(c => c.Root == item || c.Modifiers.Contains(item));
-            var isPayload              = primaryChainForPayload != null && IsPayload(item, primaryChainForPayload);
-            AppendItemStats(sb, item, isChained, isPayload);
+            // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
+            // weapons describe themselves through their firing (standalone / payload / chain output).
+            AppendAttachmentIdentity(sb, item, isChained);
 
             if (!isChained)
             {
                 if (item is IWeaponItem w)
-                {
-                    sb.AppendLine();
-                    sb.AppendLine("<b>Attack:</b>");
-                    sb.AppendLine($"  dmg  {(float)w.Damage:F1}   every {(float)w.AttackSpeed:F1}s");
-                    sb.AppendLine($"  cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
-                }
+                    AppendStandaloneWeapon(sb, w);
                 return sb.ToString().TrimEnd();
             }
 
@@ -202,7 +205,11 @@ namespace Code.Runtime.UI.Inventory
                     sb.Append(BuildChainSentence(chain, item));
                     sb.AppendLine();
                 }
-                AppendChainOutput(sb, chain, item, detailed);
+
+                if (item is IWeaponItem pw && IsPayload(item, chain))
+                    AppendPayloadOutput(sb, chain, pw);
+                else
+                    AppendChainOutput(sb, chain, item, detailed);
             }
 
             return sb.ToString().TrimEnd();
@@ -261,13 +268,82 @@ namespace Code.Runtime.UI.Inventory
             var before = WeaponStatResolver.Resolve(weapon, ordered.Take(hovIndex));
             var with   = WeaponStatResolver.Resolve(weapon, ordered.Take(hovIndex + 1));
 
-            sb.AppendLine("<b>Attack:</b>");
+            var reactorDriven = chain.Root is IReactorItem;
+            sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
             sb.AppendLine($"  dmg  {Stat(before.Damage, with.Damage, detailed)}   " +
                           $"{FireRate(chain, before.AttackSpeed, with.AttackSpeed, detailed)}");
+            sb.AppendLine($"  {AxesLine(with.Delivery, with.Affinity, with.Anchor, 0)}");
+
             var poolStr = with.CostResource != before.CostResource
                 ? $" [{before.CostResource}→{with.CostResource}]"
                 : $" [{with.CostResource}]";
-            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}{poolStr}");
+            // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
+            // cover it nothing fires. Payload marginals are summarised below and detailed per-payload.
+            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}{poolStr}" +
+                          "   (root gate)".Colored(LightGray));
+
+            AppendPayloadSummary(sb, chain, with.CostResource);
+        }
+
+        /// <summary>
+        /// One line summarising the weapon's downstream payloads (ADR-0006): how many child deliveries
+        /// the firing carries and what they add to the shared cost pool. Flat costs sum cleanly; a mix of
+        /// modifier types can't be one honest number, so we say "mixed" and defer detail to each payload's
+        /// own tooltip. Silent when the chain has no payload weapons.
+        /// </summary>
+        private static void AppendPayloadSummary(StringBuilder sb, IItemChain chain, ResourceType pool)
+        {
+            var payloads = chain.Modifiers.OfType<IWeaponItem>()
+                .Where(w => w != chain.Weapon)
+                .ToList();
+            if (payloads.Count == 0) return;
+
+            var allFlat = payloads.All(w => (w.Payload?.CostType ?? ModifierType.FlatAdd) == ModifierType.FlatAdd);
+            var flatSum = payloads.Sum(w => w.Payload?.CostValue ?? 0f);
+            var costStr = allFlat ? $"+{flatSum:0.###} [{pool}]" : "mixed cost";
+
+            sb.AppendLine($"  {payloads.Count} payload{(payloads.Count > 1 ? "s" : "")}: {costStr}".Colored(LightGray));
+        }
+
+        /// <summary>
+        /// A hovered payload weapon describes its <em>own</em> child delivery (ADR-0004 §4 / ADR-0006),
+        /// not the root's stats — combat fires it with its own Damage, its PayloadBehavior delivery axes,
+        /// and charges its authored cost modifier against the chain's shared pool. The old diff path
+        /// showed the root's unchanged numbers here (a payload weapon isn't a WeaponStats contributor),
+        /// which was simply wrong.
+        /// </summary>
+        private static void AppendPayloadOutput(StringBuilder sb, IItemChain chain, IWeaponItem payload)
+        {
+            var rootName = chain.Weapon?.Name ?? "weapon";
+            var slot     = chain.Modifiers.OfType<IWeaponItem>()
+                               .Where(w => w != chain.Weapon)
+                               .ToList()
+                               .IndexOf(payload) + 1;
+
+            sb.AppendLine($"<b>Payload</b> of {rootName}   {$"(#{slot} in propagation)".Colored(LightGray)}");
+
+            var b         = payload.Payload;
+            var delivery  = b?.Delivery  ?? DeliveryPattern.Single;
+            var affinity  = b?.Affinity  ?? Affinity.Hostile;
+            var anchor    = b?.Anchor    ?? Anchor.Target;
+            var shapeSize = b?.ShapeSize ?? 1;
+            sb.AppendLine($"  {(float)payload.Damage:F1} dmg   ·   {AxesLine(delivery, affinity, anchor, shapeSize)}");
+
+            // What including this payload adds to the one shared pool — the chain root's CostResource
+            // (ADR-0006 Decision 4). Type tells the player how it scales: flat, % of base, or compounding.
+            var pool     = WeaponStatResolver.Resolve(chain).CostResource;
+            var costVal  = b?.CostValue ?? 0f;
+            var costType = b?.CostType  ?? ModifierType.FlatAdd;
+            if (Mathf.Approximately(costVal, 0f))
+                sb.AppendLine($"  free to add   [{pool}]".Colored(LightGray));
+            else
+            {
+                var costStr = new Modifier(costVal, costType, Guid.Empty).ToString();
+                sb.AppendLine($"  cost {costStr} [{pool}]   ·   {CostNote(costType).Colored(LightGray)}");
+            }
+
+            if (b != null && b.Timing != PayloadTiming.Instant)
+                sb.AppendLine($"  {b.Timing.ToString().ToLowerInvariant()} ({b.TimingValue:0.###})".Colored(LightGray));
         }
 
         // ── Stat formatting ───────────────────────────────────────────────
@@ -286,77 +362,80 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Item stats display ────────────────────────────────────────────
 
-        private static void AppendItemStats(StringBuilder sb, ITetrisItem item, bool isChained, bool isPayload)
+        private static void AppendAttachmentIdentity(StringBuilder sb, ITetrisItem item, bool isChained)
         {
-            switch (item)
+            if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
+                return;
+
+            var chainedDesc  = ChainedDescription(item);
+            var sm           = item as IAttachmentItem;
+            var unchainedStr = sm?.affixes.Count > 0
+                ? $"unchained: {sm.affixes[0].PawnStat} {sm.affixes[0].Modifier}"
+                : null;
+
+            // Bold the active half: in a chain the chained effect is live and the loose affix is greyed,
+            // and vice-versa when the item sits alone in the grid (ADR-0004 item roles).
+            if (isChained)
             {
-                case IWeaponItem w:
-                    sb.AppendLine($"  dmg  {(float)w.Damage:F1}   spd  {(float)w.AttackSpeed:F1}");
-                    sb.AppendLine($"  cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
-                    if (w.Payload.Condition != ConditionType.None)
-                    {
-                        sb.AppendLine();
-                        var payloadStr = $"  payload:   {w.Payload.Condition} \n" +
-                                         $"  threshold: {w.Payload.ConditionThreshold:F2}";
-                        sb.AppendLine(isPayload ? $"<b>{payloadStr}</b>" : payloadStr.Colored(LightGray));
-                    }
-                    break;
-
-                case IAmplifierItem or IShifterItem or IReactorItem or IConverterItem:
-                {
-                    var chainedDesc  = ChainedDescription(item);
-                    var sm           = item as IAttachmentItem;
-                    var unchainedStr = sm?.affixes.Count > 0
-                        ? $"unchained: {sm.affixes[0].PawnStat} {sm.affixes[0].Modifier}"
-                        : null;
-
-                    if (isChained)
-                    {
-                        sb.AppendLine($"  <b>{chainedDesc}</b>");
-                        if (unchainedStr != null)
-                            sb.AppendLine($"  {unchainedStr.Colored(LightGray)}");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"  {chainedDesc.Colored(LightGray)}");
-                        if (unchainedStr != null)
-                            sb.AppendLine($"  <b>{unchainedStr}</b>");
-                    }
-                    break;
-                }
+                sb.AppendLine($"  <b>{chainedDesc}</b>");
+                if (unchainedStr != null)
+                    sb.AppendLine($"  {unchainedStr.Colored(LightGray)}");
             }
+            else
+            {
+                sb.AppendLine($"  {chainedDesc.Colored(LightGray)}");
+                if (unchainedStr != null)
+                    sb.AppendLine($"  <b>{unchainedStr}</b>");
+            }
+        }
+
+        /// <summary>A weapon sitting alone (no chain): it fires on its own timer with its base stats.</summary>
+        private static void AppendStandaloneWeapon(StringBuilder sb, IWeaponItem w)
+        {
+            sb.AppendLine();
+            sb.AppendLine("<b>Attack:</b>");
+            sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {AxesLine(w.Delivery, w.Affinity, w.Anchor, 0)}");
+            sb.AppendLine($"  every {Interval((float)w.AttackSpeed)}   ·   cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
         }
 
         // ── Helpers ───────────────────────────────────────────────────────
 
-        private static string FireRate(IItemChain chain, float before, float after, bool detailed)
+        // AttackSpeed is attacks-per-second (combat fires every 1/AttackSpeed s — CombatClock). The old
+        // tooltip printed the rate value as if it were seconds, so a fast weapon read as "every 2.5s"
+        // when it actually fired every 0.4s. Convert to the interval and treat lower as the improvement.
+        private static string FireRate(IItemChain chain, float beforeSpd, float afterSpd, bool detailed)
         {
             var reactor = chain.Root as IReactorItem
                           ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
+            if (reactor != null)
+                return $"fires {ReactorWhen(reactor.ReactorType)}"; // reactor-driven: the timer is suppressed
+
+            var before = beforeSpd > 0f ? 1f / beforeSpd : 0f;
+            var after  = afterSpd  > 0f ? 1f / afterSpd  : 0f;
 
             var valueStr = Mathf.Approximately(before, after)
-                ? $"{after:F1}s"
+                ? $"{after:0.00}s"
                 : detailed
-                    ? $"{before:F1}s → {Stat(before, after, detailed)}s"
-                    : $"{Stat(before, after, detailed)}s";
+                    ? $"{before:0.00}s → {Stat(before, after, detailed, invert: true)}s"
+                    : $"{Stat(before, after, detailed, invert: true)}s";
 
-            return reactor != null
-                ? $"{reactor.ReactorType} ({valueStr})"
-                : $"every {valueStr}";
+            return $"every {valueStr}";
         }
-        
+
+        private static string Interval(float attackSpeed) =>
+            attackSpeed > 0f ? $"{1f / attackSpeed:0.00}s" : "—";
+
         private static string ChainedDescription(ITetrisItem item) => item switch
         {
-            IAmplifierItem amp => 
+            IAmplifierItem amp =>
                 $"chained:   {amp.outputMod.stat} {amp.outputMod.modifier}",
 
-            IShifterItem act =>
-                $"chained:   {act.inputMod.stat} {act.inputMod.modifier}" +
-                $" ↔ {act.outputMod.stat} {act.outputMod.modifier}",
+            IShifterItem sh =>
+                $"chained:   {sh.inputMod.stat} {sh.inputMod.modifier}" +
+                $" ↔ {sh.outputMod.stat} {sh.outputMod.modifier}",
 
             IReactorItem reactor =>
-                $"chained:   {reactor.ReactorType}" +
-                "  when: ",
+                $"chained:   fires {ReactorWhen(reactor.ReactorType)}",
 
             IConverterItem converter => "chained:   " + converter.Axis switch
             {
@@ -393,14 +472,61 @@ namespace Code.Runtime.UI.Inventory
             return false;
         }
 
-        private static string ComponentLabel(ITetrisItem item) => item switch
+        private static string ComponentLabel(ITetrisItem item, bool isPayload) => item switch
         {
-            IWeaponItem    => "Weapon",
-            IAmplifierItem => "Amplifier",
-            IConverterItem => "Converter",
-            IShifterItem => "Activator",
-            IReactorItem   => "Reactor",
-            _              => item.GetType().Name,
+            IWeaponItem when isPayload => "Payload",
+            IWeaponItem                => "Weapon",
+            IAmplifierItem             => "Amplifier",
+            IConverterItem             => "Converter",
+            IShifterItem               => "Shifter",
+            IReactorItem               => "Reactor",
+            _                          => item.GetType().Name,
+        };
+
+        // ── Player-facing word maps ───────────────────────────────────────
+
+        /// <summary>Delivery + Affinity + Anchor as one legible line (ADR-0004 §3): what shape, who it
+        /// hits, and where it centres. Aoe shows its radius; weapons pass shapeSize 0 (Aoe is payload-only).</summary>
+        private static string AxesLine(DeliveryPattern delivery, Affinity affinity, Anchor anchor, int shapeSize) =>
+            $"{DeliveryWord(delivery, shapeSize)} · hits {AffinityWord(affinity)} · on {AnchorWord(anchor)}";
+
+        private static string DeliveryWord(DeliveryPattern delivery, int shapeSize) =>
+            delivery == DeliveryPattern.Aoe ? $"Aoe r{shapeSize}" : delivery.ToString();
+
+        private static string AffinityWord(Affinity affinity) => affinity switch
+        {
+            Affinity.Hostile  => "enemies",
+            Affinity.Friendly => "allies",
+            Affinity.Self     => "self",
+            _                 => affinity.ToString(),
+        };
+
+        private static string AnchorWord(Anchor anchor) => anchor switch
+        {
+            Anchor.Origin => "self",
+            _             => "target",
+        };
+
+        private static string ReactorWhen(ReactorType type) => type switch
+        {
+            ReactorType.OnSelfHit         => "when hit",
+            ReactorType.OnManaDeplete     => "when mana empties",
+            ReactorType.OnEnemyDeath      => "when an enemy dies",
+            ReactorType.OnAllyAttacks     => "when an ally attacks",
+            ReactorType.OnAllyKills       => "when an ally kills",
+            ReactorType.OnNearbyEnemyDies => "when a nearby enemy dies",
+            _                             => type.ToString(),
+        };
+
+        /// <summary>How a payload's cost modifier scales (ADR-0006 Decision 5) — the player's read on
+        /// whether stacking it deep gets expensive.</summary>
+        private static string CostNote(ModifierType type) => type switch
+        {
+            ModifierType.FlatAdd     => "flat",
+            ModifierType.PercentAdd  => "% of base",
+            ModifierType.PercentMult => "deeper-costs-more",
+            ModifierType.Overwrite   => "fixed",
+            _                        => string.Empty,
         };
     }
 

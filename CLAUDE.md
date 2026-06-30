@@ -58,10 +58,18 @@ Issues, PRDs, and triage live in GitHub Issues at `lolesch/glyphshero` (via the 
 
 ### Triage labels
 
-Canonical label vocabulary, unmapped: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `Docs/agents/triage-labels.md`.
+Canonical label vocabulary, unmapped: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`, `needs-design`. See `Docs/agents/triage-labels.md`.
+
+### Design gate
+
+Design decisions get made at the design table, not silently at the keyboard. Before filling an undefined gap, apply the **one-way / two-way door** test: cheap to reverse → decide it but **log it in the slice-end ledger**; expensive to unwind, or it *contradicts an accepted Decision* or *defines a new rule* → **stop**, open a `needs-design` issue, don't back-write the choice. A structural ADR isn't `Accepted` until a `## Worked example` traces one concrete case through every Decision (tuning is exempt — it's playtested). Every implementation slice ends with a ledger (assumptions / decisions taken / gaps left open). `needs-design` never blocks the night shift (whitelist filter). See `Docs/agents/design-gate.md`.
+
+### Night shift
+
+Unattended overnight runs work the backlog AFK. The day shift (interactive, on `main`/`laptopLab`) has authority and curates which issues are `ready-for-agent`; the runner machinery lives only on the **`night-base`** branch (so it never clutters `main` or fires a SessionStart banner in interactive work). See `Docs/agents/night-shift.md`.
 
 ### Domain docs
 
 Single-context repo. `CLAUDE.md` is the current architecture reference; `CONTEXT.md` / `Docs/adr/` are created lazily as terms and decisions get resolved. See `Docs/agents/domain.md`.
 
-**ADRs are append-only.** "Update/sync the docs" means `CONTEXT.md`, the design docs, and ADR *headers* (`Lifecycle`/`Amended-by`) — **never** an accepted ADR's Decision body, which is frozen at decision time. A changed decision is a *new* ADR; the current truth of a concept lives in `CONTEXT.md`, which points at the governing ADR. See `Docs/adr/README.md`.
+**ADRs are append-only.** "Update/sync the docs" means `CONTEXT.md`, the design docs, and ADR *headers* (`Lifecycle`/`Amended-by`) — **never** an accepted ADR's Decision body, which is frozen at decision time. A changed decision is a *new* ADR; the current truth of a concept lives in `CONTEXT.md`, which points at the governing ADR. A discovered deviation opens a *superseding* ADR — it is **not** back-written into the accepted body (the acceptance gate exists to catch contradictions *before* acceptance). See `Docs/adr/README.md`.
