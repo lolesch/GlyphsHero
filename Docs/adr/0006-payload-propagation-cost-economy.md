@@ -12,9 +12,47 @@ date: 2026-06-24
 # ADR-0006 — Payload propagation is a fail-forward cost economy; the `ConditionType` draft is dissolved
 
 **Status:** Accepted (2026-06-24)
-**Lifecycle:** **Design-only — not implemented** (unlike ADR-0004/0005, which landed same-day).
-Implementation is a set of bounded follow-up slices (see Consequences); the planned-deltas section
-below is therefore a **spec**, not a build log.
+**Lifecycle:** **Implemented.** Slices 1–3 + the consumer wiring landed 2026-06-29/30; all six Decisions
+are realised (Decision 6 by the pre-existing reactor-cost pipeline, see below); 126/126 EditMode green.
+Remaining items are the body's **Deferred** list (Reactor watch-conditions, Status-as-gate, weapon-economy
+pool/`ProcChance`, telegraph, Converter-of-payload-cost, damage-gate) — none are part of this ADR's core.
+- **Slice 3 — pure walker (2026-06-29):** `PropagationCostResolver` (+ `CostNode`/`PropagationResult`) in
+  `Assets/Code/Runtime/Core/Combat/`, locked by `PropagationCostResolverTests` (red-green, two mutations
+  proven: fork-ordering flip and sibling-undo removal each failed exactly their target test).
+  **Deviation from Decision 5's literal wording:** the walker does *not* keep a node's modifier on and
+  `TryRemoveModifier`-rollback across the whole walk; it threads one `MutableFloat` with add-and-keep down a
+  linear lineage and removes modifiers only where state must reset — pruning an unaffordable node, and
+  **isolating fork siblings** (each restarts from the fork's running cost `R`). The literal "keep the
+  modifier on" leaks sibling A's mods into sibling B at a fork, contradicting Decision 3; the backtracking
+  form faithfully realises Decisions 2 and 3 and still routes every number through `MutableFloat`.
+- **Slice 1 — dissolve (2026-06-30):** removed `PayloadBehavior.Condition`/`ConditionThreshold`,
+  `PawnCombatController.EvaluatePayloadCondition`, and the tooltip/chain-debug condition reads. The
+  `ConditionType` enum is kept **parked** (no live uses) for the future Reactor/Trigger-condition ADR.
+- **Slice 2 — author cost data (2026-06-30):** `PayloadBehavior` gained `CostValue` (float) + `CostType`
+  (`ModifierType`, default `FlatAdd`). Authored as primitives, not a `Modifier`, because the **Data**
+  assembly is dependency-free and cannot reference `Modifier`; the runtime builds the `Modifier` at fire
+  time. Default `CostValue 0` ⇒ existing payloads are free until authored.
+- **Consumer wiring (2026-06-30):** new pure `PayloadCostTree.BuildLineage<T>` (locked by
+  `PayloadCostTreeTests`, mutation-proven) maps the chain's payloads into a linear `CostNode` lineage in
+  propagation order; `PawnCombatController.Fire` runs the walker once (root gate + fail-forward), spends
+  `TotalSpent` from the pool, and `FirePayloads` detonates only the funded nodes. A Health cost pool is
+  handed a balance one epsilon under full so blood-magic still can't self-kill (mirrors `Resource.CanSpend`).
+  This replaces the old per-payload independent `ResourceCost` deduction; a payload's own `ResourceCost`
+  stat is no longer consulted when it acts as a payload.
+- **Decision 6 — Reactor event cost factor — ALREADY SATISFIED by the existing pipeline (2026-06-30):**
+  no new mechanism was needed. A reactor authors its cost as its `ReactorConfig.inputStatMod` targeting
+  `WeaponInputStat.ManaCost` (any `ModifierType`, typically `PercentMult` to tax a frequent trigger);
+  `WeaponStatResolver` already folds a reactor-root's `inputMod` into `WeaponStats.ResourceCost`, which is
+  the value `Fire` seeds the walker with — i.e. the reactor-scaled **effective base / root gate** of
+  Decision 5. So `Fire` passes `reactorMods: null` (passing the mod again would double-count). The walker's
+  `reactorMods` parameter stays as the explicit model seam (locked by
+  `RootGate_ReactorModRaisesEffectiveBase`) but is unused in this integration because the reactor cost rides
+  resolved stats. *Caveat:* a `ReactorConfig` has a single `inputStatMod` slot, so a reactor taxing cost
+  cannot also buff another input stat — if a reactor ever needs both, that is a multi-mod generalisation
+  beyond ADR-0006, not a gap in the cost model.
+- **Needs a play-mode check:** combat firing has no automated coverage (no pawn/registry fakes), so the
+  in-combat behaviour — payloads firing per the economy, fail-forward pruning — is verified by the green
+  suite + a user play-test, per the established pattern.
 **Companion:** ADR-0004 (attack model — §4 makes a Payload a child delivery node), ADR-0005 (the
 resource economy — Cost is one pool + magnitude).
 **Refines:** ADR-0004 §4 (what gates a child delivery node) and the half-built

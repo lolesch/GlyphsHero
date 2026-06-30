@@ -2,6 +2,7 @@
 | Game                         | Relevant mechanic                             | Lesson                                                               |
 | ---------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
 | **Noita**                    | Wand building, spell + modifier chains        | Closest ancestor. Protect legibility actively                        |
+| **Magicraft**                | Per-wand mana pool + regen, end-of-chain cooldown, per-spell cast interval | Weapon-local economy & chain pacing; contrast to our pawn-level mana / no interval |
 | **Path of Exile**            | Skill gems, CoC/CwDT                          | Validates dual-mode weapon; condition+effect as one unit             |
 | **Backpack Battles**         | Item activation triggers, resource thresholds | Rich trigger grammar; generator/spender patterns                     |
 | **Backpack Hero**            | Grid adjacency, implicit item relationships   | Tactile spatial puzzling                                             |

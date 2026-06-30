@@ -4441,17 +4441,11 @@ MonoBehaviour:
   continueAfterLootButton: {fileID: 1233224307}
   gameOverButton: {fileID: 131466772}
   itemPool:
-  - {fileID: 11400000, guid: f3bd027fce4558b40b6e3c663a5defcd, type: 2}
-  - {fileID: 11400000, guid: 3aafe504aba36954f9fe01fa03622533, type: 2}
-  - {fileID: 11400000, guid: fd4a579c748d3414f88c941336c65ec9, type: 2}
+  - {fileID: 11400000, guid: fb19e700426d517408b5be9a2cefd59e, type: 2}
   - {fileID: 11400000, guid: 62b0a140624198a4d909ae17f3a25027, type: 2}
-  - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
+  - {fileID: 11400000, guid: fd4a579c748d3414f88c941336c65ec9, type: 2}
+  - {fileID: 11400000, guid: f3bd027fce4558b40b6e3c663a5defcd, type: 2}
   - {fileID: 11400000, guid: 57ebd3624db0aa6469b794b430703496, type: 2}
-  - {fileID: 11400000, guid: d27bd8a659792f741917243aa66dcfcb, type: 2}
-  - {fileID: 11400000, guid: a572866fea819a94d87021b0702dd708, type: 2}
-  - {fileID: 11400000, guid: 07e8abe6d3f44cf6baa6daf80e8f8e9d, type: 2}
-  - {fileID: 11400000, guid: f6619da53e6140628fd4dd67213c9866, type: 2}
-  - {fileID: 11400000, guid: 7a841dc11f0746a0869a8a7c2270c995, type: 2}
   - {fileID: 11400000, guid: 52131fb51d194ad28ade9a27cb8b5c39, type: 2}
   lootCount: 3
   <Current>k__BackingField: 0

@@ -220,5 +220,46 @@ namespace Code.Tests.EditMode.Inventory
             weapons.Should().Contain(weaponA);
             weapons.Should().Contain(weaponB);
         }
+
+        [Test]
+        public void TimerWeaponDownstreamOfWeapon_IsPayload_NotItsOwnFiring()
+        {
+            // [weaponA]( <-> )[weaponB]: no reactor between them, so the downstream weapon is a payload
+            // (a child delivery, ADR-0004 §4 / ADR-0006), not a second firing. One chain; the upstream-most
+            // weapon by position (A) owns the firing and carries B as a modifier. B does NOT fire on its own.
+            var weaponA = new FakeWeapon("WeaponA", Right);
+            var weaponB = new FakeWeapon("WeaponB", Left);
+            var container = new FakeContainer(new Vector2Int(4, 1))
+                .Place(new Vector2Int(0, 0), weaponA)
+                .Place(new Vector2Int(1, 0), weaponB);
+
+            var chains = ChainResolver.Resolve(container);
+
+            chains.Should().HaveCount(1);
+            chains[0].Root.Should().BeSameAs(weaponA);
+            chains[0].Weapon.Should().BeSameAs(weaponA);
+            chains[0].Modifiers.Should().Contain(weaponB);
+        }
+
+        [Test]
+        public void ReactorDrivenWeapon_CarriesDownstreamTimerWeaponAsPayload()
+        {
+            // [reactor][weaponA][weaponB]: the reactor drives A; B sits behind A with no reactor between,
+            // so B is A's payload on the one reactor firing — not a separate timer firing.
+            var reactor = new FakeReactor("Reactor", ReactorType.OnSelfHit, Right);
+            var weaponA = new FakeWeapon("WeaponA", Left, Right);
+            var weaponB = new FakeWeapon("WeaponB", Left);
+            var container = new FakeContainer(new Vector2Int(4, 1))
+                .Place(new Vector2Int(0, 0), reactor)
+                .Place(new Vector2Int(1, 0), weaponA)
+                .Place(new Vector2Int(2, 0), weaponB);
+
+            var chains = ChainResolver.Resolve(container);
+
+            chains.Should().HaveCount(1);
+            chains[0].Root.Should().BeSameAs(reactor);
+            chains[0].Weapon.Should().BeSameAs(weaponA);
+            chains[0].Modifiers.Should().Contain(weaponB);
+        }
     }
 }
