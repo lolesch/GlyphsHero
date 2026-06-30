@@ -182,7 +182,10 @@ namespace Code.Runtime.UI.Inventory
             // payload) — not by "is a weapon", which mis-painted every payload with the root colour.
             var labelColor   = ChainComponentColors.GetColor(item, isWeaponRoot);
             var componentStr = $"[{ComponentLabel(item, isPayload)}]".Colored(labelColor);
-            sb.AppendLine($"<align=left><b>{item.Name}</b><align=right> {componentStr}</align>");
+            // Type channel (tooltip-redesign slice 1): a leading role glyph next to the name. Color
+            // stays reserved for direction, so type is the glyph's job (TypeGlyphs).
+            var typeGlyph    = TypeGlyphs.For(item, isPayload);
+            sb.AppendLine($"<align=left>{typeGlyph} <b>{item.Name}</b><align=right> {componentStr}</align>");
             sb.AppendLine(new string('─', 24));
 
             // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
