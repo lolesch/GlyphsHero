@@ -37,9 +37,19 @@ Directly under the `# ADR-NNNN — title` line, as bold key/value lines:
 
 The YAML frontmatter stays: `tags: [ADR, <domains>]`, `status:`, `date:`.
 
+## The acceptance gate: prove it before Accepted
+
+A **structural** ADR (one that defines rules) stays `Proposed` until its `## Worked example` section
+traces one concrete case end-to-end through every Decision. That worked example is what catches a
+contradiction *between* Decisions before code depends on it — the failure mode that produced ADR-0006's
+back-written "Deviation from Decision 5" note. If the example can't be walked without a judgement the
+Decisions don't answer, that's an `## Open questions` entry to resolve before acceptance. Pure
+tuning/number ADRs are exempt — their validation is playtest. Full rationale: `Docs/agents/design-gate.md`.
+
 ## Body sections (conventional order)
 
 `## Context` → `## Decisions` (numbered `### N. … — Accepted` subheads, each with its *Why*) →
+`## Worked example` (required for structural ADRs — the acceptance gate above) →
 `## Considered and rejected` → `## Deferred (designed, not built)` → `## Open questions` →
 `## Consequences`.
 
@@ -56,6 +66,7 @@ issue trail**, not the ADR. The `Lifecycle` header field is the ADR's pointer at
 | [0003](0003-delivery-patterns-reach-gated-and-stackable.md) | Delivery patterns are reach-gated, stackable, covered-hex | Implemented (refined by 0004) |
 | [0004](0004-attack-model-item-roles-and-recursive-delivery.md) | Attack model: item roles + recursive-delivery collapse | Implemented |
 | [0005](0005-resource-economy-cost-gain-magnitude.md) | Resource economy decomposes into Cost / Gain-on-hit / Magnitude | Implemented |
-| [0006](0006-payload-propagation-cost-economy.md) | Payload propagation is a fail-forward cost economy | **Design-only** — not implemented |
+| [0006](0006-payload-propagation-cost-economy.md) | Payload propagation is a fail-forward cost economy | Implemented |
+| [0007](0007-weapon-payload-direction-and-reactor-boundary.md) | Weapon→weapon payloads; reactor is the firing boundary; age-stamped origin | **Partially implemented** (Decision 1 only) |
 
 Keep this table's `Lifecycle` column in step with each ADR's header when state changes.

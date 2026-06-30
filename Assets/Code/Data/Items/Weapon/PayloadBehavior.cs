@@ -8,8 +8,13 @@ namespace Code.Data.Items.Weapon
     [Serializable]
     public sealed class PayloadBehavior
     {
-        [field: SerializeField] public ConditionType    Condition          { get; private set; }
-        [field: SerializeField] public float            ConditionThreshold { get; private set; } = 0.5f;
+        // The marginal cost of including this payload in the attack (ADR-0006 Decisions 4–5): authored as
+        // a value + ModifierType so it flows through the same MutableFloat pipeline as any stat modifier
+        // (FlatAdd / PercentAdd / PercentMult — PercentMult is the opt-in "deeper costs more"). The pure
+        // PropagationCostResolver reads these to decide fail-forward propagation. Data is dependency-free,
+        // so the runtime builds the Modifier from these primitives at fire time. Default 0 = free to add.
+        [field: SerializeField] public float        CostValue { get; private set; }
+        [field: SerializeField] public ModifierType CostType  { get; private set; } = ModifierType.FlatAdd;
         // The child delivery's pattern mask (stackable) and the Aoe radius it consumes. Payloads may
         // use Aoe (a disk) — weapons may not (see DeliveryPattern). ShapeSize is the Reach/shape-size
         // split: it is a pattern parameter, never the acquisition Reach.
