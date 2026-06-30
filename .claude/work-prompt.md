@@ -12,6 +12,10 @@ clean, committed state. Do exactly one task chunk, then stop.
 - If the handover shows an issue in progress, continue THAT issue.
 - Otherwise list candidates and take the lowest-numbered one:
   `gh issue list --state open --label ready-for-agent --json number,title --jq 'sort_by(.number)'`
+- Read the chosen issue IN FULL before working — `gh issue view <n> --comments`. The body is the
+  spec (it may point to a spec doc under `Docs/.../specs/` on main); the comments carry prior slice
+  ledgers. That issue + the context from step 1 is your entire task handover — do not work from the
+  title alone.
 - If there are NO `ready-for-agent` issues and nothing in progress: print exactly
   `NIGHT_RUNNER_NO_TASKS` on its own line and STOP. Do nothing else, make no commits.
 
