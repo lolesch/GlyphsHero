@@ -275,7 +275,7 @@ namespace Code.Runtime.UI.Inventory
             sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
             sb.AppendLine($"  dmg  {Stat(before.Damage, with.Damage, detailed)}   " +
                           $"{FireRate(chain, before.AttackSpeed, with.AttackSpeed, detailed)}");
-            sb.AppendLine($"  {AxesLine(with.Delivery, with.Affinity, with.Anchor, 0)}");
+            sb.AppendLine($"  {DeliverySentence.Build(with.Delivery, with.Affinity, with.Anchor, 0)}");
 
             var poolStr = with.CostResource != before.CostResource
                 ? $" [{before.CostResource}→{with.CostResource}]"
@@ -330,7 +330,7 @@ namespace Code.Runtime.UI.Inventory
             var affinity  = b?.Affinity  ?? Affinity.Hostile;
             var anchor    = b?.Anchor    ?? Anchor.Target;
             var shapeSize = b?.ShapeSize ?? 1;
-            sb.AppendLine($"  {(float)payload.Damage:F1} dmg   ·   {AxesLine(delivery, affinity, anchor, shapeSize)}");
+            sb.AppendLine($"  {(float)payload.Damage:F1} dmg   ·   {DeliverySentence.Build(delivery, affinity, anchor, shapeSize)}");
 
             // What including this payload adds to the one shared pool — the chain root's CostResource
             // (ADR-0006 Decision 4). Type tells the player how it scales: flat, % of base, or compounding.
@@ -397,7 +397,7 @@ namespace Code.Runtime.UI.Inventory
         {
             sb.AppendLine();
             sb.AppendLine("<b>Attack:</b>");
-            sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {AxesLine(w.Delivery, w.Affinity, w.Anchor, 0)}");
+            sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {DeliverySentence.Build(w.Delivery, w.Affinity, w.Anchor, 0)}");
             sb.AppendLine($"  every {Interval((float)w.AttackSpeed)}   ·   cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
         }
 
@@ -488,27 +488,9 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Player-facing word maps ───────────────────────────────────────
 
-        /// <summary>Delivery + Affinity + Anchor as one legible line (ADR-0004 §3): what shape, who it
-        /// hits, and where it centres. Aoe shows its radius; weapons pass shapeSize 0 (Aoe is payload-only).</summary>
-        private static string AxesLine(DeliveryPattern delivery, Affinity affinity, Anchor anchor, int shapeSize) =>
-            $"{DeliveryWord(delivery, shapeSize)} · hits {AffinityWord(affinity)} · on {AnchorWord(anchor)}";
-
-        private static string DeliveryWord(DeliveryPattern delivery, int shapeSize) =>
-            delivery == DeliveryPattern.Aoe ? $"Aoe r{shapeSize}" : delivery.ToString();
-
-        private static string AffinityWord(Affinity affinity) => affinity switch
-        {
-            Affinity.Hostile  => "enemies",
-            Affinity.Friendly => "allies",
-            Affinity.Self     => "self",
-            _                 => affinity.ToString(),
-        };
-
-        private static string AnchorWord(Anchor anchor) => anchor switch
-        {
-            Anchor.Origin => "self",
-            _             => "target",
-        };
+        // Delivery axes (Pattern × Affinity × Anchor + Aoe radius) are now rendered as one verb-led
+        // sentence by DeliverySentence.Build (tooltip-redesign slice 2). The old AxesLine/DeliveryWord/
+        // AffinityWord/AnchorWord robot-output maps were deleted with their callers.
 
         private static string ReactorWhen(ReactorType type) => type switch
         {
