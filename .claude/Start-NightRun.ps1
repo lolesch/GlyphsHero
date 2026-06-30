@@ -61,10 +61,17 @@ if ($dirty) {
     Write-Host 'Working tree is not clean — commit or stash before a night run. Aborting.'
     exit 1
 }
+# Git writes branch/merge status to stderr ("Already on '...'", "Switched to...",
+# "Already up to date"); under the script-level 'Stop' PS 5.1 turns that stderr into a
+# terminating NativeCommandError. Drop to 'Continue' for the sync calls and gate on
+# $LASTEXITCODE instead, then restore 'Stop' for the cmdlet-driven rest of the script.
+$ErrorActionPreference = 'Continue'
 git fetch origin --quiet 2>$null
-git checkout night-base 2>&1 | Out-Null
-git merge --no-edit origin/main 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) {
+git checkout night-base 2>$null | Out-Null
+git merge --no-edit origin/main 2>$null | Out-Null
+$mergeExit = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
+if ($mergeExit -ne 0) {
     Write-Host 'Could not sync night-base with origin/main (conflict?). Aborting.'
     git merge --abort 2>$null
     exit 1
@@ -85,6 +92,10 @@ function Invoke-ClaudeSession {
 
     # --print = headless; stdin carries the prompt.
     # --dangerously-skip-permissions so it doesn't stall on a permission prompt overnight.
+    # Local 'Continue': under PS 5.1 a native command's stderr captured via 2>&1 is wrapped as a
+    # NativeCommandError; with the script-level 'Stop' that would terminate the run the moment claude
+    # writes any stderr. We still want stderr in the log, just not as a fatal error.
+    $ErrorActionPreference = 'Continue'
     $prompt | claude --print --dangerously-skip-permissions --max-turns $MaxTurns 2>&1 |
         Tee-Object -FilePath $logFile | Out-Null
 
