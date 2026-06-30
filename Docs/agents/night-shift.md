@@ -39,8 +39,25 @@ when it is genuinely **AFK-finishable** — the bar a task must clear:
 - **Self-contained context** — the issue body + `CONTEXT.md`/ADRs are enough; no tribal knowledge.
 
 If a candidate fails any of these, label it `ready-for-human` or leave it `needs-triage` instead — keep it
-out of the night queue. Order matters: the runner takes the **lowest-numbered** open `ready-for-agent`
-issue, so number/prioritise accordingly.
+out of the night queue. A candidate that fails specifically on **an open design fork** gets `needs-design`
+(`Docs/agents/design-gate.md`), which is mutually exclusive with `ready-for-agent` — the runner's filter is
+a whitelist, so a `needs-design` issue is simply invisible to it and never blocks the night. Order matters:
+the runner takes the **lowest-numbered** open `ready-for-agent` issue, so number/prioritise accordingly.
+
+## When the runner hits a design fork mid-slice (park, don't guess)
+
+If, partway through a `ready-for-agent` issue, the agent reaches a **one-way-door** gap the design doesn't
+answer (the ADR-0006 situation — a rule that's undefined or contradicts an accepted Decision), it must
+neither silently fill it (drift) nor stall the whole night (blocked). Instead — **park it and move on**:
+
+1. Commit only the already-decided **safe** part of the work.
+2. Open a `needs-design` issue capturing the fork (what's undefined, options seen, why it's one-way).
+3. Strip `ready-for-agent` from the original issue.
+4. Pick up the **next** eligible `ready-for-agent` issue.
+
+"Don't block the night" means *skip to the next funded issue*, never *guess to keep moving*. Every slice's
+night-runner comment also carries the **slice ledger** (assumptions / decisions taken / gaps left open) per
+`design-gate.md`. The runner's own instruction for this lives in `.claude/work-prompt.md` on `night-base`.
 
 ## Running a night (evening)
 
