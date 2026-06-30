@@ -31,9 +31,32 @@ clean, committed state. Do exactly one task chunk, then stop.
   Runner). So: make the smallest change you can fully reason about, and do NOT claim tests
   pass. Instead record precisely what a human must verify in Rider/Unity.
 
+### If you hit a design fork mid-chunk: PARK, don't guess (design gate)
+Read `Docs/agents/design-gate.md`. If you reach a gap the design doesn't answer, apply the
+**one-way / two-way door** test:
+- **Two-way door** (cheap to reverse — a value, a default, an ordering tiebreak): decide it,
+  and record it in the slice ledger (step 5) so a human can veto it. Keep going.
+- **One-way door** (expensive to unwind; *contradicts an accepted ADR Decision*; or *defines a
+  previously-undefined rule*): **do NOT settle it silently and do NOT back-write it into an ADR.**
+  Instead park the issue:
+  1. Commit only the already-decided **safe** part of the chunk.
+  2. Open a `needs-design` issue capturing the fork:
+     `gh issue create --label needs-design --title "..." --body "<what's undefined, options seen, why one-way, blocking issue #<n>>"`
+  3. Remove `ready-for-agent` from the original: `gh issue edit <n> --remove-label ready-for-agent`
+     and comment that it's parked on the new `needs-design` issue.
+  4. Then go back to step 2's picker and take the NEXT lowest-numbered `ready-for-agent` issue
+     (the night is not blocked — you skip to the next funded issue, you never guess to proceed).
+
 ## 5. Close out the iteration
 1. Commit: `git add -A && git commit -m "#<n>: <concise change>"` (keep `.meta` with assets).
-2. Comment on the issue with what changed and what remains:
+2. Comment on the issue with what changed and what remains, and ALWAYS end the comment with
+   the **slice ledger** (design-gate.md) — unconditionally, even if nothing came up:
+   ```
+   ### Slice ledger
+   - Assumptions made:  <two-way doors decided — review/veto>
+   - Decisions I took:  <judgement calls, with the door-test result>
+   - Gaps left open:    <one-way doors NOT filled — each filed as a needs-design issue (link it)>
+   ```
    `gh issue comment <n> --body "..."`. If the chunk fully resolves the issue, you may
    `gh issue edit <n> --remove-label ready-for-agent` and note it — but do not close it
    (a human verifies first).
