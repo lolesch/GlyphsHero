@@ -182,7 +182,10 @@ namespace Code.Runtime.UI.Inventory
             // payload) — not by "is a weapon", which mis-painted every payload with the root colour.
             var labelColor   = ChainComponentColors.GetColor(item, isWeaponRoot);
             var componentStr = $"[{ComponentLabel(item, isPayload)}]".Colored(labelColor);
-            sb.AppendLine($"<align=left><b>{item.Name}</b><align=right> {componentStr}</align>");
+            // Type channel (tooltip-redesign slice 1): a leading role glyph next to the name. Color
+            // stays reserved for direction, so type is the glyph's job (TypeGlyphs).
+            var typeGlyph    = TypeGlyphs.For(item, isPayload);
+            sb.AppendLine($"<align=left>{typeGlyph} <b>{item.Name}</b><align=right> {componentStr}</align>");
             sb.AppendLine(new string('─', 24));
 
             // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
@@ -202,12 +205,29 @@ namespace Code.Runtime.UI.Inventory
                 sb.AppendLine(new string('─', 24));
                 if (detailed)
                 {
-                    sb.Append(BuildChainSentence(chain, item));
-                    sb.AppendLine();
+                    // Alt breadcrumb (tooltip-redesign §4): the chain in real connection order
+                    // (root → weapon), the hovered item bracketed. Replaces the deleted
+                    // BuildChainSentence, whose ↓ diagram walked outward and read backwards to the grid.
+                    sb.AppendLine(Breadcrumb.Build(chain, item));
                 }
 
-                if (item is IWeaponItem pw && IsPayload(item, chain))
-                    AppendPayloadOutput(sb, chain, pw);
+                // Weapon-redesign slice 3: the weapon is the chain's terminal readout (final totals +
+                // piece list). A payload weapon shows its own child delivery. Only non-weapon pieces
+                // (amp/shifter/reactor/converter) still fall through to the per-piece marginal view.
+                if (item is IWeaponItem weaponItem)
+                {
+                    var payloadRole = IsPayload(item, chain);
+                    if (payloadRole)
+                        AppendPayloadOutput(sb, chain, weaponItem);
+                    else
+                        AppendWeaponTerminal(sb, chain, detailed);
+
+                    // Symmetric two-state (slice 5): the active role renders in full above; show the
+                    // weapon's *other* role (a driving weapon "as payload", a payload "as driving
+                    // weapon") dim beneath — both states always visible, emphasis the only marker.
+                    AppendState(sb, TwoStateBlock.Build(weaponItem, primaryActive: !payloadRole).Other,
+                        emphasized: false);
+                }
                 else
                     AppendChainOutput(sb, chain, item, detailed);
             }
@@ -215,42 +235,75 @@ namespace Code.Runtime.UI.Inventory
             return sb.ToString().TrimEnd();
         }
 
-        private static string BuildChainSentence(IItemChain chain, ITetrisItem hovered)
+        /// <summary>
+        /// The driving weapon is the chain's <em>terminal readout</em> (tooltip-redesign slice 3): the
+        /// final resolved totals (not a delta) followed by an enumerated piece list — one line per
+        /// contributing piece, <c>glyph + name + that piece's marginal delta</c> (coloured by direction).
+        /// The math is factored into <see cref="PositionalDelta"/>; this method only formats it.
+        /// </summary>
+        private static void AppendWeaponTerminal(StringBuilder sb, IItemChain chain, bool detailed)
         {
-            var ordered  = OrderedItems(chain);
-            var hovIndex = ordered.IndexOf(hovered);
-            var sb       = new StringBuilder();
-            var isFirst  = true;
+            var totals = PositionalDelta.Totals(chain);
 
-            void AppendEntry(ITetrisItem item)
-            {
-                var isPayload    = IsPayload(item, chain);
-                var isWeaponRoot = item is IWeaponItem && !isPayload;
-                var color        = ChainComponentColors.GetColor(item, isWeaponRoot);
-                var name         = item == hovered ? $"<b>{item.Name}</b>" : item.Name;
-                var prefix       = isFirst ? "" : "  ↓\n";
-                sb.Append($"{prefix}{name.Colored(color)}\n");
-                isFirst = false;
-            }
+            var reactorDriven = chain.Root is IReactorItem;
+            sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
+            sb.AppendLine($"  dmg  {(float)totals.Damage:F1}   {TerminalRate(chain, totals.AttackSpeed)}");
+            sb.AppendLine($"  {DeliverySentence.Build(totals.Delivery, totals.Affinity, totals.Anchor, 0)}");
+            // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
+            // cover it, nothing fires.
+            sb.AppendLine($"  cost {(float)totals.ResourceCost:F1} [{totals.CostResource}]" +
+                          "   (root gate)".Colored(LightGray));
 
-            var isTrigger = hovered is IShifterItem or IReactorItem;
-            if (isTrigger)
-            {
-                AppendEntry(hovered);
-                for (var i = hovIndex + 1; i < ordered.Count; i++)
-                {
-                    AppendEntry(ordered[i]);
-                    if (ordered[i] is IWeaponItem) break;
-                }
-            }
-            else
-            {
-                AppendEntry(hovered);
-                for (var i = hovIndex - 1; i >= 0; i--)
-                    AppendEntry(ordered[i]);
-            }
+            foreach (var piece in PositionalDelta.Pieces(chain))
+                sb.AppendLine(PieceLine(piece, detailed));
 
-            return sb.ToString().TrimEnd();
+            AppendPayloadSummary(sb, chain, totals.CostResource);
+        }
+
+        /// <summary>One piece-list row: the piece's type glyph, its name, and its marginal delta.</summary>
+        private static string PieceLine(PieceDelta piece, bool detailed)
+        {
+            var glyph = TypeGlyphs.For(piece.Item, isPayload: false); // pieces are never payload weapons
+            return $"  {glyph} {piece.Item.Name}  {PieceDeltaText(piece, detailed)}";
+        }
+
+        // A piece's marginal effect. Slice 3 keeps this generic (the numeric stat/axis deltas that
+        // changed, plus the reactor's firing condition, which has no numeric readout); slice 4 refines
+        // it into the full per-attachment views from the spec's §3 table.
+        private static string PieceDeltaText(PieceDelta p, bool detailed)
+        {
+            if (p.Item is IReactorItem reactor)
+                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}".Colored(LightGray);
+
+            var parts = new List<string>();
+            if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
+                parts.Add($"{Stat(p.Before.Damage, p.With.Damage, detailed)} dmg");
+            if (!Mathf.Approximately(p.Before.AttackSpeed, p.With.AttackSpeed))
+            {
+                // Show the attack interval (1/speed), where a shorter interval is the improvement.
+                var beforeInt = p.Before.AttackSpeed > 0f ? 1f / p.Before.AttackSpeed : 0f;
+                var withInt   = p.With.AttackSpeed   > 0f ? 1f / p.With.AttackSpeed   : 0f;
+                parts.Add($"rate {Stat(beforeInt, withInt, detailed, invert: true)}s");
+            }
+            if (!Mathf.Approximately(p.Before.ResourceCost, p.With.ResourceCost))
+                parts.Add($"cost {Stat(p.Before.ResourceCost, p.With.ResourceCost, detailed, invert: true)}");
+            // Categorical axis reclassifications (a converter's Delivery/Affinity/Anchor/pool change).
+            // Under Alt these expand to the full "from → to" (spec §3 Converter row); factored into the
+            // pure, testable PositionalDelta so the equation logic isn't buried in the MonoBehaviour.
+            parts.AddRange(PositionalDelta.AxisDeltas(p, detailed));
+
+            return parts.Count > 0 ? string.Join("   ", parts) : "—".Colored(LightGray);
+        }
+
+        /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition, else
+        /// the resolved attack interval.</summary>
+        private static string TerminalRate(IItemChain chain, float attackSpeed)
+        {
+            var reactor = chain.Root as IReactorItem
+                          ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
+            return reactor != null
+                ? $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}"
+                : $"every {Interval(attackSpeed)}";
         }
 
         private static void AppendChainOutput(StringBuilder sb, IItemChain chain,
@@ -272,7 +325,7 @@ namespace Code.Runtime.UI.Inventory
             sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
             sb.AppendLine($"  dmg  {Stat(before.Damage, with.Damage, detailed)}   " +
                           $"{FireRate(chain, before.AttackSpeed, with.AttackSpeed, detailed)}");
-            sb.AppendLine($"  {AxesLine(with.Delivery, with.Affinity, with.Anchor, 0)}");
+            sb.AppendLine($"  {DeliverySentence.Build(with.Delivery, with.Affinity, with.Anchor, 0)}");
 
             var poolStr = with.CostResource != before.CostResource
                 ? $" [{before.CostResource}→{with.CostResource}]"
@@ -311,23 +364,20 @@ namespace Code.Runtime.UI.Inventory
         /// and charges its authored cost modifier against the chain's shared pool. The old diff path
         /// showed the root's unchanged numbers here (a payload weapon isn't a WeaponStats contributor),
         /// which was simply wrong.
+        ///
+        /// Tooltip-redesign slice 3: the root name and the "(#n in propagation)" slot text are dropped —
+        /// a payload's tooltip is about its own delivery + cost-to-pool, not its position in the root.
         /// </summary>
         private static void AppendPayloadOutput(StringBuilder sb, IItemChain chain, IWeaponItem payload)
         {
-            var rootName = chain.Weapon?.Name ?? "weapon";
-            var slot     = chain.Modifiers.OfType<IWeaponItem>()
-                               .Where(w => w != chain.Weapon)
-                               .ToList()
-                               .IndexOf(payload) + 1;
-
-            sb.AppendLine($"<b>Payload</b> of {rootName}   {$"(#{slot} in propagation)".Colored(LightGray)}");
+            sb.AppendLine("<b>Payload</b>");
 
             var b         = payload.Payload;
             var delivery  = b?.Delivery  ?? DeliveryPattern.Single;
             var affinity  = b?.Affinity  ?? Affinity.Hostile;
             var anchor    = b?.Anchor    ?? Anchor.Target;
             var shapeSize = b?.ShapeSize ?? 1;
-            sb.AppendLine($"  {(float)payload.Damage:F1} dmg   ·   {AxesLine(delivery, affinity, anchor, shapeSize)}");
+            sb.AppendLine($"  {(float)payload.Damage:F1} dmg   ·   {DeliverySentence.Build(delivery, affinity, anchor, shapeSize)}");
 
             // What including this payload adds to the one shared pool — the chain root's CostResource
             // (ADR-0006 Decision 4). Type tells the player how it scales: flat, % of base, or compounding.
@@ -367,26 +417,22 @@ namespace Code.Runtime.UI.Inventory
             if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
                 return;
 
-            var chainedDesc  = ChainedDescription(item);
-            var sm           = item as IAttachmentItem;
-            var unchainedStr = sm?.affixes.Count > 0
-                ? $"unchained: {sm.affixes[0].PawnStat} {sm.affixes[0].Modifier}"
-                : null;
+            // Symmetric two-state (tooltip-redesign spec §2, slice 5): both the chained delta and the
+            // loose unchained affix are always shown; the live one (chained in a chain, the affix
+            // standalone — ADR-0004 item roles) is emphasised, the other dim. Emphasis is the only marker.
+            var block = TwoStateBlock.Build(item, primaryActive: isChained);
+            AppendState(sb, block.Active, emphasized: true);
+            AppendState(sb, block.Other,  emphasized: false);
+        }
 
-            // Bold the active half: in a chain the chained effect is live and the loose affix is greyed,
-            // and vice-versa when the item sits alone in the grid (ADR-0004 item roles).
-            if (isChained)
-            {
-                sb.AppendLine($"  <b>{chainedDesc}</b>");
-                if (unchainedStr != null)
-                    sb.AppendLine($"  {unchainedStr.Colored(LightGray)}");
-            }
-            else
-            {
-                sb.AppendLine($"  {chainedDesc.Colored(LightGray)}");
-                if (unchainedStr != null)
-                    sb.AppendLine($"  <b>{unchainedStr}</b>");
-            }
+        /// <summary>Renders one <see cref="ItemStateView"/> as a <c>label:   lines…</c> row, bold when the
+        /// state is the live one and dim otherwise — the sole state marker (no badge). An empty state
+        /// prints a dim em-dash so the symmetry (both states always shown) stays visible.</summary>
+        private static void AppendState(StringBuilder sb, in ItemStateView state, bool emphasized)
+        {
+            var body = state.Lines.Count > 0 ? string.Join("   ·   ", state.Lines) : "—";
+            var line = $"{state.Label}:   {body}";
+            sb.AppendLine(emphasized ? $"  <b>{line}</b>" : $"  {line.Colored(LightGray)}");
         }
 
         /// <summary>A weapon sitting alone (no chain): it fires on its own timer with its base stats.</summary>
@@ -394,8 +440,11 @@ namespace Code.Runtime.UI.Inventory
         {
             sb.AppendLine();
             sb.AppendLine("<b>Attack:</b>");
-            sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {AxesLine(w.Delivery, w.Affinity, w.Anchor, 0)}");
+            sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {DeliverySentence.Build(w.Delivery, w.Affinity, w.Anchor, 0)}");
             sb.AppendLine($"  every {Interval((float)w.AttackSpeed)}   ·   cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
+
+            // Symmetric two-state (slice 5): a loose weapon is driving; show its dim "as payload" state.
+            AppendState(sb, TwoStateBlock.Build(w, primaryActive: true).Other, emphasized: false);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────
@@ -408,7 +457,7 @@ namespace Code.Runtime.UI.Inventory
             var reactor = chain.Root as IReactorItem
                           ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
             if (reactor != null)
-                return $"fires {ReactorWhen(reactor.ReactorType)}"; // reactor-driven: the timer is suppressed
+                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}"; // reactor-driven: the timer is suppressed
 
             var before = beforeSpd > 0f ? 1f / beforeSpd : 0f;
             var after  = afterSpd  > 0f ? 1f / afterSpd  : 0f;
@@ -425,30 +474,6 @@ namespace Code.Runtime.UI.Inventory
         private static string Interval(float attackSpeed) =>
             attackSpeed > 0f ? $"{1f / attackSpeed:0.00}s" : "—";
 
-        private static string ChainedDescription(ITetrisItem item) => item switch
-        {
-            IAmplifierItem amp =>
-                $"chained:   {amp.outputMod.stat} {amp.outputMod.modifier}",
-
-            IShifterItem sh =>
-                $"chained:   {sh.inputMod.stat} {sh.inputMod.modifier}" +
-                $" ↔ {sh.outputMod.stat} {sh.outputMod.modifier}",
-
-            IReactorItem reactor =>
-                $"chained:   fires {ReactorWhen(reactor.ReactorType)}",
-
-            IConverterItem converter => "chained:   " + converter.Axis switch
-            {
-                ConverterAxis.Delivery => $"delivery → {converter.ToDelivery}",
-                ConverterAxis.Affinity => $"affinity → {converter.ToAffinity}",
-                ConverterAxis.Anchor   => $"anchor → {converter.ToAnchor}",
-                ConverterAxis.Resource => $"cost pool → {converter.ToResource}",
-                _                      => converter.Axis.ToString(),
-            },
-
-            _ => string.Empty,
-        };
-        
         private static List<ITetrisItem> OrderedItems(IItemChain chain)
         {
             var list = new List<ITetrisItem> { chain.Root };
@@ -485,38 +510,12 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Player-facing word maps ───────────────────────────────────────
 
-        /// <summary>Delivery + Affinity + Anchor as one legible line (ADR-0004 §3): what shape, who it
-        /// hits, and where it centres. Aoe shows its radius; weapons pass shapeSize 0 (Aoe is payload-only).</summary>
-        private static string AxesLine(DeliveryPattern delivery, Affinity affinity, Anchor anchor, int shapeSize) =>
-            $"{DeliveryWord(delivery, shapeSize)} · hits {AffinityWord(affinity)} · on {AnchorWord(anchor)}";
+        // Delivery axes (Pattern × Affinity × Anchor + Aoe radius) are now rendered as one verb-led
+        // sentence by DeliverySentence.Build (tooltip-redesign slice 2). The old AxesLine/DeliveryWord/
+        // AffinityWord/AnchorWord robot-output maps were deleted with their callers.
 
-        private static string DeliveryWord(DeliveryPattern delivery, int shapeSize) =>
-            delivery == DeliveryPattern.Aoe ? $"Aoe r{shapeSize}" : delivery.ToString();
-
-        private static string AffinityWord(Affinity affinity) => affinity switch
-        {
-            Affinity.Hostile  => "enemies",
-            Affinity.Friendly => "allies",
-            Affinity.Self     => "self",
-            _                 => affinity.ToString(),
-        };
-
-        private static string AnchorWord(Anchor anchor) => anchor switch
-        {
-            Anchor.Origin => "self",
-            _             => "target",
-        };
-
-        private static string ReactorWhen(ReactorType type) => type switch
-        {
-            ReactorType.OnSelfHit         => "when hit",
-            ReactorType.OnManaDeplete     => "when mana empties",
-            ReactorType.OnEnemyDeath      => "when an enemy dies",
-            ReactorType.OnAllyAttacks     => "when an ally attacks",
-            ReactorType.OnAllyKills       => "when an ally kills",
-            ReactorType.OnNearbyEnemyDies => "when a nearby enemy dies",
-            _                             => type.ToString(),
-        };
+        // ReactorWhen moved to PositionalDelta.FiringCondition (slice 4) so the attachment view, the
+        // terminal rate line, and the piece list share one firing-condition map.
 
         /// <summary>How a payload's cost modifier scales (ADR-0006 Decision 5) — the player's read on
         /// whether stacking it deep gets expensive.</summary>
