@@ -61,9 +61,15 @@ Read `Docs/agents/design-gate.md`. If you reach a gap the design doesn't answer,
    - Decisions I took:  <judgement calls, with the door-test result>
    - Gaps left open:    <one-way doors NOT filled — each filed as a needs-design issue (link it)>
    ```
-   `gh issue comment <n> --body "..."`. If the chunk fully resolves the issue, you may
-   `gh issue edit <n> --remove-label ready-for-agent` and note it — but do not close it
-   (a human verifies first).
+   `gh issue comment <n> --body "..."`. **When your chunk leaves the issue code-complete for the
+   night** — nothing more an unattended agent can add, *even if a human still has to verify it in
+   Rider/Unity* — you **MUST** remove the label: `gh issue edit <n> --remove-label ready-for-agent`,
+   and say so in the comment. Removing the label is **not** closing the issue: it only drains the
+   issue from the night queue so the picker advances and the runner can reach `NIGHT_RUNNER_NO_TASKS`;
+   a human still verifies before closing. Leave `ready-for-agent` **on** only when you deliberately
+   left in-scope agent work for a follow-up session — and then the handover (step 3) MUST name this
+   issue as the in-progress one so the next session resumes it (never a code-complete-pending-human
+   issue: those come off the queue).
 3. Overwrite `.claude/SESSION_HANDOVER.md` with: timestamp, active branch, current issue,
    exactly what you did, the next step, blockers, and what to verify in Rider/Unity.
 4. Append ONE line to `.claude/night-log.md` (create it if missing), format:
