@@ -33,10 +33,11 @@
 #>
 
 param(
-    [int]$MaxIterations = 12,     # hard ceiling on work sessions per night
-    [int]$PauseSeconds  = 20,     # breather between sessions
-    [int]$MaxTurns      = 60,     # per-session turn ceiling passed to claude
-    [switch]$SkipSummary          # skip the morning-summary pass
+    [int]$MaxIterations = 12,                 # hard ceiling on work sessions per night
+    [int]$PauseSeconds  = 20,                 # breather between sessions
+    [int]$MaxTurns      = 40,                 # per-session turn ceiling passed to claude
+    [string]$Model      = 'claude-sonnet-5',  # model for the headless sessions — Sonnet 5, not Opus (quota/cost)
+    [switch]$SkipSummary                      # skip the morning-summary pass
 )
 
 $ErrorActionPreference = 'Stop'
@@ -96,7 +97,7 @@ function Invoke-ClaudeSession {
     # NativeCommandError; with the script-level 'Stop' that would terminate the run the moment claude
     # writes any stderr. We still want stderr in the log, just not as a fatal error.
     $ErrorActionPreference = 'Continue'
-    $prompt | claude --print --dangerously-skip-permissions --max-turns $MaxTurns 2>&1 |
+    $prompt | claude --print --model $Model --dangerously-skip-permissions --max-turns $MaxTurns 2>&1 |
         Tee-Object -FilePath $logFile | Out-Null
 
     return [pscustomobject]@{
