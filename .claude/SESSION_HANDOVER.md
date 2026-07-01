@@ -5,44 +5,41 @@
 > *what* to do and *what's done*; this file tracks *where the last session left off*.
 
 **Last updated:** 2026-07-02
-**Active branch:** night/2026-07-02 (Pawn-UI series #11–#15; stay on this branch for the whole series)
-**Current issue:** #14 [Pawn UI 4/5] Grid status bar — CODE-COMPLETE. `ready-for-agent` removed;
-awaiting human prefab-wiring + Rider/Unity verification only.
-**State:** No issue is in progress. Next session: run the step-2 picker for the lowest-numbered
-`ready-for-agent` issue (**#15** is the only one left), or emit `NIGHT_RUNNER_NO_TASKS` if drained.
+**Active branch:** night/2026-07-02 (Pawn-UI series #11–#15 — series COMPLETE on this branch)
+**Current issue:** #15 [Pawn UI 5/5] Selected-pawn HUD panel — CODE-COMPLETE. `ready-for-agent`
+removed; awaiting human panel-authoring + SerializeField wiring + Rider/Unity verification only.
+**State:** No issue is in progress. The Pawn-UI series (#11–#15) is fully code-complete. Next session:
+run the step-2 picker. If nothing else is `ready-for-agent`, emit `NIGHT_RUNNER_NO_TASKS` and stop.
 
 ## What the last chunk did
 
-Completed all C# for **#14** in one chunk (commit `954b617`):
+Completed all C# for **#15** in one chunk (commit `e6bd3ce`):
 
-- `Assets/Code/Runtime/UI/PawnResourceView.cs` — added **initial paint** (`SetPawn` now calls a new
-  private `Paint()` after binding, so the bar shows current fill immediately instead of waiting for the
-  first `OnCurrentChanged`), and an **`OnDestroy`** that unsubscribes `OnCurrentChanged` (leak fix; the
-  rebind-unsubscribe path was already present). `Paint()` reads the #11 NaN-safe `resource.Percentage`
-  and null-guards `bar`/`resource`.
-- `Assets/Code/Runtime/UI/PawnStatusBar.cs` (+ `.meta`) — NEW, `Code.Runtime.UI`. World-space canvas
-  child of `Pawn.prefab`; `Start()` does `GetComponentInParent<Pawn>()` then binds two serialized
-  `PawnResourceView` children (`healthBar`, `manaBar`) to `pawn.Stats.health`/`.mana` via `SetPawn`.
-  Defensive null logs. Reads a `Pawn` only — UI → Pawns layering respected (UI asmdef already refs
-  Pawns GUID `fc25358…`).
-- No tests (MonoBehaviours, no pure seam; NaN case already locked by #11's Resource test).
+- `Assets/Code/Runtime/UI/PawnHudView.cs` (+`.meta`) — NEW, `Code.Runtime.UI`. Selected-pawn HUD.
+  Subscribes `HexSelectionHandler.OnPawnSelected` (OnEnable/OnDisable); on switch `Unbind()` prev
+  then `Bind()` next; unbinds in `OnDestroy` too. Shows icon+name, health/mana fill bars (reuses
+  `PawnResourceView`) + numeric `current / max` text, and 4 secondary stats (healthRegen, manaRegen,
+  movementSpeed, range). Live: pools via `Resource.OnCurrentChanged` (also forwards max changes),
+  stats via `Stat.OnTotalChanged` (#11). `Paint()` on bind for initial values. Toggles a **child**
+  `_root` for visibility (component must sit on an always-active object — documented in header).
+  Reads `IPawn` only → UI → Pawns layering holds.
+- `Assets/Code/Runtime/Pawns/Pawn.cs` — smallest identity addition: `IPawn` gains read-only
+  `Sprite Icon` + `string DisplayName`; `Pawn` exposes `_icon` and new `_displayName` (cached from
+  `config.name` at spawn). Additive two-way door.
+- `Assets/Code/Tests/EditMode/Pawns/HexSelectionPolicyTests.cs` — `StubPawn` implements the two new
+  `IPawn` members (throwing) so the EditMode assembly still compiles.
 
 ## Next step
 
-Pick **#15** [Pawn UI 5/5] Selected-pawn HUD panel — via the step-2 picker. Read spec
-`Docs/superpowers/specs/2026-07-01-pawn-ui.md` (§Decision 3: separate panel, shares only the selection
-source `HexSelectionHandler.OnPawnSelected` from #12; shows icon+name, health+mana bars WITH numeric
-current/max text, and secondary stats healthRegen/manaRegen/movementSpeed/range; **fully live** — pools
-via `Resource.OnCurrentChanged`, every stat incl. max via `Stat.OnTotalChanged` from #11; unsubscribe
-previous pawn on switch + on destroy; hidden until first selection; any pawn incl. enemies).
-`ItemTooltipController` is the reference for a lifecycle-managed ref-wired panel. Likely runner writes
-C# + a WIRE IN UNITY recipe; human authors the panel + SerializeField wiring.
-Dependency order: Statistics(#11 ✓) → Selection(#12 ✓) → Inventory-trigger(#13 ✓) → Grid-bar(#14 ✓) → HUD(#15).
+Run the step-2 picker:
+`gh issue list --state open --label ready-for-agent --json number,title --jq 'sort_by(.number)'`.
+The Pawn-UI series is drained; if the list is empty and nothing is in progress, print
+`NIGHT_RUNNER_NO_TASKS` and STOP (no commits).
 
 ## Prior chunks still pending human verification
 
 - **This branch (`night/2026-07-02`):** #11 (Statistics seam), #12 (Selection), #13 (Inventory-trigger),
-  #14 (Grid status bar — needs prefab wiring per its WIRE IN UNITY recipe).
+  #14 (Grid status bar — needs prefab wiring), #15 (HUD — needs panel authoring + wiring).
 - **`night/2026-07-01`:** tooltip-redesign slices #3–#10, all code-complete, `ready-for-agent`
   removed, awaiting Rider/Unity verification.
 
@@ -50,11 +47,13 @@ Dependency order: Statistics(#11 ✓) → Selection(#12 ✓) → Inventory-trigg
 
 None.
 
-## To verify in Rider / Unity (#14)
+## To verify in Rider / Unity (#15)
 
-1. Do the WIRE IN UNITY steps on `Assets/Prefabs/Pawn.prefab` (canvas child + two Image bars + two
-   `PawnResourceView` + `PawnStatusBar` with `healthBar`/`manaBar` assigned).
-2. Play: every spawned pawn (both teams) shows both bars at correct **initial** fill immediately.
-3. A 0-mana pawn shows an empty mana bar, **no NaN**.
-4. Bars track damage/regen live during Combat; destroying a pawn logs no leak/NRE.
-5. `ChainResolverTests` / `PawnStatsTests` / `Resource` tests still green (no API changed).
+1. Project compiles (new `IPawn.Icon`/`DisplayName`; `StubPawn` satisfies `IPawn`).
+2. `HexSelectionPolicyTests` / `ChainResolverTests` / `PawnStatsTests` / `Resource` tests green
+   (only additive interface members; no existing API changed).
+3. Do the WIRE IN UNITY steps (see issue #15 comment): author the HUD panel, put `PawnHudView` on an
+   **always-active** parent, assign a **child** `_root` + all refs.
+4. Play: select pawns (both teams) → HUD swaps; numbers live in combat; chaining a LifeMax/range item
+   while a pawn is selected updates max live; a 0-mana pawn shows `0 / 0` (no NaN); despawning the
+   selected pawn logs no leak/NRE.
