@@ -207,7 +207,8 @@ namespace Code.Runtime.UI.Inventory
         };
 
         // The kind a Converter reclassifies its axis to (ADR-0004 §1) — the "to" side only.
-        private static string ConverterTarget(IConverterItem c) => c.Axis switch
+        // internal so the sibling CompareBlock (slice 8) reuses the one map instead of duplicating it.
+        internal static string ConverterTarget(IConverterItem c) => c.Axis switch
         {
             ConverterAxis.Delivery => c.ToDelivery.ToString(),
             ConverterAxis.Affinity => c.ToAffinity.ToString(),
@@ -224,7 +225,8 @@ namespace Code.Runtime.UI.Inventory
 
         // A flat/percent-add modifier of ~0 changes nothing → not worth a line. Percent-mult / overwrite
         // are deliberate authored values (× x %, = x), so they always print.
-        private static bool IsMeaningful(Modifier mod) => mod.Type switch
+        // internal so CompareBlock (slice 8) shares the same no-op gate the piece views use.
+        internal static bool IsMeaningful(Modifier mod) => mod.Type switch
         {
             ModifierType.FlatAdd or ModifierType.PercentAdd => Math.Abs((float)mod) > Epsilon,
             _                                               => true,
