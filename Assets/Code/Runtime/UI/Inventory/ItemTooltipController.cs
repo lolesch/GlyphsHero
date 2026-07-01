@@ -287,10 +287,10 @@ namespace Code.Runtime.UI.Inventory
             }
             if (!Mathf.Approximately(p.Before.ResourceCost, p.With.ResourceCost))
                 parts.Add($"cost {Stat(p.Before.ResourceCost, p.With.ResourceCost, detailed, invert: true)}");
-            if (p.Before.Delivery     != p.With.Delivery)     parts.Add($"→ {p.With.Delivery}");
-            if (p.Before.Affinity     != p.With.Affinity)     parts.Add($"→ {p.With.Affinity}");
-            if (p.Before.Anchor       != p.With.Anchor)       parts.Add($"→ {p.With.Anchor}");
-            if (p.Before.CostResource != p.With.CostResource) parts.Add($"pool → {p.With.CostResource}");
+            // Categorical axis reclassifications (a converter's Delivery/Affinity/Anchor/pool change).
+            // Under Alt these expand to the full "from → to" (spec §3 Converter row); factored into the
+            // pure, testable PositionalDelta so the equation logic isn't buried in the MonoBehaviour.
+            parts.AddRange(PositionalDelta.AxisDeltas(p, detailed));
 
             return parts.Count > 0 ? string.Join("   ", parts) : "—".Colored(LightGray);
         }

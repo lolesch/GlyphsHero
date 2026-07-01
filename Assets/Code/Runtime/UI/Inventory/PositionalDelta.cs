@@ -59,6 +59,43 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>
+        /// The <b>axis-change</b> lines of a piece's marginal delta: the categorical (non-numeric) shifts a
+        /// piece makes to the weapon's Delivery / Affinity / Anchor axes and its cost <em>pool</em>. A
+        /// <see cref="IConverterItem"/> is the usual source (it reclassifies one axis — kind, not amount),
+        /// read from the piece's before/with snapshots rather than the item, so it stays a chain-positional
+        /// delta. <b>Additive</b>: a line appears only for an axis this piece actually changes.
+        ///
+        /// <paramref name="detailed"/> is the Alt expansion (spec §3 Converter row): off, each line names
+        /// only the <em>result</em> (<c>→ Aoe</c> — "converts to"); on, it shows the full <em>from → to</em>
+        /// (<c>Single → Aoe</c>). Color stays the presenter's job (direction only) — these are the semantic
+        /// strings, uncolored, so the axis logic is unit-testable without driving Unity.
+        /// </summary>
+        public static IReadOnlyList<string> AxisDeltas(PieceDelta piece, bool detailed)
+        {
+            var parts = new List<string>();
+            AddAxis(parts, piece.Before.Delivery, piece.With.Delivery, detailed);
+            AddAxis(parts, piece.Before.Affinity, piece.With.Affinity, detailed);
+            AddAxis(parts, piece.Before.Anchor,   piece.With.Anchor,   detailed);
+            AddPool(parts, piece.Before.CostResource, piece.With.CostResource, detailed);
+            return parts;
+        }
+
+        // One reclassified axis: "→ To" (result only), or with Alt the whole move "From → To".
+        private static void AddAxis<T>(ICollection<string> parts, T before, T with, bool detailed)
+            where T : struct, Enum
+        {
+            if (EqualityComparer<T>.Default.Equals(before, with)) return;
+            parts.Add(detailed ? $"{before} → {with}" : $"→ {with}");
+        }
+
+        // The cost pool keeps its "pool" lead so a resource swap doesn't read like an axis conversion.
+        private static void AddPool(ICollection<string> parts, ResourceType before, ResourceType with, bool detailed)
+        {
+            if (before == with) return;
+            parts.Add(detailed ? $"pool {before} → {with}" : $"pool → {with}");
+        }
+
+        /// <summary>
         /// The per-attachment <b>active-delta content</b> (tooltip-redesign spec §3, slice 4): the §3
         /// table's "active delta (no Alt)" column, read <em>intrinsically</em> from the item's own
         /// modifiers/axis — not from a chain diff. This is the "what does this piece do?" answer for an
