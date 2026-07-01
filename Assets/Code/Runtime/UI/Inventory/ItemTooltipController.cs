@@ -302,7 +302,7 @@ namespace Code.Runtime.UI.Inventory
         private static string PieceDeltaText(PieceDelta p, bool detailed)
         {
             if (p.Item is IReactorItem reactor)
-                return $"fires {ReactorWhen(reactor.ReactorType)}".Colored(LightGray);
+                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}".Colored(LightGray);
 
             var parts = new List<string>();
             if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
@@ -331,7 +331,7 @@ namespace Code.Runtime.UI.Inventory
             var reactor = chain.Root as IReactorItem
                           ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
             return reactor != null
-                ? $"fires {ReactorWhen(reactor.ReactorType)}"
+                ? $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}"
                 : $"every {Interval(attackSpeed)}";
         }
 
@@ -487,7 +487,7 @@ namespace Code.Runtime.UI.Inventory
             var reactor = chain.Root as IReactorItem
                           ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
             if (reactor != null)
-                return $"fires {ReactorWhen(reactor.ReactorType)}"; // reactor-driven: the timer is suppressed
+                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}"; // reactor-driven: the timer is suppressed
 
             var before = beforeSpd > 0f ? 1f / beforeSpd : 0f;
             var after  = afterSpd  > 0f ? 1f / afterSpd  : 0f;
@@ -504,30 +504,16 @@ namespace Code.Runtime.UI.Inventory
         private static string Interval(float attackSpeed) =>
             attackSpeed > 0f ? $"{1f / attackSpeed:0.00}s" : "—";
 
-        private static string ChainedDescription(ITetrisItem item) => item switch
+        // The attachment's own §3 active-delta content (tooltip-redesign slice 4). Built intrinsically
+        // by PositionalDelta.Describe — additive lines (a numeric line only when non-default), including
+        // the reactor's input modifier that the old per-type switch dropped. Joined onto one "chained:"
+        // line; the bold/dim two-state framing lives in AppendAttachmentIdentity.
+        private static string ChainedDescription(ITetrisItem item)
         {
-            IAmplifierItem amp =>
-                $"chained:   {amp.outputMod.stat} {amp.outputMod.modifier}",
+            var lines = PositionalDelta.Describe(item);
+            return lines.Count > 0 ? "chained:   " + string.Join("   ·   ", lines) : "chained:";
+        }
 
-            IShifterItem sh =>
-                $"chained:   {sh.inputMod.stat} {sh.inputMod.modifier}" +
-                $" ↔ {sh.outputMod.stat} {sh.outputMod.modifier}",
-
-            IReactorItem reactor =>
-                $"chained:   fires {ReactorWhen(reactor.ReactorType)}",
-
-            IConverterItem converter => "chained:   " + converter.Axis switch
-            {
-                ConverterAxis.Delivery => $"delivery → {converter.ToDelivery}",
-                ConverterAxis.Affinity => $"affinity → {converter.ToAffinity}",
-                ConverterAxis.Anchor   => $"anchor → {converter.ToAnchor}",
-                ConverterAxis.Resource => $"cost pool → {converter.ToResource}",
-                _                      => converter.Axis.ToString(),
-            },
-
-            _ => string.Empty,
-        };
-        
         private static List<ITetrisItem> OrderedItems(IItemChain chain)
         {
             var list = new List<ITetrisItem> { chain.Root };
@@ -568,16 +554,8 @@ namespace Code.Runtime.UI.Inventory
         // sentence by DeliverySentence.Build (tooltip-redesign slice 2). The old AxesLine/DeliveryWord/
         // AffinityWord/AnchorWord robot-output maps were deleted with their callers.
 
-        private static string ReactorWhen(ReactorType type) => type switch
-        {
-            ReactorType.OnSelfHit         => "when hit",
-            ReactorType.OnManaDeplete     => "when mana empties",
-            ReactorType.OnEnemyDeath      => "when an enemy dies",
-            ReactorType.OnAllyAttacks     => "when an ally attacks",
-            ReactorType.OnAllyKills       => "when an ally kills",
-            ReactorType.OnNearbyEnemyDies => "when a nearby enemy dies",
-            _                             => type.ToString(),
-        };
+        // ReactorWhen moved to PositionalDelta.FiringCondition (slice 4) so the attachment view, the
+        // terminal rate line, and the piece list share one firing-condition map.
 
         /// <summary>How a payload's cost modifier scales (ADR-0006 Decision 5) — the player's read on
         /// whether stacking it deep gets expensive.</summary>

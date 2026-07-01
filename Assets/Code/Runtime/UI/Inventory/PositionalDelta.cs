@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Data.Enums;
 using Code.Runtime.Modules.Inventory;
+using Code.Runtime.Modules.Statistics;
 
 namespace Code.Runtime.UI.Inventory
 {
@@ -54,6 +57,88 @@ namespace Code.Runtime.UI.Inventory
 
             return result;
         }
+
+        /// <summary>
+        /// The per-attachment <b>active-delta content</b> (tooltip-redesign spec §3, slice 4): the §3
+        /// table's "active delta (no Alt)" column, read <em>intrinsically</em> from the item's own
+        /// modifiers/axis — not from a chain diff. This is the "what does this piece do?" answer for an
+        /// attachment's <em>own</em> hover:
+        /// <list type="bullet">
+        ///   <item><b>Amplifier</b> — its output modifier, e.g. <c>Damage +6</c>.</item>
+        ///   <item><b>Reactor</b> — the firing condition (<c>fires when hit</c>) plus its input modifier,
+        ///   e.g. <c>ManaCost * 120 %</c>.</item>
+        ///   <item><b>Shifter</b> — the input↔output economy trade.</item>
+        ///   <item><b>Converter</b> — the target it converts <em>to</em>, e.g. <c>→ Aoe</c> (the <em>from</em>
+        ///   side is an Alt/later-slice concern).</item>
+        /// </list>
+        /// <b>Additive</b>: a numeric line appears only when its modifier is non-default, so future fields
+        /// don't force layout churn (spec §3 note). Non-attachments return an empty list. The Alt "before →
+        /// after" equation expansion is a later slice; this is the active (no-Alt) content only.
+        /// </summary>
+        public static IReadOnlyList<string> Describe(ITetrisItem item)
+        {
+            switch (item)
+            {
+                case IAmplifierItem amp:
+                    return ModLine(amp.outputMod.stat, amp.outputMod.modifier);
+
+                case IShifterItem sh:
+                    // The economy trade is one semantic move — the shifter's identity, always shown.
+                    return new[]
+                    {
+                        $"{sh.inputMod.stat} {sh.inputMod.modifier} ↔ {sh.outputMod.stat} {sh.outputMod.modifier}",
+                    };
+
+                case IReactorItem reactor:
+                    var lines = new List<string> { $"fires {FiringCondition(reactor.ReactorType)}" };
+                    if (IsMeaningful(reactor.inputMod.modifier))
+                        lines.Add($"{reactor.inputMod.stat} {reactor.inputMod.modifier}");
+                    return lines;
+
+                case IConverterItem converter:
+                    return new[] { $"→ {ConverterTarget(converter)}" };
+
+                default:
+                    return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>Player-facing firing-condition phrase for a reactor's trigger event. Shared by the
+        /// attachment view, the weapon's terminal rate line, and the piece list so there is one map.</summary>
+        public static string FiringCondition(ReactorType type) => type switch
+        {
+            ReactorType.OnSelfHit         => "when hit",
+            ReactorType.OnManaDeplete     => "when mana empties",
+            ReactorType.OnEnemyDeath      => "when an enemy dies",
+            ReactorType.OnAllyAttacks     => "when an ally attacks",
+            ReactorType.OnAllyKills       => "when an ally kills",
+            ReactorType.OnNearbyEnemyDies => "when a nearby enemy dies",
+            _                             => type.ToString(),
+        };
+
+        // The kind a Converter reclassifies its axis to (ADR-0004 §1) — the "to" side only.
+        private static string ConverterTarget(IConverterItem c) => c.Axis switch
+        {
+            ConverterAxis.Delivery => c.ToDelivery.ToString(),
+            ConverterAxis.Affinity => c.ToAffinity.ToString(),
+            ConverterAxis.Anchor   => c.ToAnchor.ToString(),
+            ConverterAxis.Resource => c.ToResource.ToString(),
+            _                      => c.Axis.ToString(),
+        };
+
+        // Amp/shifter-style "stat modifier" line, dropped when the modifier is a no-op (additive rule).
+        private static IReadOnlyList<string> ModLine<T>(T stat, Modifier mod) where T : Enum =>
+            IsMeaningful(mod) ? new[] { $"{stat} {mod}" } : Array.Empty<string>();
+
+        private const float Epsilon = 1e-4f;
+
+        // A flat/percent-add modifier of ~0 changes nothing → not worth a line. Percent-mult / overwrite
+        // are deliberate authored values (× x %, = x), so they always print.
+        private static bool IsMeaningful(Modifier mod) => mod.Type switch
+        {
+            ModifierType.FlatAdd or ModifierType.PercentAdd => Math.Abs((float)mod) > Epsilon,
+            _                                               => true,
+        };
 
         // Root then modifiers — the ChainResolver order WeaponStatResolver folds contributors in.
         private static List<ITetrisItem> OrderedItems(IItemChain chain)
