@@ -209,8 +209,16 @@ namespace Code.Runtime.UI.Inventory
                     sb.AppendLine();
                 }
 
-                if (item is IWeaponItem pw && IsPayload(item, chain))
-                    AppendPayloadOutput(sb, chain, pw);
+                // Weapon-redesign slice 3: the weapon is the chain's terminal readout (final totals +
+                // piece list). A payload weapon shows its own child delivery. Only non-weapon pieces
+                // (amp/shifter/reactor/converter) still fall through to the per-piece marginal view.
+                if (item is IWeaponItem weaponItem)
+                {
+                    if (IsPayload(item, chain))
+                        AppendPayloadOutput(sb, chain, weaponItem);
+                    else
+                        AppendWeaponTerminal(sb, chain, detailed);
+                }
                 else
                     AppendChainOutput(sb, chain, item, detailed);
             }
@@ -254,6 +262,77 @@ namespace Code.Runtime.UI.Inventory
             }
 
             return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// The driving weapon is the chain's <em>terminal readout</em> (tooltip-redesign slice 3): the
+        /// final resolved totals (not a delta) followed by an enumerated piece list — one line per
+        /// contributing piece, <c>glyph + name + that piece's marginal delta</c> (coloured by direction).
+        /// The math is factored into <see cref="PositionalDelta"/>; this method only formats it.
+        /// </summary>
+        private static void AppendWeaponTerminal(StringBuilder sb, IItemChain chain, bool detailed)
+        {
+            var totals = PositionalDelta.Totals(chain);
+
+            var reactorDriven = chain.Root is IReactorItem;
+            sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
+            sb.AppendLine($"  dmg  {(float)totals.Damage:F1}   {TerminalRate(chain, totals.AttackSpeed)}");
+            sb.AppendLine($"  {DeliverySentence.Build(totals.Delivery, totals.Affinity, totals.Anchor, 0)}");
+            // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
+            // cover it, nothing fires.
+            sb.AppendLine($"  cost {(float)totals.ResourceCost:F1} [{totals.CostResource}]" +
+                          "   (root gate)".Colored(LightGray));
+
+            foreach (var piece in PositionalDelta.Pieces(chain))
+                sb.AppendLine(PieceLine(piece, detailed));
+
+            AppendPayloadSummary(sb, chain, totals.CostResource);
+        }
+
+        /// <summary>One piece-list row: the piece's type glyph, its name, and its marginal delta.</summary>
+        private static string PieceLine(PieceDelta piece, bool detailed)
+        {
+            var glyph = TypeGlyphs.For(piece.Item, isPayload: false); // pieces are never payload weapons
+            return $"  {glyph} {piece.Item.Name}  {PieceDeltaText(piece, detailed)}";
+        }
+
+        // A piece's marginal effect. Slice 3 keeps this generic (the numeric stat/axis deltas that
+        // changed, plus the reactor's firing condition, which has no numeric readout); slice 4 refines
+        // it into the full per-attachment views from the spec's §3 table.
+        private static string PieceDeltaText(PieceDelta p, bool detailed)
+        {
+            if (p.Item is IReactorItem reactor)
+                return $"fires {ReactorWhen(reactor.ReactorType)}".Colored(LightGray);
+
+            var parts = new List<string>();
+            if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
+                parts.Add($"{Stat(p.Before.Damage, p.With.Damage, detailed)} dmg");
+            if (!Mathf.Approximately(p.Before.AttackSpeed, p.With.AttackSpeed))
+            {
+                // Show the attack interval (1/speed), where a shorter interval is the improvement.
+                var beforeInt = p.Before.AttackSpeed > 0f ? 1f / p.Before.AttackSpeed : 0f;
+                var withInt   = p.With.AttackSpeed   > 0f ? 1f / p.With.AttackSpeed   : 0f;
+                parts.Add($"rate {Stat(beforeInt, withInt, detailed, invert: true)}s");
+            }
+            if (!Mathf.Approximately(p.Before.ResourceCost, p.With.ResourceCost))
+                parts.Add($"cost {Stat(p.Before.ResourceCost, p.With.ResourceCost, detailed, invert: true)}");
+            if (p.Before.Delivery     != p.With.Delivery)     parts.Add($"→ {p.With.Delivery}");
+            if (p.Before.Affinity     != p.With.Affinity)     parts.Add($"→ {p.With.Affinity}");
+            if (p.Before.Anchor       != p.With.Anchor)       parts.Add($"→ {p.With.Anchor}");
+            if (p.Before.CostResource != p.With.CostResource) parts.Add($"pool → {p.With.CostResource}");
+
+            return parts.Count > 0 ? string.Join("   ", parts) : "—".Colored(LightGray);
+        }
+
+        /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition, else
+        /// the resolved attack interval.</summary>
+        private static string TerminalRate(IItemChain chain, float attackSpeed)
+        {
+            var reactor = chain.Root as IReactorItem
+                          ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
+            return reactor != null
+                ? $"fires {ReactorWhen(reactor.ReactorType)}"
+                : $"every {Interval(attackSpeed)}";
         }
 
         private static void AppendChainOutput(StringBuilder sb, IItemChain chain,
@@ -314,16 +393,13 @@ namespace Code.Runtime.UI.Inventory
         /// and charges its authored cost modifier against the chain's shared pool. The old diff path
         /// showed the root's unchanged numbers here (a payload weapon isn't a WeaponStats contributor),
         /// which was simply wrong.
+        ///
+        /// Tooltip-redesign slice 3: the root name and the "(#n in propagation)" slot text are dropped —
+        /// a payload's tooltip is about its own delivery + cost-to-pool, not its position in the root.
         /// </summary>
         private static void AppendPayloadOutput(StringBuilder sb, IItemChain chain, IWeaponItem payload)
         {
-            var rootName = chain.Weapon?.Name ?? "weapon";
-            var slot     = chain.Modifiers.OfType<IWeaponItem>()
-                               .Where(w => w != chain.Weapon)
-                               .ToList()
-                               .IndexOf(payload) + 1;
-
-            sb.AppendLine($"<b>Payload</b> of {rootName}   {$"(#{slot} in propagation)".Colored(LightGray)}");
+            sb.AppendLine("<b>Payload</b>");
 
             var b         = payload.Payload;
             var delivery  = b?.Delivery  ?? DeliveryPattern.Single;
