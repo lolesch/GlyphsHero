@@ -2,11 +2,14 @@ You are running UNATTENDED as ONE iteration of the overnight night-runner for th
 GlyphsHero / AutoBattler Unity project. Be conservative and always leave the repo in a
 clean, committed state. Do exactly one task chunk, then stop.
 
-## 1. Load context first
-- Read `.claude/SESSION_HANDOVER.md` — the mid-task state from the previous iteration.
-- Read `Docs/agents/night-shift.md` — the day/night protocol and what makes a task night-suitable.
-- Follow `Docs/agents/domain.md` reading order: `CLAUDE.md`, then `CONTEXT.md`, then any
-  ADRs under `Docs/adr/` that touch the area you are about to work in.
+## 1. Load context first (read only what this slice needs — don't read the whole repo)
+- Read `.claude/SESSION_HANDOVER.md` — the mid-task state from the previous iteration. This is your
+  primary handoff; lean on it and don't re-derive what it already tells you.
+- Read `CLAUDE.md` — the architecture / convention reference.
+- Read `CONTEXT.md` (only if it exists) and *only* the ADR(s) under `Docs/adr/` that touch the area
+  you are about to change — not the whole folder. The design-gate rules you need mid-slice are
+  restated inline in step 4, so you do NOT need to read `Docs/agents/night-shift.md` or
+  `Docs/agents/domain.md` unless the handover or the issue explicitly points you there.
 
 ## 2. Pick exactly one task
 - If the handover shows an issue in progress, continue THAT issue.
