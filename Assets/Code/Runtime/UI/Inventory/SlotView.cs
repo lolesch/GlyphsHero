@@ -132,10 +132,20 @@ namespace Code.Runtime.UI.Inventory
         private void RequestTooltip()
         {
             var item = ResolveItem();
-            if (item == null) return;
+            if (item == null) return;   // empty slot → no tooltip, and no drag-compare (Acceptance)
             if (!_container.ContentPointer.TryGetValue(_gridPosition, out var anchor)) return;
 
             var (screenX, onRight) = ComputeTooltipAnchor(item, anchor);
+
+            // Drag-to-compare (tooltip-redesign slice 8): while an item is held, hovering an *occupied*
+            // slot shows a held-vs-slot standalone comparison instead of the slot item's own tooltip.
+            var held = _dragController?.HeldItem;
+            if (held != null && !ReferenceEquals(held, item))
+            {
+                _tooltipController?.RequestCompare(held, item, _container, screenX, onRight);
+                return;
+            }
+
             _tooltipController?.RequestShow(item, _container, screenX, onRight);
         }
 
