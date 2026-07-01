@@ -6,50 +6,57 @@
 
 **Last updated:** 2026-07-01 (night run)
 **Active branch:** night/2026-07-01
-**Current issue:** #7 — [Tooltip 5/8] Symmetric two-state (**code-complete this night**, label removed)
-**State:** idle — no issue in progress. #7 done; next session picks the next `ready-for-agent`.
+**Current issue:** #8 — [Tooltip 6/8] Alt = math expansion + breadcrumb (**IN PROGRESS** — breadcrumb
+half done this chunk; equation/base-value half remains; `ready-for-agent` deliberately kept)
+**State:** issue #8 in progress — next session continues #8 (the equation/base-value half).
 
-## What I did (#7)
+## What I did (#8, commit 599a06e)
 
-- New `Assets/Code/Runtime/UI/Inventory/TwoStateBlock.cs` (+ `.meta`) — pure builder.
-  `TwoStateBlock.Build(item, primaryActive)` → `TwoStateView { Active, Other }` of
-  `ItemStateView { Kind, Label, Lines }`. Attachment: `Chained` (from `PositionalDelta.Describe`)
-  ⇄ `Unchained` (loose `IAttachmentItem.affixes`); Weapon: `Driving` (base attack) ⇄ `Payload`
-  (own child delivery via `PayloadBehavior`, defaults mirroring `AppendPayloadOutput`). Caller
-  passes `primaryActive: isChained` (attachment) / `!isPayload` (weapon).
-- `ItemTooltipController` rewired to show **both** states always (active bold, other dim; emphasis
-  the only marker): `AppendAttachmentIdentity` now delegates to `TwoStateBlock` + a new shared
-  `AppendState` renderer (empty state → dim `—`). The chained weapon branch and
-  `AppendStandaloneWeapon` append the weapon's dim other-role line ("as payload" / "as driving
-  weapon"); existing rich active blocks untouched. Old `ChainedDescription` deleted (folded into
-  `AppendState`).
-- New `Assets/Code/Tests/EditMode/UI/TwoStateBlockTests.cs` (+ `.meta`) — red-green over the
-  Active/Other arrangement + deterministic content lines. All new `.cs` shipped with `.meta`.
+Did the **breadcrumb** half of slice 6 — the part with a clean pure-testable seam:
 
-## Next step
+- New `Assets/Code/Runtime/UI/Inventory/Breadcrumb.cs` (+ `.meta`) — pure builder.
+  `Breadcrumb.Build(chain|topology, item)` renders the chain in **real connection order**
+  (`OrderedItems` = root → weapon), hovered item bracketed:
+  `Reactor → Amp → [Iron Amp] → Crossblades`. Reserves `Breadcrumb.Branch = "⑂"` for future
+  branch rendering (unused). Topology overload resolves the item's chain; empty for loose items.
+- Deleted `BuildChainSentence` (`ItemTooltipController.cs`) and its `↓` inverted-arrow diagram
+  (it walked outward from the hovered item, reading backwards to the grid). The Alt (`detailed`)
+  branch now appends `Breadcrumb.Build(chain, item)` — one line, real order.
+- New `Assets/Code/Tests/EditMode/UI/BreadcrumbTests.cs` (+ `.meta`) — red-green: ordering (a
+  reversed walk fails), bracket placement, separator, empty-chain, topology resolution. All new
+  `.cs` shipped with `.meta`.
 
-Nothing in progress. Next session takes the lowest-numbered open `ready-for-agent` issue —
-**#8** ([Tooltip 6/8] Alt = math expansion + breadcrumb; delete `BuildChainSentence` & inverted
-arrows). It builds on this slice: Alt will extend `TwoStateBlock`/`PositionalDelta` to render
-`before → after` equations (the `detailed` flag is deliberately **not** wired into `TwoStateBlock`
-yet), add a `Breadcrumb.Build(topology, item)` real-connection-order path, and delete the
-backwards `BuildChainSentence` (`ItemTooltipController.cs`) and its inverted arrows.
+## Next step (finish #8 — the equation/base-value half)
+
+Spec `Docs/superpowers/specs/2026-06-30-tooltip-redesign.md` §2–§3. Numeric before→after already
+works under Alt for damage/cost/rate (existing `Stat(before, after, detailed)`). Still to do:
+
+1. **Converter piece delta** under Alt: show `Single → Aoe` (from → to), not just `→ Aoe`
+   (`ItemTooltipController.PieceDeltaText` + `AppendChainOutput`; the "from" axis is on `p.Before`).
+2. **Reactor** equation `[base 3] ×120% = 3.6` (spec §2.1) — a reactor's `inputMod` applied to the
+   base, rendered as an equation under Alt.
+3. **Weapon terminal** `base 12 → final 18` under Alt (`AppendWeaponTerminal` shows only `totals`
+   today; add the weapon-base → final equation when `detailed`). Weapon base = `chain.Weapon.Damage`
+   etc.; final = `PositionalDelta.Totals(chain)`.
+
+The `detailed` flag is deliberately **not** wired into `TwoStateBlock`/`PositionalDelta.Describe`
+yet — that's where the equation expansion would live if factored into the pure builders (cleaner &
+testable) rather than added inline in the controller. Prefer extending the pure builders.
 
 ## Blockers
 
-None. No design fork hit; no `needs-design` filed.
+None. No design fork hit; no `needs-design` filed. `#8` remains `ready-for-agent` (in-scope work left).
 
 ## To verify in Rider / Unity (I cannot compile or run the Test Runner)
 
-1. **Compiles** — `TwoStateBlock` + `ItemTooltipController` edits unverified against the compiler.
-2. EditMode suite green: **`TwoStateBlockTests`** (new), plus the untouched **`ChainResolverTests`**
-   lock, `PositionalDeltaTests`, `AttachmentDeltaTests`, `DeliverySentenceTests`, `TypeGlyphsTests`.
-3. Hover a **chained attachment** → `chained:` bold, `unchained:` dim (or `unchained: —` with no
-   loose affix). Hover it **standalone** → emphasis flips.
-4. Hover a **driving weapon** (chain) → Attack block + dim `as payload: …`. Hover a **payload
-   weapon** → Payload block + dim `as driving weapon: …`. Hover a **loose weapon** → base attack +
-   dim `as payload: …`.
-5. `·`, `—` render in the tooltip TMP font (both already in use pre-change).
-6. **Note (carried from prior slices):** slices 1 & 2 (TypeGlyphs, DeliverySentence) on this branch
-   are still pending TMP-atlas / hover verification (issues #3, #4) — the glyphs must render for the
-   piece list + these attachment/weapon lines to read correctly.
+1. **Compiles** — `Breadcrumb` + the `ItemTooltipController` deletion/wiring unverified vs the compiler.
+2. EditMode suite green: **`BreadcrumbTests`** (new), plus untouched **`ChainResolverTests`** lock,
+   `TwoStateBlockTests`, `PositionalDeltaTests`, `AttachmentDeltaTests`, `DeliverySentenceTests`,
+   `TypeGlyphsTests`.
+3. Hover a chained piece and **hold Alt** → a single-line breadcrumb appears in grid order
+   (root → weapon), the hovered item bracketed `[…]`. **No `↓` arrows anywhere.** Release Alt → gone.
+4. `→` and `⑂` render in the tooltip TMP font (`→` already in use pre-change; `⑂` is only reserved,
+   not yet drawn).
+5. **Note (carried from prior slices):** slices 1 & 2 (TypeGlyphs, DeliverySentence) on this branch
+   are still pending TMP-atlas / hover verification (issues #3, #4) — glyphs must render for the
+   piece list + breadcrumb to read correctly.
