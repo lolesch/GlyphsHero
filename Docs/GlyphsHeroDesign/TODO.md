@@ -9,11 +9,20 @@ the minimal loop would be:
 - combat phase
 	- [x] start combat
 	- [x] inventories fire their weapon chains
-		- [ ] target evaluation
+		- [x] target evaluation
 
 ## Extended Loop
 - deployment phase
 	- [ ] store units in a roster 
 	- [ ] deploy pawns from roster to grid
 - reward phase
-	- [ ] earn item rewards
+	- [x] earn item rewards
+
+
+- [ ] re-implement patch version number
+
+- [ ] unit placement
+  - [ ] Unit bank
+- [ ] unit synergy effects
+  - [ ] apply effect
+- [ ] unit inventory
