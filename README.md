@@ -1,11 +1,3 @@
-# "AutoBattler"
+# "Glyphs Hero" - working title
 
-## TODO
-
-- [ ] re-implement patch version number
-
-- [ ] unit placement
-  - [ ] Unit bank
-- [ ] unit synergy effects
-  - [ ] apply effect
-- [ ] unit inventory
+Into The Breach with Noita wand building and backpack battles inventory management

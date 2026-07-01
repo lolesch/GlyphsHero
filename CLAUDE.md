@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A Unity **auto-battler** game. Unity **6000.3.9f1** (Unity 6), Universal Render Pipeline, new Input System, 2D tilemap (hex grid). The user develops via the Rider IDE integration. Terminal is Windows PowerShell — use the PowerShell tool, not Bash/WSL.
+A Unity **auto-battler** game. Unity **6000.3.9f1** (Unity 6), Universal Render Pipeline, new Input System, 2D tilemap (hex grid). Terminal is Windows PowerShell — use the PowerShell tool, not Bash/WSL.
 
 ## Building & Running
 
-There is no CLI build/run workflow. Code is compiled and the game is run from the **Unity Editor** (Rider drives the same editor). Open the project in Unity and use Play mode. Rider compiles on save and surfaces errors in the IDE.
+There is no CLI build/run workflow. Code is compiled and the game is run from the **Unity Editor**. Open the project in Unity and use Play mode.
 
 ## Tests
 
-Tests use the **Unity Test Framework** (NUnit) plus **FluentAssertions**, and run through the editor's **Test Runner** window (`Window > General > Test Runner`), not from the command line. The EditMode test assembly is `GlyphsHero.Tests.EditMode` (`Assets/Code/Tests/EditMode/`). To run a single test, use the Test Runner tree or Rider's gutter run icons; there is no per-test CLI invocation configured.
+Tests use the **Unity Test Framework** (NUnit) plus **FluentAssertions**, and run through the editor's **Test Runner** window (`Window > General > Test Runner`), not from the command line. The EditMode test assembly is `GlyphsHero.Tests.EditMode` (`Assets/Code/Tests/EditMode/`). To run a single test, use the Test Runner tree; there is no per-test CLI invocation configured.
 
 NUnit and FluentAssertions DLLs are vendored via NuGet (`Assets/NuGet.config`, `Assets/packages.config`, `Assets/Packages/`) and referenced directly by the test asmdef's `precompiledReferences`.
 
