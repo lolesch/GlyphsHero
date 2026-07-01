@@ -52,14 +52,14 @@ A payload doesn't have its own bespoke axes — it is a **child [[Attack Targeti
 
 The old "propagation behaviors" are just child configurations:
 
-| Behavior  | = child configured as                                              |
-| --------- | ----------------------------------------------------------------- |
-| `Explode` | a child with the `Aoe` pattern                                     |
-| `Return`  | a child with anchor = origin                                       |
-| `Split`   | child count = N parallel — requires a [[Splitter & Merger\|Splitter]] |
-| `Chain`   | nested payloads detonating in sequence (no exclude-already-hit)    |
-| `Fork`    | **removed** (redundant with Split)                                 |
-| `Pierce`  | **moved** to a Delivery Layer (it's about *hitting*, not on-hit)   |
+| Behavior  | = child configured as                                              | Status |
+| --------- | ----------------------------------------------------------------- | --- |
+| `Explode` | a child with the `Aoe` pattern                                     | implemented |
+| `Return`  | a child with anchor = origin                                       | implemented |
+| `Split`   | child count = N parallel — requires a [[Splitter & Merger\|Splitter]] | **unbuilt** — no Splitter item exists yet |
+| `Chain`   | nested payloads detonating in sequence (no exclude-already-hit)    | implemented |
+| `Fork`    | **removed** (redundant with Split)                                 | n/a |
+| `Pierce`  | **moved** to a Delivery Layer (it's about *hitting*, not on-hit)   | deferred (Layer) |
 
 # Propagation cost (the gate)
 
@@ -76,6 +76,10 @@ A payload's only gate is **cost** ([[0006-payload-propagation-cost-economy|ADR-0
 
 ---
 # Affinity Tags
+
+> [!warning] Unbuilt
+> `WeaponConfig.tags` (`WeaponTags`) exists on the config but is unread by any resolver — no tag-overlap
+> logic exists in combat. This section is forward-looking design.
 
 Every weapon is *good at expressing certain payloads, awkward at others.* Measured by tag overlap — matching tags raise expression strength; mismatches lower it (threshold model, think DIII set bonuses).
 

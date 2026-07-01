@@ -27,6 +27,6 @@ MonoBehaviour:
     type: 1
   <reactorType>k__BackingField: 0
   <inputStatMod>k__BackingField:
-    stat: 0
-    value: 0
-    type: 0
+    stat: 2
+    value: 20
+    type: 3

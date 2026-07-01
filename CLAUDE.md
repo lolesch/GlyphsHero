@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A Unity **auto-battler** game. Unity **6000.3.9f1** (Unity 6), Universal Render Pipeline, new Input System, 2D tilemap (hex grid). The user develops via the Rider IDE integration. Terminal is Windows PowerShell — use the PowerShell tool, not Bash/WSL.
+A Unity **auto-battler** game. Unity **6000.3.9f1** (Unity 6), Universal Render Pipeline, new Input System, 2D tilemap (hex grid). Terminal is Windows PowerShell — use the PowerShell tool, not Bash/WSL.
 
 ## Building & Running
 
-There is no CLI build/run workflow. Code is compiled and the game is run from the **Unity Editor** (Rider drives the same editor). Open the project in Unity and use Play mode. Rider compiles on save and surfaces errors in the IDE.
+There is no CLI build/run workflow. Code is compiled and the game is run from the **Unity Editor**. Open the project in Unity and use Play mode.
 
 ## Tests
 
-Tests use the **Unity Test Framework** (NUnit) plus **FluentAssertions**, and run through the editor's **Test Runner** window (`Window > General > Test Runner`), not from the command line. The EditMode test assembly is `GlyphsHero.Tests.EditMode` (`Assets/Code/Tests/EditMode/`). To run a single test, use the Test Runner tree or Rider's gutter run icons; there is no per-test CLI invocation configured.
+Tests use the **Unity Test Framework** (NUnit) plus **FluentAssertions**, and run through the editor's **Test Runner** window (`Window > General > Test Runner`), not from the command line. The EditMode test assembly is `GlyphsHero.Tests.EditMode` (`Assets/Code/Tests/EditMode/`). To run a single test, use the Test Runner tree; there is no per-test CLI invocation configured.
 
 NUnit and FluentAssertions DLLs are vendored via NuGet (`Assets/NuGet.config`, `Assets/packages.config`, `Assets/Packages/`) and referenced directly by the test asmdef's `precompiledReferences`.
 
@@ -71,5 +71,9 @@ Unattended overnight runs work the backlog AFK. The day shift (interactive, on `
 ### Domain docs
 
 Single-context repo. `CLAUDE.md` is the current architecture reference; `CONTEXT.md` / `Docs/adr/` are created lazily as terms and decisions get resolved. See `Docs/agents/domain.md`.
+
+### Doc/code linking
+
+A design doc for an **unbuilt** system is allowed to lag code — that's the point of it. A doc for an **implemented** system should carry a status marker (`> [!info] Implemented today` / `> [!warning] Unbuilt`) on any section that outpaces the code, updated by whoever lands the change as part of closing their slice ledger. `.githooks/pre-commit` nags (non-blocking) when a staged code file has a mapped doc in `Docs/agents/doc-code-map.md` that wasn't touched in the same commit — add a row there when a doc makes claims about a specific file. One-time per machine: `git config core.hooksPath .githooks`.
 
 **ADRs are append-only.** "Update/sync the docs" means `CONTEXT.md`, the design docs, and ADR *headers* (`Lifecycle`/`Amended-by`) — **never** an accepted ADR's Decision body, which is frozen at decision time. A changed decision is a *new* ADR; the current truth of a concept lives in `CONTEXT.md`, which points at the governing ADR. A discovered deviation opens a *superseding* ADR — it is **not** back-written into the accepted body (the acceptance gate exists to catch contradictions *before* acceptance). See `Docs/adr/README.md`.

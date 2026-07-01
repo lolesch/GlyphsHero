@@ -180,6 +180,19 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public WeaponInputModifier inputMod   { get; }
     }
 
+    internal sealed class FakeConverter : FakeItem, IConverterItem
+    {
+        public FakeConverter(string name, ConverterAxis axis = ConverterAxis.Delivery,
+            params Vector2Int[] connectorDirections)
+            : base(name, connectorDirections) => Axis = axis;
+
+        public ConverterAxis   Axis       { get; }
+        public DeliveryPattern ToDelivery => DeliveryPattern.Aoe;
+        public Affinity        ToAffinity => Affinity.Friendly;
+        public Anchor          ToAnchor   => Anchor.Origin;
+        public ResourceType    ToResource => ResourceType.Health;
+    }
+
     /// <summary>
     /// Container double for the chain-state seam: contents and the chain topology are set directly
     /// (no resolver), so a test can declare exactly which items are "chained" and raise

@@ -1,4 +1,9 @@
 
+> [!warning] Unbuilt
+> No status effect system exists yet. `StatusPayloadEffect` is a data stub with no logic; combat code
+> explicitly logs "StatusPayloadEffect not yet wired — status system pending." Terrain types are defined
+> but inert (no gameplay reads them). This whole document is forward-looking design.
+
 Status effects scale better via payload than via delivery mode.
 Statuses scale primarily through payloads.
 
