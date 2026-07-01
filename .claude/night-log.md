@@ -1,0 +1,1 @@
+- 2026-07-01T22:14:37Z | #11 | night/2026-07-02 | Stat.OnTotalChanged forwarding event + Resource.Percentage NaN guard; EditMode tests (StatTests + zero-max percentage) | VERIFY: Test Runner EditMode StatTests(3) + ResourceTests zero-max green; ChainResolver/PawnStats still green
