@@ -7,18 +7,20 @@ clean, committed state. Do exactly one task chunk, then stop.
   primary handoff; lean on it and don't re-derive what it already tells you.
 - Read `CLAUDE.md` — the architecture / convention reference.
 - Read `CONTEXT.md` (only if it exists) and *only* the ADR(s) under `Docs/adr/` that touch the area
-  you are about to change — not the whole folder. The design-gate rules you need mid-slice are
-  restated inline in step 4, so you do NOT need to read `Docs/agents/night-shift.md` or
-  `Docs/agents/domain.md` unless the handover or the issue explicitly points you there.
+  you are about to change — not the whole folder. Skip `Docs/agents/night-shift.md` and
+  `Docs/agents/domain.md` — both are day-shift-facing and their operationally-relevant content is
+  already covered by `CLAUDE.md` (read above) and step 4 below.
 
 ## 2. Pick exactly one task
-- If the handover shows an issue in progress, continue THAT issue.
+- If the handover shows an issue in progress, continue THAT issue. The handover already carries the
+  accumulated state, so don't re-read the full comment history — `gh issue view <n>` (body only, no
+  `--comments`) is enough to confirm the spec; skim only the single most recent comment for anything
+  new since the handover was written.
 - Otherwise list candidates and take the lowest-numbered one:
   `gh issue list --state open --label ready-for-agent --json number,title --jq 'sort_by(.number)'`
-- Read the chosen issue IN FULL before working — `gh issue view <n> --comments`. The body is the
-  spec (it may point to a spec doc under `Docs/.../specs/` on main); the comments carry prior slice
-  ledgers. That issue + the context from step 1 is your entire task handover — do not work from the
-  title alone.
+  For a fresh issue, read it IN FULL — `gh issue view <n> --comments`. The body is the spec (it may
+  point to a spec doc under `Docs/.../specs/` on main); the comments carry prior slice ledgers. That
+  issue + the context from step 1 is your entire task handover — do not work from the title alone.
 - If there are NO `ready-for-agent` issues and nothing in progress: print exactly
   `NIGHT_RUNNER_NO_TASKS` on its own line and STOP. Do nothing else, make no commits.
 
@@ -39,8 +41,8 @@ clean, committed state. Do exactly one task chunk, then stop.
   pass. Instead record precisely what a human must verify in Rider/Unity.
 
 ### If you hit a design fork mid-chunk: PARK, don't guess (design gate)
-Read `Docs/agents/design-gate.md`. If you reach a gap the design doesn't answer, apply the
-**one-way / two-way door** test:
+The full rationale lives in `Docs/agents/design-gate.md` — you don't need to open it, the recipe below
+is complete. If you reach a gap the design doesn't answer, apply the **one-way / two-way door** test:
 - **Two-way door** (cheap to reverse — a value, a default, an ordering tiebreak): decide it,
   and record it in the slice ledger (step 5) so a human can veto it. Keep going.
 - **One-way door** (expensive to unwind; *contradicts an accepted ADR Decision*; or *defines a
