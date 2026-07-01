@@ -6,49 +6,46 @@
 
 **Last updated:** 2026-07-02
 **Active branch:** night/2026-07-02 (Pawn-UI series #11–#15; stay on this branch for the whole series)
-**Current issue:** #12 [Pawn UI 2/5] Selection — CODE-COMPLETE. `ready-for-agent` removed;
+**Current issue:** #13 [Pawn UI 3/5] Inventory-trigger — CODE-COMPLETE. `ready-for-agent` removed;
 awaiting Rider/Unity verification only.
 **State:** No issue is in progress. Next session: run the step-2 picker for the lowest-numbered
-`ready-for-agent` issue (**#13** is next), or emit `NIGHT_RUNNER_NO_TASKS` if the queue is drained.
+`ready-for-agent` issue (**#14** is next), or emit `NIGHT_RUNNER_NO_TASKS` if the queue is drained.
 
 ## What the last chunk did
 
-Completed **all of #12** in one chunk (commit `db19fff`) — the click-selection concept the
-inventory-trigger (#13) and HUD (#15) issues key off:
+Completed all of **#13** in one chunk (commit `46d93fb`) — a one-line event swap:
 
-- `HexSelectionHandler.cs` (Core / GameLoop asmdef) — added static `OnPawnSelected` event +
-  `SelectedPawn` property (mirrors existing `OnPawnHovered` style). Extracted pure policy
-  `public static IPawn ResolveSelection(IPawn current, IPawn clicked) => clicked ?? current`.
-  `Update` fires selection on `GetMouseButtonDown(0)` using the already-resolved `hoveredPawn`,
-  **only when selection changes**. Q/E rotation moved from `hoveredPawn` → `SelectedPawn`.
-  Hover path (`OnPawnHovered` + effect tilemap highlight) untouched.
-- New `Assets/Code/Tests/EditMode/Pawns/HexSelectionPolicyTests.cs` (+ hand-authored `.meta`,
-  guid `a8633b99a96e45b7b65d8c965ed3d445`) — 4 red-green cases on `ResolveSelection` via a
-  reference-identity `StubPawn : IPawn`. Mouse/event/Q/E wiring is human-verified (Input+MB seam).
-- No asmdef/interface changes.
+- `Assets/Code/Runtime/UI/Inventory/PawnInventoryView.cs` — `OnEnable`/`OnDisable` now subscribe
+  `Show` to `HexSelectionHandler.OnPawnSelected` instead of `OnPawnHovered`. No other behavior change
+  (`_view.RefreshView(pawn.Inventory)` unchanged). Also refreshed the stale class doc-comment
+  ("hovered" → "selected").
+- Robustness bonus: `OnPawnSelected` never fires null (fires on change; `ResolveSelection` returns
+  `clicked ?? current`, so empty-clicks don't fire), so `Show(pawn).Inventory` is strictly safer than
+  the old hover path (which could fire null on hover-off).
+- No tests (one-line swap, no pure seam — per issue spec). No asmdef/interface changes.
 
 ## Next step
 
-Pick **#13** [Pawn UI 3/5] Pawn inventory: drive on selection instead of hover — via the step-2
-picker. Read spec `Docs/superpowers/specs/2026-07-01-pawn-ui.md` (§Decisions 1 already read; the
-inventory-trigger is the natural consumer of the new `OnPawnSelected`). Dependency order:
-Statistics(#11 ✓) → Selection(#12 ✓) → Inventory-trigger(#13) → Grid-bar(#14) → HUD(#15).
+Pick **#14** [Pawn UI 4/5] Grid status bar: health+mana bars following every pawn — via the step-2
+picker. Read spec `Docs/superpowers/specs/2026-07-01-pawn-ui.md` (§Decision 2: world-space canvas child
+on `Pawn.prefab`; new `PawnStatusBar` in UI asmdef self-binding from parent `Pawn.Stats` in `Start()`;
+respect **UI → Pawns** layering — `Pawn`/`PawnFactory` must NOT reference UI; reuse the fixed
+`PawnResourceView`). Note: this issue needs a human to author the prefab child + wiring; the runner
+writes C# + a WIRE IN UNITY recipe only. Dependency order: Statistics(#11 ✓) → Selection(#12 ✓) →
+Inventory-trigger(#13 ✓) → Grid-bar(#14) → HUD(#15).
 
 ## Prior chunks still pending human verification
 
-- **This branch (`night/2026-07-02`):** #11 (Statistics seam) and #12 (Selection).
+- **This branch (`night/2026-07-02`):** #11 (Statistics seam), #12 (Selection), #13 (Inventory-trigger).
 - **`night/2026-07-01`:** tooltip-redesign slices #3–#10, all code-complete, `ready-for-agent`
   removed, awaiting Rider/Unity verification.
 
 ## Blockers
 
-None. Unity MCP bridge did **not** surface EditMode-test tools this session, so tests were written
-but not executed — verification is manual (below).
+None.
 
-## To verify in Rider / Unity (#12)
+## To verify in Rider / Unity (#13)
 
-1. `Window > General > Test Runner` → EditMode: `HexSelectionPolicyTests` (4 tests) all green.
-2. `ChainResolverTests` / `PawnStatsTests` still green (API was only *added to*).
-3. `HexSelectionPolicyTests.cs.meta` (guid `a8633b99…`) imports with no missing-meta/duplicate-guid warning.
-4. Play mode: click a pawn selects; click another switches; click empty keeps selection; re-click
-   same keeps it (no toggle). Q/E rotates the **selected** pawn (not the hovered one).
+1. Hovering a pawn no longer changes the inventory panel.
+2. Clicking a pawn shows that pawn's inventory; clicking another switches it.
+3. `ChainResolverTests` / `PawnStatsTests` / `HexSelectionPolicyTests` still green (no API changed).
