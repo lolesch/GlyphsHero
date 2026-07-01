@@ -244,14 +244,18 @@ namespace Code.Runtime.UI.Inventory
         private static void AppendWeaponTerminal(StringBuilder sb, IItemChain chain, bool detailed)
         {
             var totals = PositionalDelta.Totals(chain);
+            var weapon = chain.Weapon;
 
             var reactorDriven = chain.Root is IReactorItem;
             sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
-            sb.AppendLine($"  dmg  {(float)totals.Damage:F1}   {TerminalRate(chain, totals.AttackSpeed)}");
+            var dmgStr = PositionalDelta.BaseFinal($"{(float)weapon.Damage:F1}", $"{(float)totals.Damage:F1}", detailed);
+            sb.AppendLine($"  dmg  {dmgStr}   {TerminalRate(chain, (float)weapon.AttackSpeed, totals.AttackSpeed, detailed)}");
             sb.AppendLine($"  {DeliverySentence.Build(totals.Delivery, totals.Affinity, totals.Anchor, 0)}");
             // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
             // cover it, nothing fires.
-            sb.AppendLine($"  cost {(float)totals.ResourceCost:F1} [{totals.CostResource}]" +
+            var costStr = PositionalDelta.BaseFinal(
+                $"{(float)weapon.ResourceCost:F1}", $"{(float)totals.ResourceCost:F1}", detailed);
+            sb.AppendLine($"  cost {costStr} [{totals.CostResource}]" +
                           "   (root gate)".Colored(LightGray));
 
             foreach (var piece in PositionalDelta.Pieces(chain))
@@ -273,7 +277,12 @@ namespace Code.Runtime.UI.Inventory
         private static string PieceDeltaText(PieceDelta p, bool detailed)
         {
             if (p.Item is IReactorItem reactor)
-                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}".Colored(LightGray);
+            {
+                var firing   = $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}";
+                var equation = PositionalDelta.ReactorInputEquation(reactor, p, detailed);
+                var line     = equation.Length > 0 ? $"{firing}   {equation}" : firing;
+                return line.Colored(LightGray);
+            }
 
             var parts = new List<string>();
             if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
@@ -296,14 +305,16 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition, else
-        /// the resolved attack interval.</summary>
-        private static string TerminalRate(IItemChain chain, float attackSpeed)
+        /// the resolved attack interval — under Alt, the base interval leads it (spec §2.2).</summary>
+        private static string TerminalRate(IItemChain chain, float baseSpeed, float finalSpeed, bool detailed)
         {
             var reactor = chain.Root as IReactorItem
                           ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
-            return reactor != null
-                ? $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}"
-                : $"every {Interval(attackSpeed)}";
+            if (reactor != null)
+                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}";
+
+            var intervalStr = PositionalDelta.BaseFinal(Interval(baseSpeed), Interval(finalSpeed), detailed);
+            return $"every {intervalStr}";
         }
 
         private static void AppendChainOutput(StringBuilder sb, IItemChain chain,
