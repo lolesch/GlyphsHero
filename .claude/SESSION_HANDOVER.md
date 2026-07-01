@@ -6,37 +6,43 @@
 
 **Last updated:** 2026-07-02
 **Active branch:** night/2026-07-02 (Pawn-UI series #11–#15; stay on this branch for the whole series)
-**Current issue:** #13 [Pawn UI 3/5] Inventory-trigger — CODE-COMPLETE. `ready-for-agent` removed;
-awaiting Rider/Unity verification only.
+**Current issue:** #14 [Pawn UI 4/5] Grid status bar — CODE-COMPLETE. `ready-for-agent` removed;
+awaiting human prefab-wiring + Rider/Unity verification only.
 **State:** No issue is in progress. Next session: run the step-2 picker for the lowest-numbered
-`ready-for-agent` issue (**#14** is next), or emit `NIGHT_RUNNER_NO_TASKS` if the queue is drained.
+`ready-for-agent` issue (**#15** is the only one left), or emit `NIGHT_RUNNER_NO_TASKS` if drained.
 
 ## What the last chunk did
 
-Completed all of **#13** in one chunk (commit `46d93fb`) — a one-line event swap:
+Completed all C# for **#14** in one chunk (commit `954b617`):
 
-- `Assets/Code/Runtime/UI/Inventory/PawnInventoryView.cs` — `OnEnable`/`OnDisable` now subscribe
-  `Show` to `HexSelectionHandler.OnPawnSelected` instead of `OnPawnHovered`. No other behavior change
-  (`_view.RefreshView(pawn.Inventory)` unchanged). Also refreshed the stale class doc-comment
-  ("hovered" → "selected").
-- Robustness bonus: `OnPawnSelected` never fires null (fires on change; `ResolveSelection` returns
-  `clicked ?? current`, so empty-clicks don't fire), so `Show(pawn).Inventory` is strictly safer than
-  the old hover path (which could fire null on hover-off).
-- No tests (one-line swap, no pure seam — per issue spec). No asmdef/interface changes.
+- `Assets/Code/Runtime/UI/PawnResourceView.cs` — added **initial paint** (`SetPawn` now calls a new
+  private `Paint()` after binding, so the bar shows current fill immediately instead of waiting for the
+  first `OnCurrentChanged`), and an **`OnDestroy`** that unsubscribes `OnCurrentChanged` (leak fix; the
+  rebind-unsubscribe path was already present). `Paint()` reads the #11 NaN-safe `resource.Percentage`
+  and null-guards `bar`/`resource`.
+- `Assets/Code/Runtime/UI/PawnStatusBar.cs` (+ `.meta`) — NEW, `Code.Runtime.UI`. World-space canvas
+  child of `Pawn.prefab`; `Start()` does `GetComponentInParent<Pawn>()` then binds two serialized
+  `PawnResourceView` children (`healthBar`, `manaBar`) to `pawn.Stats.health`/`.mana` via `SetPawn`.
+  Defensive null logs. Reads a `Pawn` only — UI → Pawns layering respected (UI asmdef already refs
+  Pawns GUID `fc25358…`).
+- No tests (MonoBehaviours, no pure seam; NaN case already locked by #11's Resource test).
 
 ## Next step
 
-Pick **#14** [Pawn UI 4/5] Grid status bar: health+mana bars following every pawn — via the step-2
-picker. Read spec `Docs/superpowers/specs/2026-07-01-pawn-ui.md` (§Decision 2: world-space canvas child
-on `Pawn.prefab`; new `PawnStatusBar` in UI asmdef self-binding from parent `Pawn.Stats` in `Start()`;
-respect **UI → Pawns** layering — `Pawn`/`PawnFactory` must NOT reference UI; reuse the fixed
-`PawnResourceView`). Note: this issue needs a human to author the prefab child + wiring; the runner
-writes C# + a WIRE IN UNITY recipe only. Dependency order: Statistics(#11 ✓) → Selection(#12 ✓) →
-Inventory-trigger(#13 ✓) → Grid-bar(#14) → HUD(#15).
+Pick **#15** [Pawn UI 5/5] Selected-pawn HUD panel — via the step-2 picker. Read spec
+`Docs/superpowers/specs/2026-07-01-pawn-ui.md` (§Decision 3: separate panel, shares only the selection
+source `HexSelectionHandler.OnPawnSelected` from #12; shows icon+name, health+mana bars WITH numeric
+current/max text, and secondary stats healthRegen/manaRegen/movementSpeed/range; **fully live** — pools
+via `Resource.OnCurrentChanged`, every stat incl. max via `Stat.OnTotalChanged` from #11; unsubscribe
+previous pawn on switch + on destroy; hidden until first selection; any pawn incl. enemies).
+`ItemTooltipController` is the reference for a lifecycle-managed ref-wired panel. Likely runner writes
+C# + a WIRE IN UNITY recipe; human authors the panel + SerializeField wiring.
+Dependency order: Statistics(#11 ✓) → Selection(#12 ✓) → Inventory-trigger(#13 ✓) → Grid-bar(#14 ✓) → HUD(#15).
 
 ## Prior chunks still pending human verification
 
-- **This branch (`night/2026-07-02`):** #11 (Statistics seam), #12 (Selection), #13 (Inventory-trigger).
+- **This branch (`night/2026-07-02`):** #11 (Statistics seam), #12 (Selection), #13 (Inventory-trigger),
+  #14 (Grid status bar — needs prefab wiring per its WIRE IN UNITY recipe).
 - **`night/2026-07-01`:** tooltip-redesign slices #3–#10, all code-complete, `ready-for-agent`
   removed, awaiting Rider/Unity verification.
 
@@ -44,8 +50,11 @@ Inventory-trigger(#13 ✓) → Grid-bar(#14) → HUD(#15).
 
 None.
 
-## To verify in Rider / Unity (#13)
+## To verify in Rider / Unity (#14)
 
-1. Hovering a pawn no longer changes the inventory panel.
-2. Clicking a pawn shows that pawn's inventory; clicking another switches it.
-3. `ChainResolverTests` / `PawnStatsTests` / `HexSelectionPolicyTests` still green (no API changed).
+1. Do the WIRE IN UNITY steps on `Assets/Prefabs/Pawn.prefab` (canvas child + two Image bars + two
+   `PawnResourceView` + `PawnStatusBar` with `healthBar`/`manaBar` assigned).
+2. Play: every spawned pawn (both teams) shows both bars at correct **initial** fill immediately.
+3. A 0-mana pawn shows an empty mana bar, **no NaN**.
+4. Bars track damage/regen live during Combat; destroying a pawn logs no leak/NRE.
+5. `ChainResolverTests` / `PawnStatsTests` / `Resource` tests still green (no API changed).
