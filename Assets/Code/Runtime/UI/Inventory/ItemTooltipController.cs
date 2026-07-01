@@ -214,10 +214,17 @@ namespace Code.Runtime.UI.Inventory
                 // (amp/shifter/reactor/converter) still fall through to the per-piece marginal view.
                 if (item is IWeaponItem weaponItem)
                 {
-                    if (IsPayload(item, chain))
+                    var payloadRole = IsPayload(item, chain);
+                    if (payloadRole)
                         AppendPayloadOutput(sb, chain, weaponItem);
                     else
                         AppendWeaponTerminal(sb, chain, detailed);
+
+                    // Symmetric two-state (slice 5): the active role renders in full above; show the
+                    // weapon's *other* role (a driving weapon "as payload", a payload "as driving
+                    // weapon") dim beneath — both states always visible, emphasis the only marker.
+                    AppendState(sb, TwoStateBlock.Build(weaponItem, primaryActive: !payloadRole).Other,
+                        emphasized: false);
                 }
                 else
                     AppendChainOutput(sb, chain, item, detailed);
@@ -446,26 +453,22 @@ namespace Code.Runtime.UI.Inventory
             if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
                 return;
 
-            var chainedDesc  = ChainedDescription(item);
-            var sm           = item as IAttachmentItem;
-            var unchainedStr = sm?.affixes.Count > 0
-                ? $"unchained: {sm.affixes[0].PawnStat} {sm.affixes[0].Modifier}"
-                : null;
+            // Symmetric two-state (tooltip-redesign spec §2, slice 5): both the chained delta and the
+            // loose unchained affix are always shown; the live one (chained in a chain, the affix
+            // standalone — ADR-0004 item roles) is emphasised, the other dim. Emphasis is the only marker.
+            var block = TwoStateBlock.Build(item, primaryActive: isChained);
+            AppendState(sb, block.Active, emphasized: true);
+            AppendState(sb, block.Other,  emphasized: false);
+        }
 
-            // Bold the active half: in a chain the chained effect is live and the loose affix is greyed,
-            // and vice-versa when the item sits alone in the grid (ADR-0004 item roles).
-            if (isChained)
-            {
-                sb.AppendLine($"  <b>{chainedDesc}</b>");
-                if (unchainedStr != null)
-                    sb.AppendLine($"  {unchainedStr.Colored(LightGray)}");
-            }
-            else
-            {
-                sb.AppendLine($"  {chainedDesc.Colored(LightGray)}");
-                if (unchainedStr != null)
-                    sb.AppendLine($"  <b>{unchainedStr}</b>");
-            }
+        /// <summary>Renders one <see cref="ItemStateView"/> as a <c>label:   lines…</c> row, bold when the
+        /// state is the live one and dim otherwise — the sole state marker (no badge). An empty state
+        /// prints a dim em-dash so the symmetry (both states always shown) stays visible.</summary>
+        private static void AppendState(StringBuilder sb, in ItemStateView state, bool emphasized)
+        {
+            var body = state.Lines.Count > 0 ? string.Join("   ·   ", state.Lines) : "—";
+            var line = $"{state.Label}:   {body}";
+            sb.AppendLine(emphasized ? $"  <b>{line}</b>" : $"  {line.Colored(LightGray)}");
         }
 
         /// <summary>A weapon sitting alone (no chain): it fires on its own timer with its base stats.</summary>
@@ -475,6 +478,9 @@ namespace Code.Runtime.UI.Inventory
             sb.AppendLine("<b>Attack:</b>");
             sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {DeliverySentence.Build(w.Delivery, w.Affinity, w.Anchor, 0)}");
             sb.AppendLine($"  every {Interval((float)w.AttackSpeed)}   ·   cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
+
+            // Symmetric two-state (slice 5): a loose weapon is driving; show its dim "as payload" state.
+            AppendState(sb, TwoStateBlock.Build(w, primaryActive: true).Other, emphasized: false);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────
@@ -503,16 +509,6 @@ namespace Code.Runtime.UI.Inventory
 
         private static string Interval(float attackSpeed) =>
             attackSpeed > 0f ? $"{1f / attackSpeed:0.00}s" : "—";
-
-        // The attachment's own §3 active-delta content (tooltip-redesign slice 4). Built intrinsically
-        // by PositionalDelta.Describe — additive lines (a numeric line only when non-default), including
-        // the reactor's input modifier that the old per-type switch dropped. Joined onto one "chained:"
-        // line; the bold/dim two-state framing lives in AppendAttachmentIdentity.
-        private static string ChainedDescription(ITetrisItem item)
-        {
-            var lines = PositionalDelta.Describe(item);
-            return lines.Count > 0 ? "chained:   " + string.Join("   ·   ", lines) : "chained:";
-        }
 
         private static List<ITetrisItem> OrderedItems(IItemChain chain)
         {
