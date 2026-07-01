@@ -4,56 +4,44 @@
 > source of **mid-task state** between fresh sessions within one night. GitHub issues track
 > *what* to do and *what's done*; this file tracks *where the last session left off*.
 
-**Last updated:** 2026-07-01 (interactive, finishing a chunk the night runner left mid-slice)
+**Last updated:** 2026-07-01
 **Active branch:** night/2026-07-01
-**Current issue:** #8 — [Tooltip 6/8] Alt = math expansion + breadcrumb (**CODE-COMPLETE** —
-`ready-for-agent` removed; awaiting Rider/Unity verification)
-**State:** idle — next session should take the lowest-numbered open `ready-for-agent` issue
-(#9, per `Docs/agents/night-shift.md`).
+**Current issue:** none in progress (last worked: #9, now code-complete pending human verify)
+**State:** idle — ready for the next lowest-numbered `ready-for-agent` issue.
 
-## What I did (#8, finishing the numeric-equation half)
+## What the last chunk did
 
-A prior unattended session hit its `--max-turns` cap mid-slice and left uncommitted WIP already
-implementing both remaining pieces; reviewed it, found the code sound but the reactor-equation half
-untested (red-green gap), added the missing tests, and committed:
+Completed **#9 [Tooltip 7/8] Drop shows tooltip in new chain context** (commit `7b878bc`).
+- `InventoryDragController.DropAt`: on a fully-consumed placement (`carried == null` → `EndDrag`),
+  calls `GetSlotAt(targetContainer, targetAnchor)?.ShowTooltip()`. Covers drag-drop **and**
+  click-to-place (both route through `DropAt`); skipped on swap-displaced `ContinueHolding`.
+- New `ISlotView.ShowTooltip()` → `SlotView` delegates to existing private `RequestTooltip()`,
+  reusing the hover path verbatim (same 0.4s `_showDelay`, same anchor math, same `RequestShow`).
+- Only `SlotView` implements `ISlotView` (no test fakes). `ChainResolverTests` untouched.
+- Removed `ready-for-agent` from #9 (code-complete; awaits human Play-mode verify).
 
-- `PositionalDelta.ReactorInputEquation(IReactorItem, PieceDelta, bool)` — spec §2/§3 Reactor row:
-  the modifier alone without Alt (`ManaCost +5`), or `[base X] modifier = result` with Alt, reading
-  whichever `WeaponStats` field the reactor's `inputMod.stat` targets (`AttackSpeed`/`ManaCost`) off
-  the piece's own before/with snapshot. `ProcChance` has no backing field (`WeaponStatResolver` drops
-  it silently) so it falls back to the label even under Alt. Empty when the modifier is a no-op (same
-  threshold as `Describe`).
-- `PositionalDelta.BaseFinal(string, string, bool)` — spec §2.2 weapon terminal: `base X → final Y`
-  under Alt, plain final value otherwise. Pure equation shape; the caller still owns each stat's own
-  formatting/coloring.
-- `ItemTooltipController.AppendWeaponTerminal`/`TerminalRate`/`PieceDeltaText` wired to both — the
-  weapon terminal now shows `base → final` for dmg and the fire-rate interval under Alt; a reactor
-  piece's line now carries its input equation alongside the firing condition.
-- `Assets/Code/Tests/EditMode/UI/TerminalEquationTests.cs` (+ `.meta`) — added the missing
-  `ReactorInputEquationTests` fixture (AttackSpeed/ManaCost/ProcChance/no-op cases), alongside the
-  already-present `BaseFinal` tests.
+## Prior chunks still pending human verification (this branch)
 
-This closes out the tooltip-redesign spec's Alt math expansion (slice 6) in full — issues #3–#8 are
-now all code-complete on this branch.
+Issues #3–#8 (tooltip-redesign slices 1–6) are all code-complete on `night/2026-07-01`,
+`ready-for-agent` removed, awaiting Rider/Unity verification. #9 now joins them.
+
+## Next step
+
+Nothing in progress. Next session: take the lowest-numbered open `ready-for-agent` issue.
+As of this run the queue is **#10 (Tooltip 8/8 drag-to-compare)**, then #11–#15 (Pawn UI 1–5).
 
 ## Blockers
 
-None. No design fork hit; no `needs-design` filed.
+None.
 
-## To verify in Rider / Unity (I cannot compile or run the Test Runner)
+## To verify in Rider / Unity (for #9, Play mode)
 
-1. **Compiles** — `PositionalDelta.ReactorInputEquation`/`BaseFinal` and the three
-   `ItemTooltipController` call sites that changed signature (`TerminalRate` now takes
-   `chain, baseSpeed, finalSpeed, detailed`).
-2. EditMode suite green: **`TerminalEquationTests`** (both fixtures, new `ReactorInputEquationTests`
-   included), plus the full existing suite — `ChainResolverTests`, `PositionalDeltaTests`,
-   `AttachmentDeltaTests`, `AxisDeltaTests`, `TwoStateBlockTests`, `BreadcrumbTests`,
-   `DeliverySentenceTests`, `TypeGlyphsTests`.
-3. Hold **Alt** on a driving weapon → dmg and fire-rate interval read `base X → final Y`; release Alt
-   → just the final value (unchanged from before this chunk).
-4. Hold **Alt** on a reactor piece with a non-zero `inputMod` → its line reads
-   `fires <condition>   [base X] <modifier> = <result>`; release Alt → just the modifier label
-   (`<stat> <modifier>`); a `ProcChance`-targeting reactor never gets the bracketed equation, Alt or not.
-5. **Note (carried from prior slices):** slices 1 & 2 (TypeGlyphs, DeliverySentence) are still pending
-   TMP-atlas / hover verification (issues #3, #4) — glyphs must render for the piece list + breadcrumb
-   to read correctly.
+1. Drag an item onto an empty cell → tooltip appears ~0.4s after release, new chain context.
+2. Drag into a chain → tooltip reflects the re-resolved chain.
+3. Click-to-pick then click-to-place → same drop-tooltip behavior.
+4. No tooltip flicker during the drag itself.
+5. Swap-drop that keeps an item in hand → no tooltip until that item is placed.
+
+Known scoped-out gap (two-way door, logged on #9): shift/ctrl-click **cross-container transfer**
+(`TryTransferToOtherContainer`) does not show a tooltip — `TryAdd` doesn't return the landing anchor.
+Extend later if desired.
