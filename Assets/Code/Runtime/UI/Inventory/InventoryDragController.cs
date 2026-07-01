@@ -242,6 +242,11 @@ namespace Code.Runtime.UI.Inventory
             if (carried == null)
             {
                 EndDrag();
+                // Drop-shows-tooltip (tooltip-redesign slice 7): the item fully placed (nothing left in
+                // hand), so surface its tooltip at its new anchor in the newly-resolved chain context.
+                // Same 0.4s delay as hover (the slot reuses the hover request path). Skipped when an
+                // item is still carried (a swap displaced one) — the player isn't done placing yet.
+                GetSlotAt(targetContainer, targetAnchor)?.ShowTooltip();
             }
             else
             {

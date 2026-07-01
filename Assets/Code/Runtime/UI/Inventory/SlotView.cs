@@ -57,6 +57,12 @@ namespace Code.Runtime.UI.Inventory
 
         public void SetContainer(ITetrisContainer container) => _container = container;
 
+        // Drop-shows-tooltip (tooltip-redesign slice 7, §Interaction): after the drag controller places
+        // an item, it asks the anchor slot to surface that item's tooltip in the newly-resolved chain
+        // context. Reuses the hover path — same _showDelay (0.4s, not instant → no mid-drag flicker),
+        // same anchor computation — so there's a single tooltip-request code path.
+        public void ShowTooltip() => RequestTooltip();
+
         public void SetHighlight(SlotHighlight highlight)
         {
             if (_icon.color == Color.clear) return;
@@ -256,6 +262,7 @@ namespace Code.Runtime.UI.Inventory
         void Initialize(Vector2Int gridPosition, IInventoryDragController dragController,
             ITetrisContainer container, IItemTooltipController tooltipController);
         void SetContainer(ITetrisContainer container);
+        void ShowTooltip();
         void RefreshView(ITetrisItem item);
         void SetHighlight(SlotHighlight highlight);
         void SetPipState(Vector2Int connectorSlotPos, Vector2Int connectorDirection, PipState state);
