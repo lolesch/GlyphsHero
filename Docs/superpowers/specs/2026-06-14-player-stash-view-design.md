@@ -1,7 +1,7 @@
 # Player Stash View — Design Spec
 
 **Date:** 2026-06-14
-**Status:** Approved (design), pending implementation
+**Status:** Implemented (`PlayerStashView.cs`, `InventoryView.cs`)
 **Approach:** A — Composition (pure renderer + per-source presenters)
 
 ## Problem

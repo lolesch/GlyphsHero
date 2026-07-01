@@ -1,0 +1,56 @@
+#!/bin/sh
+# Doc-code linking nag. Reads Docs/agents/doc-code-map.md; when a staged file matches a
+# mapped code glob, checks whether at least one paired doc is also staged. Never blocks
+# the commit — prints a reminder only. See Docs/agents/doc-code-map.md for the ruleset,
+# and CLAUDE.md's "Doc/code linking" note for the convention this supports.
+
+MAP="Docs/agents/doc-code-map.md"
+[ -f "$MAP" ] || exit 0
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+warned=0
+
+while IFS='|' read -r _ code docs _; do
+    code=$(printf '%s' "$code" | sed -e 's/^ *//' -e 's/ *$//' -e 's/`//g')
+    docs=$(printf '%s' "$docs" | sed -e 's/^ *//' -e 's/ *$//' -e 's/`//g')
+
+    [ -z "$code" ] && continue
+    case "$code" in
+        "Code (glob)"|---*) continue ;;
+    esac
+
+    code_hit=""
+    for f in $staged; do
+        case "$f" in
+            $code) code_hit="$f" ;;
+        esac
+    done
+    [ -z "$code_hit" ] && continue
+
+    doc_hit=0
+    old_ifs=$IFS
+    IFS=','
+    for d in $docs; do
+        d=$(printf '%s' "$d" | sed -e 's/^ *//' -e 's/ *$//')
+        for f in $staged; do
+            [ "$f" = "$d" ] && doc_hit=1
+        done
+    done
+    IFS=$old_ifs
+
+    if [ "$doc_hit" -eq 0 ]; then
+        warned=1
+        echo ""
+        echo "doc-code-map: '$code_hit' matches '$code' — none of its paired docs are staged:"
+        echo "  $docs"
+    fi
+done < "$MAP"
+
+if [ "$warned" -eq 1 ]; then
+    echo ""
+    echo "(reminder only, commit proceeds — see $MAP. Skip with 'git commit --no-verify'.)"
+fi
+
+exit 0

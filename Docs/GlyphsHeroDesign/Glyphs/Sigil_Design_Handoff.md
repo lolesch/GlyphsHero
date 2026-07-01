@@ -13,6 +13,13 @@ The reference for composite quality is **Tyranny's sigil stacking system**: four
 
 ## Component Taxonomy (Design Context)
 
+> [!info] Superseded naming
+> This table predates [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]]. "Activator" is
+> now **Shifter** (trades input stat for output stat, not a free-standing trigger), and Converter
+> reclassifies Delivery/Affinity/Anchor/Resource — not damage or target (those are deferred). The visual
+> decisions below are still current; treat this table as historical context only, and defer to
+> [[Item Chaining]] for the live taxonomy.
+
 | Component | Role |
 |---|---|
 | **Activator** | Self-contained trigger — fires the next action node on its own condition |
