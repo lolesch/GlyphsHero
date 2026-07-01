@@ -21,7 +21,7 @@ namespace Code.Runtime.Modules.Statistics
         public bool IsDepleted => CurrentValue <= 0;
         public bool IsFull => CurrentValue >= MaxValue;
         public float MissingValue => MaxValue - CurrentValue;
-        public float Percentage => CurrentValue / MaxValue;
+        public float Percentage => MaxValue <= 0f ? 0f : CurrentValue / MaxValue;
         public event Action<float, float, float> OnCurrentChanged; // (previous, newValue, total)
         public event Action OnDepleted;
         public event Action OnRecharged;
