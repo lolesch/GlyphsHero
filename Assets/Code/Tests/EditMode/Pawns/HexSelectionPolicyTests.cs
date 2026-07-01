@@ -8,6 +8,7 @@ using Code.Runtime.UI.Inventory;
 using FluentAssertions;
 using NUnit.Framework;
 using Submodules.Utility.Extensions;
+using UnityEngine;
 
 namespace Code.Tests.EditMode.Pawns
 {
@@ -72,6 +73,8 @@ namespace Code.Tests.EditMode.Pawns
             public PawnTeam         Team          => throw new NotImplementedException();
             public Hex              HexPosition   => throw new NotImplementedException();
             public TerrainCostConfig MovementCosts => throw new NotImplementedException();
+            public Sprite           Icon          => throw new NotImplementedException();
+            public string           DisplayName   => throw new NotImplementedException();
 
             public event Action OnDefeated { add { } remove { } }
 
