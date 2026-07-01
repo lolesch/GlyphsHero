@@ -205,8 +205,10 @@ namespace Code.Runtime.UI.Inventory
                 sb.AppendLine(new string('─', 24));
                 if (detailed)
                 {
-                    sb.Append(BuildChainSentence(chain, item));
-                    sb.AppendLine();
+                    // Alt breadcrumb (tooltip-redesign §4): the chain in real connection order
+                    // (root → weapon), the hovered item bracketed. Replaces the deleted
+                    // BuildChainSentence, whose ↓ diagram walked outward and read backwards to the grid.
+                    sb.AppendLine(Breadcrumb.Build(chain, item));
                 }
 
                 // Weapon-redesign slice 3: the weapon is the chain's terminal readout (final totals +
@@ -228,44 +230,6 @@ namespace Code.Runtime.UI.Inventory
                 }
                 else
                     AppendChainOutput(sb, chain, item, detailed);
-            }
-
-            return sb.ToString().TrimEnd();
-        }
-
-        private static string BuildChainSentence(IItemChain chain, ITetrisItem hovered)
-        {
-            var ordered  = OrderedItems(chain);
-            var hovIndex = ordered.IndexOf(hovered);
-            var sb       = new StringBuilder();
-            var isFirst  = true;
-
-            void AppendEntry(ITetrisItem item)
-            {
-                var isPayload    = IsPayload(item, chain);
-                var isWeaponRoot = item is IWeaponItem && !isPayload;
-                var color        = ChainComponentColors.GetColor(item, isWeaponRoot);
-                var name         = item == hovered ? $"<b>{item.Name}</b>" : item.Name;
-                var prefix       = isFirst ? "" : "  ↓\n";
-                sb.Append($"{prefix}{name.Colored(color)}\n");
-                isFirst = false;
-            }
-
-            var isTrigger = hovered is IShifterItem or IReactorItem;
-            if (isTrigger)
-            {
-                AppendEntry(hovered);
-                for (var i = hovIndex + 1; i < ordered.Count; i++)
-                {
-                    AppendEntry(ordered[i]);
-                    if (ordered[i] is IWeaponItem) break;
-                }
-            }
-            else
-            {
-                AppendEntry(hovered);
-                for (var i = hovIndex - 1; i >= 0; i--)
-                    AppendEntry(ordered[i]);
             }
 
             return sb.ToString().TrimEnd();
