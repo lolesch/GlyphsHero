@@ -55,16 +55,15 @@ verify, keeping `ChainResolverTests` green.
   mutation-verified** (disabling the bootstrap apply failed exactly the 4 bootstrap-dependent tests; green on
   revert). The confusing `IAttachmentItem.OnChained`/`OnUnchained` naming (OnChained *removes* the passive) was
   left as-is — a possible small follow-up rename.
-- **Designed (2026-06-21):** Candidate 5 — *movement on a fixed combat tick*. A design grilling
+- **Done:** Candidate 5 — *movement on a fixed combat tick* (2026-06-21). A design grilling
   ([[0001-range-movement-and-combat-tick|ADR-0001]]) settled the range/movement model **before** coding
-  and **re-scoped #5 from a heavy planner to a small pure step-rule**: range becomes a pawn stat,
-  movement is monotone closing, and a project-side `CombatClock` fixed tick drives a move-readiness
-  step-rule (deleting the reservation sets + re-check guard). Attacks stay on the Utility `Timer`. **Next
-  up to implement.**
-- **Next up:** Candidate 5 (implement, per ADR-0001 / §5 below).
+  and re-scoped #5 from a heavy planner to a small pure step-rule: range is a pawn stat, movement is
+  monotone closing, and a project-side `CombatClock` fixed tick drives a move-readiness step-rule
+  (deleting the reservation sets + re-check guard).
+- **Done:** Candidate 7 — *combat clock / timer unification* (2026-06-22). Attack firing + reactor
+  events migrated onto `CombatClock` alongside movement, read-then-write within a tick — fully
+  deterministic combat. Shipped with a playtest re-entrancy crash fix. See §7.
 - Candidate 6: not started.
-- **Candidate 7 (new):** *Combat clock / timer unification* — spun out of #5: migrate attack firing +
-  reactors onto `CombatClock` for full read-then-write simultaneity. Queued after #5. See §7.
 
 Mark each candidate `done` / `doing` / `next` in its heading as you go.
 

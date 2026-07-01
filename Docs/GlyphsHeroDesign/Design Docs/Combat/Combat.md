@@ -28,6 +28,12 @@ multiple Weapons fire simultaneously
 
 # Combat Events
 
+> [!info] Implemented today
+> `ReactorType` has 6 live values: `OnSelfHit`, `OnManaDeplete`, `OnEnemyDeath`, `OnAllyAttacks`,
+> `OnAllyKills`, `OnNearbyEnemyDies`. Everything else below (the wider event vocabulary, hex-positional
+> conditions) is forward-looking design — the `OnAllyAttacks`/`OnAllyKills`/`OnNearbyEnemyDies` events
+> in particular still need `CombatCoordinator` cross-pawn access per KNOWN_ISSUES.
+
 - OnDamageTaken
 - OnManaSpent
 - OnOverheal

@@ -28,6 +28,10 @@ The **Weapon** sets the *base* of each axis; a **Converter** reclassifies the *k
 
 Defines which unit/hex the weapon aims at — the **aim anchor**. Set per weapon in config. Predictable by design — enemies follow the same rules, so the player can learn and counter patterns via positioning.
 
+> [!info] Implemented today
+> Only `Nearest` exists (`CombatCoordinator`'s target search). The rest of this table is forward-looking
+> design — `ConverterConfig` explicitly defers target-strategy reclassification ("no data system yet").
+
 | Strategy                          | Description                                                                             |
 | --------------------------------- | --------------------------------------------------------------------------------------- |
 | `Nearest`                         | Closest valid target by hex distance                                                    |
@@ -38,7 +42,7 @@ Defines which unit/hex the weapon aims at — the **aim anchor**. Set per weapon
 | `MostBuffed/Debuffed`             |                                                                                         |
 | `Specific tag` <br>(e.g. burning) |                                                                                         |
 
-**Chain modification:** a [[Converter]] reclassifies the active strategy (e.g. `Nearest`→`LowestHP`, or restricting `Nearest` to **burning** targets) — *not* the [[Shifter]] (that mis-assignment is corrected in ADR-0004). One active strategy per weapon at resolution time; the Converter **replaces, never stacks**.
+**Chain modification:** a [[Converter]] reclassifies the active strategy (e.g. `Nearest`→`LowestHP`, or restricting `Nearest` to **burning** targets) — *not* the [[Shifter]] (that mis-assignment is corrected in ADR-0004). One active strategy per weapon at resolution time; the Converter **replaces, never stacks**. *Deferred* — see box above.
 
 ---
 

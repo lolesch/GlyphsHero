@@ -1,7 +1,7 @@
 
 # TODO
 
-- [ ] resource regen on pawns.
+- [x] resource regen on pawns. Done (2026-06-22): `Resource.Regenerate(rate, dt)` driven by `CombatCoordinator` on the `CombatClock` (combat-only); enemies full-heal at combat start. Mana regen left unwired on purpose (attack-cost economy).
 - [ ] converter should only show cenvertable types, not the input enum and actually apply the change
 - [x] Enemies should not be draggable
 	- [ ] enemies inventory should not be interactable ( inspect, but no add/remove/drag )
@@ -57,16 +57,16 @@
 
 ## Item Chain
 
-- [ ] Converters + typed signal propagation — the type-reclassifier across axes: damage type, **target strategy**, **delivery pattern**, resource type, optionally trigger event (ADR-0004 §1). *Not* cadence/frequency, *not* the Shifter's target-selection role.
+- [ ] Converters + typed signal propagation — the type-reclassifier across axes. **Delivery pattern, affinity, anchor done (ADR-0004 §1); resource type done (ADR-0005 §2, `ConverterAxis.Resource`).** Still deferred: **damage type**, **target strategy**, optionally **trigger event** — blocked on those underlying systems becoming data-driven (`ConverterAxis.cs`). *Not* cadence/frequency, *not* the Shifter's target-selection role.
 - [ ] Reactor ally/nearby events — `OnAllyAttacks`, `OnAllyKills`, `OnNearbyEnemyDies` require coordinator access to other pawns
 
 ---
 
 ## Code Smells / Tech Debt
 
-- [x] **Movement → fixed combat tick.** **Implemented 2026-06-21 (Candidate 5) — see [[0001-range-movement-and-combat-tick|ADR-0001]] + Architecture Review §5.** A project-side **`CombatClock`** (frame-rate-independent fixed-tick accumulator) drives movement: each tick every seeking pawn accrues **move-readiness** (`movementSpeed × tickInterval`) and proposes one A* step against a **frozen snapshot**, then the pure **`MovementResolver`** applies them read-then-write with **closest-to-target-wins** contested-hex arbitration (ties by stable registration id). Range is now a **pawn stat** (`PawnStat.Range` / `PawnConfig.baseRange`); movement is **monotone closing** to the **minimum active-weapon reach** (`ResolveMinReach`, v1: range-fixed weapon → 1, range-scaling → pawn range). This **deleted** `_reservedHexes`, the reservation use of `_claimedHexes`, the per-pawn movement `Timer`s, and the on-arrival re-check guard — dissolving the whole stale-decision bug class. Pure seams locked by `CombatClockTests` + `MovementResolverTests`. **Still open:** (a) ~~view-interpolate lerp polish~~ done (2026-06-22); (b) ~~the delivery-pattern split (Decision 2b)~~ shipped 2026-06-23 (ADR-0003), then **Decision 2b withdrawn** by **ADR-0004 §2** — Reach is one uniform pawn stat, so `ResolveMinReach` collapses to `max(1, round(pawn.range))` and the `Payload.ShapeSize ≤ 1` melee/ranged placeholder is **to be deleted** (code delta pending); (c) range pricing/cap, blocked on the balancing table (Decision 2c). **Attack-firing migration is split out → ADR-0001 §8 / Architecture Review §7 (Candidate 7).**
+- [x] **Movement → fixed combat tick.** **Implemented 2026-06-21 (Candidate 5) — see [[0001-range-movement-and-combat-tick|ADR-0001]] + Architecture Review §5.** A project-side **`CombatClock`** (frame-rate-independent fixed-tick accumulator) drives movement: each tick every seeking pawn accrues **move-readiness** (`movementSpeed × tickInterval`) and proposes one A* step against a **frozen snapshot**, then the pure **`MovementResolver`** applies them read-then-write with **closest-to-target-wins** contested-hex arbitration (ties by stable registration id). Range is now a **pawn stat** (`PawnStat.Range` / `PawnConfig.baseRange`); movement is **monotone closing** to the **minimum active-weapon reach**. This **deleted** `_reservedHexes`, the reservation use of `_claimedHexes`, the per-pawn movement `Timer`s, and the on-arrival re-check guard — dissolving the whole stale-decision bug class. Pure seams locked by `CombatClockTests` + `MovementResolverTests`. **Still open:** (a) ~~view-interpolate lerp polish~~ done (2026-06-22); (b) ~~the delivery-pattern split (Decision 2b)~~ shipped 2026-06-23 (ADR-0003), then **Decision 2b withdrawn** by **ADR-0004 §2** — Reach is one uniform pawn stat; ~~`ResolveMinReach`~~ is now `CombatCoordinator.ResolveReach` = `max(1, round(pawn.range))`, no per-weapon `ShapeSize` placeholder — **done**; (c) range pricing/cap, blocked on the balancing table (Decision 2c). **Attack-firing migration is split out → ADR-0001 §8 / Architecture Review §7 (Candidate 7).**
 - [ ] `TetrisContainer` with `null` `IPawnStats` — mild smell; replace with `NullPawnStats` null-object pattern when a third statless container type appears
-- [ ] `ItemTooltipController` calls `ChainResolver.ResolveTopology` on every hover. Acceptable for a dev tool. Upgrade path: cache topology on `OnContentsChanged` in `InventoryView` and pass the cached result to `Show()`. **This is the deferred half of Candidate 2 ("resolve once / push topology"):** the firing-model rework (Candidate 2-B) shipped 2026-06-20; topology *ownership* across the UI consumers (InventoryView, ItemTooltipController) is the remaining 2-A. See `Architecture Review.md` §2.
+- [x] `ItemTooltipController` calls `ChainResolver.ResolveTopology` on every hover. **Done** — this was the deferred half of Candidate 2 ("resolve once / push topology"): `ITetrisContainer` now owns a lazily-resolved, dirty-flagged `Topology`; `ItemTooltipController` reads `container.Topology` (no per-hover re-resolve). See `Architecture Review.md` §2 (Candidate 2-A).
 
 ---
 
