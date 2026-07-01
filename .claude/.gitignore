@@ -1,6 +1,0 @@
-# Night-runner transient files — not worth committing
-run-logs/
-STOP
-
-# Personal/local Claude settings — never committed to the shared harness
-settings.local.json
