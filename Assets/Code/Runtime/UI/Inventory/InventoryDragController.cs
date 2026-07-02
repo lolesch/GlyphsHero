@@ -35,6 +35,10 @@ namespace Code.Runtime.UI.Inventory
 
         private enum GestureMode { Idle, Click, Drag }
         private GestureMode _gesture;
+
+        // The item currently in hand (picked up / carried), or null when nothing is held. Exposed so a
+        // hovered slot can render a held-vs-slot drag-compare tooltip (tooltip-redesign slice 8).
+        public ITetrisItem HeldItem => _heldItem;
         
         private void Awake()
         {
@@ -242,6 +246,11 @@ namespace Code.Runtime.UI.Inventory
             if (carried == null)
             {
                 EndDrag();
+                // Drop-shows-tooltip (tooltip-redesign slice 7): the item fully placed (nothing left in
+                // hand), so surface its tooltip at its new anchor in the newly-resolved chain context.
+                // Same 0.4s delay as hover (the slot reuses the hover request path). Skipped when an
+                // item is still carried (a swap displaced one) — the player isn't done placing yet.
+                GetSlotAt(targetContainer, targetAnchor)?.ShowTooltip();
             }
             else
             {
@@ -395,6 +404,7 @@ namespace Code.Runtime.UI.Inventory
 
     public interface IInventoryDragController
     {
+        ITetrisItem HeldItem { get; }
         void Register(ITetrisContainer container, IReadOnlyList<ISlotView> slots);
         void Unregister(ITetrisContainer container);
         void OnSlotPointerClick(ISlotView slot, Vector2 screenPos);

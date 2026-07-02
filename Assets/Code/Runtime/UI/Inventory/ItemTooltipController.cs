@@ -32,6 +32,8 @@ namespace Code.Runtime.UI.Inventory
         private ITetrisItem   _cachedItem;
         private ChainTopology _cachedTopology;
         private bool          _altWasPressed;
+        private ITetrisItem   _compareHeld;        // non-null ⇒ visible tooltip is a drag-compare (held vs slot)
+        private ITetrisItem   _pendingCompareHeld; // its held counterpart while the show coroutine waits
 
         private static readonly Color LightGray = new(0.7f, 0.7f, 0.7f);
 
@@ -73,17 +75,35 @@ namespace Code.Runtime.UI.Inventory
         // ── IItemTooltipController ────────────────────────────────────────
 
         public void RequestShow(ITetrisItem item, ITetrisContainer container, float anchorScreenX, bool onRight)
+            => BeginShow(item, container, anchorScreenX, onRight, compareHeld: null);
+
+        // Drag-to-compare (tooltip-redesign slice 8): while an item is held over an occupied slot, show a
+        // held-vs-slot standalone comparison instead of the slot item's own tooltip. Reuses the same delay,
+        // panel, and positioning as a normal hover — CompareBlock.Build does the pure item-vs-item align.
+        public void RequestCompare(ITetrisItem held, ITetrisItem slotItem, ITetrisContainer container,
+            float anchorScreenX, bool onRight)
+        {
+            if (held == null || slotItem == null) { Hide(slotItem); return; }
+            BeginShow(slotItem, container, anchorScreenX, onRight, compareHeld: held);
+        }
+
+        private void BeginShow(ITetrisItem item, ITetrisContainer container, float anchorScreenX, bool onRight,
+            ITetrisItem compareHeld)
         {
             if (item == null) { Hide(null); return; }
 
             _hideScheduled   = false;
             _pendingHideItem = null;
 
-            if (item == _visibleItem || item == _pendingItem) return;
+            // Dedup on (item, compareHeld): re-hovering the same slot item with the same held side is a
+            // no-op, but switching either side (or held→null when the drag ends) re-renders.
+            if (item == _visibleItem && compareHeld == _compareHeld)        return;
+            if (item == _pendingItem && compareHeld == _pendingCompareHeld) return;
 
             if (_pendingShow != null) StopCoroutine(_pendingShow);
-            _pendingItem = item;
-            _pendingShow = StartCoroutine(ShowAfterDelay(item, container, anchorScreenX, onRight));
+            _pendingItem        = item;
+            _pendingCompareHeld = compareHeld;
+            _pendingShow        = StartCoroutine(ShowAfterDelay(item, container, anchorScreenX, onRight, compareHeld));
         }
 
         public void Hide(ITetrisItem leavingItem)
@@ -97,24 +117,38 @@ namespace Code.Runtime.UI.Inventory
         // ── Internals ─────────────────────────────────────────────────────
 
         private IEnumerator ShowAfterDelay(ITetrisItem item, ITetrisContainer container,
-            float anchorScreenX, bool onRight)
+            float anchorScreenX, bool onRight, ITetrisItem compareHeld)
         {
             if (_visibleItem == null)
                 yield return new WaitForSeconds(_showDelay);
 
-            _pendingShow  = null;
-            _pendingItem  = null;
-            _visibleItem  = item;
+            _pendingShow        = null;
+            _pendingItem        = null;
+            _pendingCompareHeld = null;
+            _visibleItem        = item;
+            _compareHeld        = compareHeld;
 
-            var topology    = container.Topology;   // container-owned, resolved once — no per-hover re-resolve
-            _cachedItem     = item;
-            _cachedTopology = topology;
-            _altWasPressed  = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-            _text.text      = BuildTooltip(item, topology, _altWasPressed);
+            if (compareHeld != null)
+            {
+                // Drag-compare render path (slice 8): a flat held-vs-slot standalone read — no chain
+                // topology and no Alt detail (leaving _cachedTopology null skips LateUpdate's alt rebuild).
+                _cachedItem       = null;
+                _cachedTopology   = null;
+                _text.text        = BuildCompare(CompareBlock.Build(compareHeld, item));
+                _panelFrame.color = LightGray; // neutral: a role color reads as one item's identity, misleading across two
+            }
+            else
+            {
+                var topology    = container.Topology;   // container-owned, resolved once — no per-hover re-resolve
+                _cachedItem     = item;
+                _cachedTopology = topology;
+                _altWasPressed  = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                _text.text      = BuildTooltip(item, topology, _altWasPressed);
 
-            var primaryChain  = PrimaryChain(item, topology);
-            var isWeaponRoot  = item is IWeaponItem && primaryChain != null && !IsPayload(item, primaryChain);
-            _panelFrame.color = ChainComponentColors.GetColor(item, isWeaponRoot);
+                var primaryChain  = PrimaryChain(item, topology);
+                var isWeaponRoot  = item is IWeaponItem && primaryChain != null && !IsPayload(item, primaryChain);
+                _panelFrame.color = ChainComponentColors.GetColor(item, isWeaponRoot);
+            }
 
             _panel.pivot = new Vector2(onRight ? 1f : 0f, 1f);
             _panel.gameObject.SetActive(true);
@@ -131,10 +165,12 @@ namespace Code.Runtime.UI.Inventory
             if (_pendingShow != null)
             {
                 StopCoroutine(_pendingShow);
-                _pendingShow = null;
-                _pendingItem = null;
+                _pendingShow        = null;
+                _pendingItem        = null;
+                _pendingCompareHeld = null;
             }
             _visibleItem    = null;
+            _compareHeld    = null;
             _cachedItem     = null;
             _cachedTopology = null;
             _panel.gameObject.SetActive(false);
@@ -236,6 +272,28 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>
+        /// Renders a <see cref="CompareView"/> (drag-to-compare, slice 8): a <c>Held vs Slot</c> header then
+        /// one <c>label · held vs slot</c> row per aligned stat. A side the row doesn't carry (a
+        /// mismatched-type row) prints a dim em-dash. The pure alignment lives in <see cref="CompareBlock"/>;
+        /// this only formats — color/emphasis stays presentation.
+        /// </summary>
+        private static string BuildCompare(CompareView view)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"<b>{view.HeldName}</b>  vs  <b>{view.SlotName}</b>");
+            sb.AppendLine(new string('─', 24));
+
+            foreach (var row in view.Rows)
+            {
+                var held = row.Held ?? "—".Colored(LightGray);
+                var slot = row.Slot ?? "—".Colored(LightGray);
+                sb.AppendLine($"<align=left>{row.Label}<align=right>{held}  vs  {slot}</align>");
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
         /// The driving weapon is the chain's <em>terminal readout</em> (tooltip-redesign slice 3): the
         /// final resolved totals (not a delta) followed by an enumerated piece list — one line per
         /// contributing piece, <c>glyph + name + that piece's marginal delta</c> (coloured by direction).
@@ -244,14 +302,18 @@ namespace Code.Runtime.UI.Inventory
         private static void AppendWeaponTerminal(StringBuilder sb, IItemChain chain, bool detailed)
         {
             var totals = PositionalDelta.Totals(chain);
+            var weapon = chain.Weapon;
 
             var reactorDriven = chain.Root is IReactorItem;
             sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
-            sb.AppendLine($"  dmg  {(float)totals.Damage:F1}   {TerminalRate(chain, totals.AttackSpeed)}");
+            var dmgStr = PositionalDelta.BaseFinal($"{(float)weapon.Damage:F1}", $"{(float)totals.Damage:F1}", detailed);
+            sb.AppendLine($"  dmg  {dmgStr}   {TerminalRate(chain, (float)weapon.AttackSpeed, totals.AttackSpeed, detailed)}");
             sb.AppendLine($"  {DeliverySentence.Build(totals.Delivery, totals.Affinity, totals.Anchor, 0)}");
             // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
             // cover it, nothing fires.
-            sb.AppendLine($"  cost {(float)totals.ResourceCost:F1} [{totals.CostResource}]" +
+            var costStr = PositionalDelta.BaseFinal(
+                $"{(float)weapon.ResourceCost:F1}", $"{(float)totals.ResourceCost:F1}", detailed);
+            sb.AppendLine($"  cost {costStr} [{totals.CostResource}]" +
                           "   (root gate)".Colored(LightGray));
 
             foreach (var piece in PositionalDelta.Pieces(chain))
@@ -273,7 +335,12 @@ namespace Code.Runtime.UI.Inventory
         private static string PieceDeltaText(PieceDelta p, bool detailed)
         {
             if (p.Item is IReactorItem reactor)
-                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}".Colored(LightGray);
+            {
+                var firing   = $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}";
+                var equation = PositionalDelta.ReactorInputEquation(reactor, p, detailed);
+                var line     = equation.Length > 0 ? $"{firing}   {equation}" : firing;
+                return line.Colored(LightGray);
+            }
 
             var parts = new List<string>();
             if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
@@ -296,14 +363,16 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition, else
-        /// the resolved attack interval.</summary>
-        private static string TerminalRate(IItemChain chain, float attackSpeed)
+        /// the resolved attack interval — under Alt, the base interval leads it (spec §2.2).</summary>
+        private static string TerminalRate(IItemChain chain, float baseSpeed, float finalSpeed, bool detailed)
         {
             var reactor = chain.Root as IReactorItem
                           ?? chain.Modifiers.OfType<IReactorItem>().FirstOrDefault();
-            return reactor != null
-                ? $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}"
-                : $"every {Interval(attackSpeed)}";
+            if (reactor != null)
+                return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}";
+
+            var intervalStr = PositionalDelta.BaseFinal(Interval(baseSpeed), Interval(finalSpeed), detailed);
+            return $"every {intervalStr}";
         }
 
         private static void AppendChainOutput(StringBuilder sb, IItemChain chain,
@@ -532,6 +601,8 @@ namespace Code.Runtime.UI.Inventory
     public interface IItemTooltipController
     {
         void RequestShow(ITetrisItem item, ITetrisContainer container, float anchorScreenX, bool onRight);
+        void RequestCompare(ITetrisItem held, ITetrisItem slotItem, ITetrisContainer container,
+            float anchorScreenX, bool onRight);
         void Hide(ITetrisItem leavingItem);
     }
 }

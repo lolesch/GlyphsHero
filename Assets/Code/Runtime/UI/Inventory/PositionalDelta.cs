@@ -96,6 +96,59 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>
+        /// The driving weapon's terminal <b>base → final</b> equation (spec §2.2 / §3 "Weapon — driving"
+        /// row): the chain's final value is a terminal readout, not a delta, so it is never colored —
+        /// without Alt only the final value shows, with Alt the base leads it. Takes pre-formatted value
+        /// strings: each stat's own display format (F1 damage, seconds interval, …) stays the caller's
+        /// job; this is only the equation shape, kept pure so it's unit-testable.
+        /// </summary>
+        public static string BaseFinal(string baseValue, string finalValue, bool detailed) =>
+            detailed ? $"base {baseValue} → final {finalValue}" : finalValue;
+
+        /// <summary>
+        /// A reactor's own <b>input</b> equation (spec §3 Reactor row): the modifier alone
+        /// (<c>ManaCost * 120 %</c>) or, under Alt, the full <c>[base X] modifier = result</c> equation —
+        /// the base/result read off whichever <see cref="WeaponStats"/> field <c>inputMod.stat</c>
+        /// targets, from the piece's own before/with snapshot (so it reflects this reactor's marginal
+        /// contribution, not the whole chain). <c>ProcChance</c> has no backing <see cref="WeaponStats"/>
+        /// field (<see cref="WeaponStatResolver"/> drops it silently), so it falls back to the modifier
+        /// alone even under Alt. Empty when the modifier is a no-op (same additive threshold as
+        /// <see cref="Describe"/>), so the caller can skip the line entirely.
+        /// </summary>
+        public static string ReactorInputEquation(IReactorItem reactor, PieceDelta piece, bool detailed)
+        {
+            var mod = reactor.inputMod;
+            if (!IsMeaningful(mod.modifier)) return string.Empty;
+
+            var label = $"{mod.stat} {mod.modifier}";
+            if (!detailed) return label;
+
+            return InputField(mod.stat, piece, out var before, out var after)
+                ? $"[base {before:0.###}] {mod.modifier} = {after:0.###}"
+                : label;
+        }
+
+        // The WeaponStats field a reactor's inputMod targets — ProcChance has none (WeaponStatResolver
+        // drops it silently), so it reports no backing field rather than a phantom 0 → 0.
+        private static bool InputField(WeaponInputStat stat, PieceDelta piece, out float before, out float after)
+        {
+            switch (stat)
+            {
+                case WeaponInputStat.AttackSpeed:
+                    before = piece.Before.AttackSpeed;
+                    after  = piece.With.AttackSpeed;
+                    return true;
+                case WeaponInputStat.ManaCost:
+                    before = piece.Before.ResourceCost;
+                    after  = piece.With.ResourceCost;
+                    return true;
+                default:
+                    before = after = 0f;
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// The per-attachment <b>active-delta content</b> (tooltip-redesign spec §3, slice 4): the §3
         /// table's "active delta (no Alt)" column, read <em>intrinsically</em> from the item's own
         /// modifiers/axis — not from a chain diff. This is the "what does this piece do?" answer for an
@@ -154,7 +207,8 @@ namespace Code.Runtime.UI.Inventory
         };
 
         // The kind a Converter reclassifies its axis to (ADR-0004 §1) — the "to" side only.
-        private static string ConverterTarget(IConverterItem c) => c.Axis switch
+        // internal so the sibling CompareBlock (slice 8) reuses the one map instead of duplicating it.
+        internal static string ConverterTarget(IConverterItem c) => c.Axis switch
         {
             ConverterAxis.Delivery => c.ToDelivery.ToString(),
             ConverterAxis.Affinity => c.ToAffinity.ToString(),
@@ -171,7 +225,8 @@ namespace Code.Runtime.UI.Inventory
 
         // A flat/percent-add modifier of ~0 changes nothing → not worth a line. Percent-mult / overwrite
         // are deliberate authored values (× x %, = x), so they always print.
-        private static bool IsMeaningful(Modifier mod) => mod.Type switch
+        // internal so CompareBlock (slice 8) shares the same no-op gate the piece views use.
+        internal static bool IsMeaningful(Modifier mod) => mod.Type switch
         {
             ModifierType.FlatAdd or ModifierType.PercentAdd => Math.Abs((float)mod) > Epsilon,
             _                                               => true,
