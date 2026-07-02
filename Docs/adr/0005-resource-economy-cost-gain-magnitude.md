@@ -16,6 +16,8 @@ date: 2026-06-24
 **Companion:** ADR-0004 (attack model — item roles, the delivery decomposition).
 **Refines:** **ADR-0004 §1** — the Weapon "owns the stat economy" and the Converter's deferred
 "resource type" axis. This ADR says *what that economy is* and *which part the Converter reclassifies*.
+**Amended-by:** ADR-0009 §3 (Cost's "who owns it: the Weapon / Trigger" widened from an exclusive owner
+to a seedable-and-modifiable surface any opted-in chain item may contribute to).
 **Context:** picking up ADR-0004's deferred **resource-type Converter axis**, the first cut welded a
 single resource *pool* onto the weapon governing **both** what it spends and what it recovers. That
 makes the most iconic build — **cost mana, leech health** — structurally impossible, and it contradicts

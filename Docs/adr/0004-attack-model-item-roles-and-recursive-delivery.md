@@ -17,6 +17,8 @@ date: 2026-06-23
 relocated to the new Affinity axis) — see Decision 3.
 **Companion:** ADR-0001 (combat tick, Reach as a pawn stat), ADR-0002 (hex-occupancy damage +
 telegraph), ADR-0003 (delivery patterns reach-gated + stackable).
+**Amended-by:** ADR-0009 §1 (Amplifier row: "no conditions; costs grid space" widened to allow an
+optional secondary Cost modifier).
 **Context:** the attack vocabulary had drifted across ADR-0002/0003 and several reworks. Two flat lists
 of "delivery patterns" coexisted (Attack Targeting.md's *Projectile/Beam/Arc/Dash/Adjacent/Homing* vs.
 the shipped *Single/Line/Cleave/Self/Aoe* mask), "delivery" named two different axes, target-selection

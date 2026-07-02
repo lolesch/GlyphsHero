@@ -11,7 +11,7 @@ The canonical glossary for the auto-battler. Definitions are what a term **is**,
 Each item touches one axis (ADR-0004 §1):
 
 - **Weapon** — the chain root; the **base** of every axis (base target strategy, delivery pattern, trigger, the **Cost** side of the economy, an optional payload). It does **not** own Gain-on-hit — that is an on-hit effect (ADR-0005).
-- **Amplifier** — **magnitude**: scales the weapon's output (Damage) up. Gain/leech is **not** a separate output — it scales *through* Damage (ADR-0005 §5). Scaling effects themselves (leech %, status, Aoe) is a deferred *effect-magnitude* axis, not the Amplifier's job.
+- **Amplifier** — **magnitude**: scales the weapon's output (Damage) up. Gain/leech is **not** a separate output — it scales *through* Damage (ADR-0005 §5). Scaling effects themselves (leech %, status, Aoe) is a deferred *effect-magnitude* axis, not the Amplifier's job. May also carry an optional Cost `inputMod`, same as Reactor/Shifter — a secondary, opt-in property, not a second axis (ADR-0009).
 - **Shifter** — **economy trade**: moves magnitude between input/output stats. *Nothing else* — it does **not** touch Target Selection.
 - **Converter** — **type reclassification on any axis**: damage type, target strategy, delivery pattern, **cost pool** (ADR-0005), optionally a trigger event type. Changes the *kind*, never the *amount*.
 - **Payload** — **propagation**: spawns a child delivery node on impact.
@@ -79,12 +79,17 @@ The economy is **three independent axes** (ADR-0005), not one welded pair. *What
 
 **Cost**:
 The activation price of a fire — a **pool** (`CostResource`: Mana / Health / …) plus a magnitude — paid
-**once per fire** as the gate that decides whether the attack happens. Owned by the **Weapon/Trigger**
-(the fuel). The **Converter** reclassifies the *pool* (Mana → Health = blood magic); the **Shifter**
-trades the magnitude. The magnitude is a **`MutableFloat`** over the weapon base, scaled by **Reactor and
-Payload cost `Modifier`s** (ADR-0006) — so the "fire cost" is really the running cost of the whole
-propagation tree, drained fail-forward (see **Propagation Cost**).
-_Avoid_: assuming Cost is mana — it is whichever pool `CostResource` names.
+**once per fire** as the gate that decides whether the attack happens. **Seeded** by the **Weapon**
+(the fuel); **any chain item may contribute an `inputMod`** to the magnitude, not just Reactor/Shifter
+(ADR-0009 widens ADR-0005's original Weapon/Trigger-only ownership — Amplifier and Converter can now
+opt in the same way). The **Converter** reclassifies the *pool* (Mana → Health = blood magic); the
+**Shifter** trades the magnitude. The magnitude is a **`MutableFloat`** over the weapon base — contributor
+order doesn't matter, `MutableFloat` buckets by `Modifier` type (`FlatAdd`/`PercentAdd`/`PercentMult`)
+before combining (ADR-0009) — scaled by **Reactor and Payload cost `Modifier`s** (ADR-0006) — so the
+"fire cost" is really the running cost of the whole propagation tree, drained fail-forward (see
+**Propagation Cost**).
+_Avoid_: assuming Cost is mana — it is whichever pool `CostResource` names. Avoid assuming Cost
+contributors must resolve in chain order — the aggregation is order-independent by type bucket.
 
 **Gain-on-hit** (or **Leech / Recovery**):
 What the caster **recovers per hit**, riding the damage event over each covered-hex occupant. **An

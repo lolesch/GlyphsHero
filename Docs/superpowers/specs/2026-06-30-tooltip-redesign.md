@@ -1,11 +1,16 @@
 # Item Tooltip Redesign — Design Spec
 
-**Date:** 2026-06-30
-**Status:** Draft — pending Leonid's review (do **not** file issues or start slices until Approved)
+**Date:** 2026-06-30 (v1 slices 1–8 shipped 2026-06-30/07-01; v2 addendum added 2026-07-02)
+**Status:** Approved — v1 (slices 1–8) implemented; issues #3–#10 merged (GitHub state stale, needs
+closing). v2 addendum below is a follow-up review pass, not yet sliced into issues.
 **Scope:** Full rewrite of the item tooltip (`ItemTooltipController`). Presentation only — no
 combat/chain/economy rules change. This is a two-way door (UI), so no ADR; decisions are logged in
-the [Slice ledger](#slice-ledger) below.
+the [Slice ledger](#slice-ledger) below. **Exception:** the v2 "Amplifier cost modifiers" item is a
+domain-model change, not UI — split out to [ADR-0009](../../adr/0009-item-cost-modifiers-are-generic.md)
+(Proposed) rather than decided here.
 **Supersedes:** the current `ItemTooltipController.BuildTooltip` legacy text format.
+**Terminology:** "Alt mode" is renamed **"Details mode"** as of the v2 pass — same trigger (holding
+Alt), new name, used everywhere below and in code/comments going forward.
 
 ---
 
@@ -277,3 +282,136 @@ that the pure logic is unit-testable without driving Unity lifecycle.)
 - **Chain-impact drag-compare** (how swapping changes the whole chain).
 - **Grid-outline type color** (type color on inventory cells, not just the tooltip frame).
 - **Branch rendering** beyond the single breadcrumb glyph (depends on branches being implemented).
+
+---
+
+## v2 addendum (2026-07-02) — header, state-emphasis, and trimming review
+
+Feedback pass after seeing v1 live in-editor, referencing Magicraft's tooltip layout as a visual
+comparison (icon-led header; a boost's cost rendered as icon+multiplier, not a bulleted stat line).
+These are deltas against the locked rules above — where a rule changes, the v1 text stays as the
+historical record and this section states the new rule.
+
+### 1. Header: icon becomes a real visual element, name leads, type hides by default
+
+v1 never gave the tooltip an actual item-icon `Image` — the header was name + type text only
+(`ItemTooltipController.cs`). New rule:
+
+- **Name on the left, item icon on the right and noticeably larger** than it renders today (the icon
+  is present in-game but barely visible at current size).
+- **Type label is hidden by default.** In Details mode, it appears **left of the icon** (Leonid: "it
+  belongs to the icon, not the name"). If it would collide with a long name, **expand the tooltip's
+  header rect first**; truncate the name only as a fallback.
+- The type **glyph** (§"Type glyph" above) is unaffected — this is about the type **text label**
+  (e.g. "Amplifier"), which is a separate, hide-by-default element from the always-present glyph.
+
+### 2. Two-state block: icons instead of text labels, fixed order (not reordered by activity)
+
+`TwoStateBlock.cs:58-59` currently swaps which state renders first based on which is active
+(`primaryActive ? new TwoStateView(chained, unchained) : new TwoStateView(unchained, chained)`). New
+rule:
+
+- **Order is fixed, never swaps:** default state always renders first (**Weapon-driving** /
+  **Unchained**), secondary state always renders second, below a divider (**Weapon-payload** /
+  **Chained**). Only the emphasis (bold vs. dim) tracks which is currently active — the same layout
+  position every time keeps the two states comparable at a glance.
+- Replace the `"chained:"` / `"unchained:"` text labels with icons (glyphs TBD in implementation —
+  reuse the type-glyph vocabulary's visual language rather than inventing a second icon set).
+- This corrects the doc's own §"Per-type content" framing: "primary" no longer means "whichever is
+  active" — it means the fixed default slot (Unchained for attachments, Driving for weapons).
+
+### 3. Unchained/loose state: show stat value; Details expands to pawn impact — except in the stash
+
+v1's §3 table didn't specify what the *unchained* state's default (non-Details) line shows. New rule:
+
+- **Owned context (item is on a pawn's grid):** default shows the item's own stat value; Details
+  expands it to the pawn's before→after (`"+10 LifeMax"` → Details: `"120 → 130"`).
+- **Ownerless context (stash — no pawn to diff against):** there is no baseline to compute a
+  before→after against. Resolved: **flat value only, in both modes** — the stash's unchained state
+  never expands to pawn-math, Details mode still adds only descriptive text, not a from→to equation.
+  (Considered and rejected: a zero-baseline `"0 → +10"` — rejected as misleading, implies a real pawn
+  floor; hiding the Details expansion entirely — rejected, Details should still add clarifying text,
+  just not invented math.)
+
+### 4. Chained state: show real stats (e.g. Reactor's trigger); cost sits separate, icon+multiplier styled
+
+- A chained attachment shows its actual live stats in that state (a Reactor shows its firing
+  condition, a Shifter shows its trade), not just a name.
+- Any cost/resource modifier renders as its **own line**, styled `[resource icon] ×N%` (matching the
+  Magicraft "Spell Summon" reference's mana-icon-plus-multiplier), not as a bulleted `MP Cost: ×N%`
+  stat line (the "Spell Boost" reference this project is moving away from).
+
+### 5. Weapon totals: show only what changed, not the full stat block
+
+v1's weapon piece list already shows deltas per piece, but the **weapon's own terminal totals** line
+showed the full stat block regardless of how many stats a hover actually touches. New rule: show only
+the stats a chain actually modifies. Example — base Damage 5, one Amplifier `+2`: default shows a
+single green `7`; Details shows `5` followed by green `+2`. A stat no item in the chain touches doesn't
+get a line at all.
+
+### 6. Universal stat glyphs
+
+Extend the type-glyph vocabulary (§"Type glyph") to **stats**, not just item roles — e.g. LifeMax as a
+heart glyph followed by `+10`, mirroring how Damage/Cost already lean on icon+number in Decision 4
+above. Details mode adds the text label alongside the glyph for a new player; default mode is
+glyph+number only. Exact glyph-per-stat map is an implementation-slice concern (same pattern as
+`TypeGlyphs`: verify TMP font support, ASCII fallback if a glyph doesn't render).
+
+### 7. Shifter's piece-list treatment was wrong — it's an upstream boundary item, not a downstream modifier
+
+v1's §3 table gives Shifter the same visual treatment as Amplifier ("both equations"). This is a
+factual error, not a style choice: per `ChainResolver`'s own root-resolution rule (`CLAUDE.md` —
+"resolved by walking upstream to the furthest trigger — a Shifter/Reactor — else the weapon itself"),
+Shifter is grouped with Reactor as an upstream trigger/root candidate, not a downstream magnitude
+modifier like Amplifier. Fix: Shifter's piece-list glyph and framing move to the same visual family as
+Reactor (upstream, before the weapon in the piece list), not the Amplifier family.
+
+### 8. Amplifier cost modifiers — split out, not decided here
+
+Leonid's ask that Amplifiers (generically, any item) carry an optional cost modifier — some free, some
+raising the pool cost, like Reactor/Payload already do — **contradicts ADR-0004's accepted "Amplifier:
+no conditions; costs grid space"** and ADR-0005's "Cost owned by the Weapon/Trigger" decision. Per the
+design gate, this is a one-way door (redefines an accepted rule), not a tooltip-spec footnote. Drafted
+as **[ADR-0009](../../adr/0009-item-cost-modifiers-are-generic.md)** (Proposed, 2026-07-02) — the
+tooltip's cost-mod rendering for Amplifiers (Decision 4 above, generalized beyond Reactor/Payload)
+waits on that ADR reaching Accepted.
+
+### v2 Slices (filed as issues, 2026-07-02)
+
+| # | Slice | Dep | Issue |
+|---|-------|-----|-------|
+| 1 | Rename "Alt mode" → "Details mode" throughout tooltip code. | — | [#17](https://github.com/lolesch/GlyphsHero/issues/17) |
+| 2 | Shifter piece-list treatment → Reactor (upstream) family, not Amplifier. | — | [#18](https://github.com/lolesch/GlyphsHero/issues/18) |
+| 3 | Weapon terminal totals show only changed stats. | — | [#19](https://github.com/lolesch/GlyphsHero/issues/19) |
+| 4 | Two-state block: fixed order (no reorder-by-active) + icons replace text labels. | — | [#20](https://github.com/lolesch/GlyphsHero/issues/20) |
+| 5 | Header rework: real icon element, name/icon layout, type label hidden by default. | — | [#21](https://github.com/lolesch/GlyphsHero/issues/21) |
+| 6 | Stash (ownerless) unchained state: flat value only. | 4 | [#22](https://github.com/lolesch/GlyphsHero/issues/22) |
+| 7 | Chained state: real live stats + cost line as separate icon+multiplier. | 4 | [#23](https://github.com/lolesch/GlyphsHero/issues/23) |
+| 8 | Universal stat glyph map (`StatGlyphs`). | 3, 7 (soft) | [#24](https://github.com/lolesch/GlyphsHero/issues/24) |
+
+Slices **1, 2, 3, 4, 5** are independent and are the best first picks (matches the v1 convention).
+**Amplifier cost modifiers are deliberately excluded from this batch** — blocked on
+[ADR-0009](../../adr/0009-item-cost-modifiers-are-generic.md) reaching `Accepted`; tracked separately as
+[needs-design #16](https://github.com/lolesch/GlyphsHero/issues/16).
+
+### v2 slice ledger
+
+**Decisions taken (two-way doors — logged, not ADR'd):**
+- Header: name left / icon right+larger / type label hidden-by-default, appearing left of icon in
+  Details mode; expand-rect before truncate on collision.
+- Two-state block: fixed order (default always first), icons replace text labels.
+- Stash unchained state: flat value only, no pawn-math in either mode.
+- Weapon totals: additive/changed-stats-only, matching the per-piece delta rule already locked in v1.
+- "Alt mode" renamed "Details mode" project-wide.
+- Shifter piece-list treatment corrected to the Reactor (upstream) visual family.
+
+**Gaps left open (needs-design / blocked, not this pass):**
+- **Amplifier (and generic item) cost modifiers** — blocked on [ADR-0009](../../adr/0009-item-cost-modifiers-are-generic.md)
+  reaching Accepted (has one open question: resolution order relative to Shifter's own trade).
+- **Universal stat-glyph map** — vocabulary decided (glyph+number default, text added in Details), the
+  actual glyph-per-stat table is an implementation-slice concern, not decided here.
+
+**Follow-up housekeeping (not a design decision, just process debt):**
+- GitHub issues #3–#10 show `OPEN` but are fully merged — need closing.
+- This spec's `Status` header was stale ("Draft — pending review") against fully-shipped v1 code —
+  corrected above.
