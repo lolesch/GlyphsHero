@@ -40,6 +40,11 @@
 		- implement resource gen first and think of giving a bonus while not in combat
 - [x] Weapons fire twice when connected to amplifiers from both sides. **Fixed at the source (2026-06-20, Candidate 2):** `ChainResolver` is now weapon-centric and runs one BFS per firing source over all connectors, so `[ampA][weapon][ampB]` is a single firing carrying both amps — no duplicate `(root, weapon)` chains. `ChainCollapser` (the Candidate-1 stopgap) is deleted. Verified by `ChainResolverTests.AmplifierOnBothSides_ProducesOneChainWithBothAmplifiers`.
 - [x] **Equidistant reactors drop a firing (found 2026-06-19).** **Fixed (2026-06-20, Candidate 2):** the weapon now owns a deduped list of reactor firing sources (0 → timer, ≥1 → fire per reactor event, timer suppressed); equidistant/parallel reactors all fire. Verified by `EquidistantReactors_OnDifferentEvents_BothFire` (+ mutation-tested). See `Architecture Review.md` §2.
+- [x] **`Resource.Percentage` returns `NaN` for a 0-max pool (e.g. a pawn with no mana stat).** **Fixed
+  (2026-07-02, Pawn-UI #11):** `Percentage` now guards `MaxValue <= 0` and returns `0` instead of
+  dividing by zero. Matters for the new selected-pawn HUD (`PawnHudView`) and grid status bars
+  (`PawnStatusBar`), which read `Percentage`/pool fill directly and would otherwise render a fill bar as
+  `NaN`. Verified by `ResourceTests.Percentage_WhenMaxIsZero_IsZeroNotNaN`.
 
 ---
 

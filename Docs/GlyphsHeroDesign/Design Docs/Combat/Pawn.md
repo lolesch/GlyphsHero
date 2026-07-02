@@ -5,6 +5,10 @@ aliases:
 
 Pawns occupy hexes and have positional interactive effects with neighbors. 
 Each pawn has a 2D grid [[Inventory]] where item placement defines a pawns attacks.
+
+For the player-facing surface of a pawn's identity (icon/name, health/mana readout, click
+selection) see the [Pawn UI design spec](../../../superpowers/specs/2026-07-01-pawn-ui.md) — this
+doc stays about the gameplay concept, not its UI presentation.
 # Pawn Identity
 
 A pawn's identity is defined by three layers working in combination:
