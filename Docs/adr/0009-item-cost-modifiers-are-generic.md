@@ -12,7 +12,7 @@ date: 2026-07-02
 # ADR-0009 — Cost modification is a generic, opt-in secondary property of any chain item
 
 **Status:** Accepted (2026-07-02)
-**Lifecycle:** Design-only — not implemented
+**Lifecycle:** Implemented 2026-07-02 (Decision 1 wiring; pending compile/Test Runner verification in Unity)
 **Companion:** ADR-0004 (attack model — item roles), ADR-0005 (resource economy — Cost / Gain-on-hit /
 Magnitude), ADR-0006 (payload propagation cost economy).
 **Amends:** ADR-0004 §1 (the Amplifier row: "no conditions; costs grid space" is refined to allow an

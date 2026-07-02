@@ -18,6 +18,13 @@ namespace Code.Data.Items.Converter
         [field: SerializeField] public Anchor          ToAnchor    { get; private set; } = Anchor.Target;
         [field: SerializeField] public ResourceType    ToResource  { get; private set; } = ResourceType.Mana;
 
+        // Optional secondary Cost axis (ADR-0009) — independent of the reclassification above.
+        // Default type FlatAdd + value 0 so an asset that never authors this field resolves as a
+        // true no-op, not Overwrite's implicit 0 (see WeaponInputStatModConfig/ModifierType default).
+        [field: Header("Chained — optional cost modifier")]
+        [field: SerializeField]
+        public WeaponInputStatModConfig inputStatMod { get; private set; } = new() { type = ModifierType.FlatAdd };
+
         public override int MaxConnectors => 2;
     }
 }

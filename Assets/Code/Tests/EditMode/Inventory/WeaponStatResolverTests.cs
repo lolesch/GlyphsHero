@@ -87,6 +87,39 @@ namespace Code.Tests.EditMode.Inventory
         }
 
         [Test]
+        public void Amplifier_InputModOnManaCost_RaisesResourceCost()
+        {
+            // ADR-0009: Amplifier's outputMod (Magnitude) and inputMod (Cost) are independent axes —
+            // mirrors Shifter_InputModOnManaCost_RaisesResourceCost, but for the role that previously
+            // had no Cost surface at all ("no conditions; costs grid space", ADR-0004 §1).
+            var weapon = new StatWeapon(damage: 1f, resourceCost: 5f);
+            var amp    = new StatAmplifier(
+                Mods.Output(WeaponOutputStat.Damage, Mods.Flat(4f)),
+                Mods.Input(WeaponInputStat.ManaCost, Mods.Flat(2f)));
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { amp });
+
+            stats.Damage.Should().BeApproximately(5f, Tolerance);        // 1 + 4 (outputMod)
+            stats.ResourceCost.Should().BeApproximately(7f, Tolerance);  // 5 + 2 (inputMod)
+        }
+
+        [Test]
+        public void Converter_InputModOnManaCost_RaisesResourceCost()
+        {
+            // ADR-0009: Converter's Axis reclassification and inputMod (Cost) are independent —
+            // the Cost bump applies regardless of which axis this Converter reclassifies.
+            var weapon    = new StatWeapon(resourceCost: 5f);
+            var converter = new StatConverter(ConverterAxis.Delivery,
+                toDelivery: DeliveryPattern.Cleave,
+                inputMod: Mods.Input(WeaponInputStat.ManaCost, Mods.Flat(3f)));
+
+            var stats = WeaponStatResolver.Resolve(weapon, new ITetrisItem[] { converter });
+
+            stats.Delivery.Should().Be(DeliveryPattern.Cleave);
+            stats.ResourceCost.Should().BeApproximately(8f, Tolerance); // 5 + 3 (inputMod)
+        }
+
+        [Test]
         public void Reactor_InputModOnAttackSpeed_RaisesAttackSpeed()
         {
             var weapon  = new StatWeapon(attackSpeed: 1f);

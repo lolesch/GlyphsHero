@@ -116,12 +116,18 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     internal sealed class FakeAmplifier : FakeItem, IAmplifierItem
     {
         public FakeAmplifier(string name, params Vector2Int[] connectorDirections)
-            : base(name, connectorDirections) =>
+            : base(name, connectorDirections)
+        {
             outputMod = new WeaponOutputModifier(
                 WeaponOutputStat.Damage,
                 new Modifier(1f, ModifierType.FlatAdd, Guid.NewGuid()));
+            inputMod = new WeaponInputModifier(
+                WeaponInputStat.AttackSpeed,
+                new Modifier(0f, ModifierType.FlatAdd, Guid.NewGuid())); // no-op: not exercised by these fixtures
+        }
 
         public WeaponOutputModifier outputMod { get; }
+        public WeaponInputModifier  inputMod  { get; }
     }
 
     /// <summary>
@@ -136,11 +142,14 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         {
             outputMod = new WeaponOutputModifier(WeaponOutputStat.Damage,
                 new Modifier(damageBonus, ModifierType.FlatAdd, Guid.NewGuid()));
+            inputMod = new WeaponInputModifier(WeaponInputStat.AttackSpeed,
+                new Modifier(0f, ModifierType.FlatAdd, Guid.NewGuid())); // no-op: not exercised by these fixtures
             Affix = new PawnStatModifier(PawnStat.LifeMax,
                 new Modifier(lifeBonus, ModifierType.FlatAdd, Guid.NewGuid()));
         }
 
         public WeaponOutputModifier outputMod { get; }
+        public WeaponInputModifier  inputMod  { get; }
         public PawnStatModifier     Affix     { get; }
         public IReadOnlyList<PawnStatModifier> affixes => new[] { Affix };
 
@@ -184,13 +193,20 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     {
         public FakeConverter(string name, ConverterAxis axis = ConverterAxis.Delivery,
             params Vector2Int[] connectorDirections)
-            : base(name, connectorDirections) => Axis = axis;
+            : base(name, connectorDirections)
+        {
+            Axis = axis;
+            inputMod = new WeaponInputModifier(
+                WeaponInputStat.AttackSpeed,
+                new Modifier(0f, ModifierType.FlatAdd, Guid.NewGuid())); // no-op: not exercised by these fixtures
+        }
 
         public ConverterAxis   Axis       { get; }
         public DeliveryPattern ToDelivery => DeliveryPattern.Aoe;
         public Affinity        ToAffinity => Affinity.Friendly;
         public Anchor          ToAnchor   => Anchor.Origin;
         public ResourceType    ToResource => ResourceType.Health;
+        public WeaponInputModifier inputMod { get; }
     }
 
     /// <summary>

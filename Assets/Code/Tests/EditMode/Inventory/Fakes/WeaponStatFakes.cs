@@ -44,10 +44,15 @@ namespace Code.Tests.EditMode.Inventory.Fakes
 
     internal sealed class StatAmplifier : FakeItem, IAmplifierItem
     {
-        public StatAmplifier(WeaponOutputModifier outputMod, string name = "Amp") : base(name)
-            => this.outputMod = outputMod;
+        public StatAmplifier(WeaponOutputModifier outputMod, WeaponInputModifier inputMod = null,
+            string name = "Amp") : base(name)
+        {
+            this.outputMod = outputMod;
+            this.inputMod  = inputMod ?? Mods.Input(WeaponInputStat.AttackSpeed, Mods.Flat(0f));
+        }
 
         public WeaponOutputModifier outputMod { get; }
+        public WeaponInputModifier  inputMod  { get; }
     }
 
     internal sealed class StatShifter : FakeItem, IShifterItem
@@ -67,7 +72,8 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     {
         public StatConverter(ConverterAxis axis, DeliveryPattern toDelivery = DeliveryPattern.Single,
             Affinity toAffinity = Affinity.Hostile, Anchor toAnchor = Anchor.Target,
-            ResourceType toResource = ResourceType.Mana, string name = "Converter")
+            ResourceType toResource = ResourceType.Mana, WeaponInputModifier inputMod = null,
+            string name = "Converter")
             : base(name)
         {
             Axis       = axis;
@@ -75,6 +81,7 @@ namespace Code.Tests.EditMode.Inventory.Fakes
             ToAffinity = toAffinity;
             ToAnchor   = toAnchor;
             ToResource = toResource;
+            this.inputMod = inputMod ?? Mods.Input(WeaponInputStat.AttackSpeed, Mods.Flat(0f));
         }
 
         public ConverterAxis   Axis       { get; }
@@ -82,6 +89,7 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public Affinity        ToAffinity { get; }
         public Anchor          ToAnchor   { get; }
         public ResourceType    ToResource { get; }
+        public WeaponInputModifier inputMod { get; }
     }
 
     internal sealed class StatReactor : FakeItem, IReactorItem

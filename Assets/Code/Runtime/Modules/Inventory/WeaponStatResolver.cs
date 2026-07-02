@@ -77,6 +77,7 @@ namespace Code.Runtime.Modules.Inventory
                 switch (item)
                 {
                     case IAmplifierItem amp:
+                        ApplyInput(amp.inputMod);
                         ApplyOutput(amp.outputMod);
                         break;
                     case IShifterItem shifter:
@@ -87,6 +88,7 @@ namespace Code.Runtime.Modules.Inventory
                         ApplyInput(reactor.inputMod);
                         break;
                     case IConverterItem converter:
+                        ApplyInput(converter.inputMod);
                         ApplyConversion(converter);
                         break;
                 }
