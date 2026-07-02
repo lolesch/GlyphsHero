@@ -1,5 +1,20 @@
 # Glyph Design Grammar --- Export Sheet
 
+> [!warning] Mostly superseded
+> This is the v3/v4-era "frame shape = component class" direction. [[Sigil_Design_Handoff|Sigil_Design_Handoff.md]]'s
+> own iteration history records this idea dying by v4 ("still too iconic") — the shipped baseline
+> (v7) uses no outer shapes at all; trigger identity is a *line character*, not a frame. §1
+> (frame shapes), §2 (core symbols), §4 (color = damage type), §5 (symbol alignment) and §7
+> (example chain) are historical only — the taxonomy in §1 also predates
+> [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]] ("Activator"/"Condition" don't
+> exist as component classes; "Payload" is a weapon *mode*, not a class). §3 (connector geometry)
+> is superseded as a *port-typing* spec, but the underlying need — visualizing where/how items
+> connect — **is built**: the inventory grid's pip system (`SlotView.SetPipState`).
+>
+> Still current and worth keeping in mind: **§6** (tile size = power tier), **§8** (design
+> consistency rules), **§9** (expansion strategy). Defer to the Handoff doc for the live visual
+> system.
+
 This document defines a consistent visual language for glyph items used
 in a grid-based tactical game.
 

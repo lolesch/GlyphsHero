@@ -81,3 +81,25 @@ Rock + Whip = Sling
 
 think about having all pawn stats in the inventory, so the entire health globe/pool is defined by what's on the grid. check other stats too.
 - if the item pool is an item, the same chaining could apply
+
+---
+
+# Sigil Visualization (from Glyphs/Sigil_Design_Handoff.md audit, 2026-07-02)
+
+Doc-vs-code sweep of the `Glyphs/` folder turned up two gaps worth floating, not deciding:
+
+- **Composite sigil renderer.** [[Sigil_Design_Handoff]] specs a full visual language (trigger-line
+  character, weapon center mark, orbiting amplifiers, payload offset) but nothing renders it —
+  items still show one static `Sprite Icon`, and the chain's reading order only exists as *text*
+  in the tooltip. `ChainResolver` already computes everything the renderer would need (root,
+  weapon, ordered modifiers, payload weapons), so this is a rendering slice, not a systems one.
+  Smallest useful first cut: root = solid-tint sprite, payload = outline/reduced-opacity sprite —
+  one channel, purely derived from data that already exists, matching the doc's "solid fill vs.
+  outline alone is sufficient" note.
+- **Color channel is spent twice on paper.** The Handoff and the (mostly superseded)
+  `glyph_design_grammar.md` both reserve color for *damage type*. The shipped tooltip glyphs
+  (`ChainComponentColors`, `TypeGlyphs`) already spend color on *component role* instead, and no
+  damage-type enum exists in code yet, so there's no live conflict today — but if elemental damage
+  types ever land, whoever adds them will need to pick a *different* channel (or accept overloading
+  one channel with two meanings). Worth a real design-gate conversation before that day arrives,
+  not a silent choice either way.

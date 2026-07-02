@@ -34,6 +34,16 @@ The reference for composite quality is **Tyranny's sigil stacking system**: four
 
 ## Visual System — Locked Decisions
 
+> [!warning] Unbuilt
+> No composite sigil renderer exists yet — items still show a single static `Sprite Icon` per
+> config, and the reading order below (trigger → weapon → amplifiers → payload) is currently
+> implemented as *text* in the tooltip (`ItemTooltipController`, `TypeGlyphs`, `ChainComponentColors`),
+> not as the visual system this doc describes. See `Ideation.md` for an implementation suggestion.
+> One adjacent piece **is** already built, though not from this doc: the inventory grid's pip
+> system (`SlotView.SetPipState`, `PipState.DeadEnd/Dash/Arrow/RootDash`) renders each item's
+> connector position + direction on the grid — the connector-port visualization the old
+> `glyph_design_grammar.md` called for (§3) is effectively shipped, just not under that name.
+
 ### Four Layers, No Overlap
 
 1. **Trigger** — the connection line entering the weapon
@@ -103,13 +113,22 @@ Sit adjacent to / surrounding the weapon center. Each has a distinct shape famil
 
 ### Layer 4: Converters — Three Visual Dimensions
 
+> [!warning] Superseded axis bindings
+> This table predates [[0004-attack-model-item-roles-and-recursive-delivery|ADR-0004]]'s Converter
+> axes. The shipped `ConverterConfig` (`ConverterAxis`) reclassifies **Delivery / Affinity / Anchor
+> / Resource** — not damage type or target strategy, which remain deferred (no data system exists
+> for either; see `KNOWN_ISSUES.md` → Item Chain). The three-dimension *idea* (color/size/stroke)
+> is still sound, but needs rebinding to real axes, e.g. size ↔ `DeliveryPattern` (Single→Cleave→Aoe
+> scaling), some marker ↔ `Affinity`/`Anchor`. Damage-type color has no backing enum at all today —
+> see `Ideation.md` for the open question that raises.
+
 Converters modify the nearest upstream action node's output type. They don't add a new shape — they change a property of the existing weapon mark.
 
 | Conversion type | Visual dimension |
 |---|---|
-| Damage type | **Color** — weapon mark shifts to damage type color |
-| Target type | **Size** — same weapon mark shape, scaled up for AoE |
-| Delivery mode | **Stroke thickness** — thin = instant · thick/heavy = accumulated burst |
+| Damage type *(deferred — no damage-type system in code)* | **Color** — weapon mark shifts to damage type color |
+| Target type *(deferred — no target-strategy system in code)* | **Size** — same weapon mark shape, scaled up for AoE |
+| Delivery mode *(shipped as `ConverterAxis.Delivery`)* | **Stroke thickness** — thin = instant · thick/heavy = accumulated burst |
 
 **Design notes:**
 - These three dimensions don't conflict — a single converter can only change one dimension
@@ -134,7 +153,7 @@ At a glance: shape character of the line + weapon silhouette tells you 80% of th
 - **Payload condition visualization** — how is the payload's condition shown within the payload mark? Current approach: the payload is just the weapon mark outline; its condition is implied by context. May need a small marker.
 - **Multiple amplifier positioning** — when 2-3 amplifiers orbit one weapon, where exactly do they sit? Needs a consistent layout rule (e.g. top/left/right reserved positions).
 - **Converter indicator** — should the converter item itself have any visual mark, or is it purely implicit (weapon mark changes, no converter symbol visible in composite)?
-- **Bidirectional chains** — if two weapons are connected, how does the composite show both with their respective trigger lines? Not yet designed.
+- **Bidirectional chains** — if two weapons are connected, how does the composite show both with their respective trigger lines? Not yet designed. **Partially resolved in code since this doc was written:** weapon→payload chaining is enabled in `ChainResolver` (a Reactor acts as the chain boundary between two weapons), with a positional tiebreak for directionality as an interim measure pending [[0007|ADR-0007]] (design-only, age-stamp origin deferred). The *visual* question — how the composite shows a weapon-as-payload downstream of a weapon-as-root — is still open.
 - **Scale testing** — all concepts at ~80-120px. Needs testing at actual inventory grid cell size (likely much smaller).
 
 ---
@@ -143,7 +162,9 @@ At a glance: shape character of the line + weapon silhouette tells you 80% of th
 
 - `sigil_concept_v7.html` — latest iteration, all components + composites
 - `sigil_concept_v4.html` — zone map diagram showing layer structure
-- `ItemChain_Design.md` — full system design doc (chain grammar, component rules, flow rules)
+- `archive/sigil_concept_v1.html` – `v3.html` — earlier iterations, superseded, kept for history only (see Iteration History below)
+- [[Item Chaining]] — full system design doc (chain grammar, component rules, flow rules); the live taxonomy of record
+- `glyph_design_grammar.md` — mostly superseded by this doc (see its own status banner); §6 (tile size = power tier), §8 (consistency rules), §9 (expansion strategy) are still current and worth keeping in mind
 
 ---
 
