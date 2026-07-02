@@ -102,6 +102,11 @@ InitTestScene*.unity*
 .idea/
 *.DotSettings.user
 
+# Claude Code / night-runner local harness — committed infra lives on night-base only
+# (see Docs/agents/night-shift.md "the .claude/ gotcha"); on main/laptopLab it's a live
+# local working-copy tool dir, never tracked here.
+.claude/
+
 # Burst compiler output
 /[Aa]ssets/burst*.bc
 
