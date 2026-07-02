@@ -79,6 +79,32 @@ issues moved + what to verify). Then in Rider/Unity: **compile + run the Test Ru
 not), confirm the `VERIFY:` notes, and merge only what you trust. Update the issues (close the genuinely
 done ones; the agent only advanced/`label-cleared` them — it never closes, so a human verifies first).
 
+## Merging a night branch back (the `.claude/` gotcha)
+
+`.claude/` is **committed infrastructure on `night-base`** — `settings.json`, `hooks/session-start.ps1`,
+`Start-NightRun.ps1`, `summary-prompt.md`, `work-prompt.md`, `.gitignore`, and the `SESSION_HANDOVER.md`
+template — not untracked scratch files. Every `night/<date>` branch forks from (or merges) `night-base`,
+so it inherits all of it as tracked history, plus `night-log.md`, which gets created fresh and committed
+during the run itself.
+
+`main`/`laptopLab` never derive from `night-base` (that's the whole point — see the top of this doc), so
+they have **zero** `.claude/*` history. That means merging *any* `night/<date>` branch into `main`/
+`laptopLab` will always try to reintroduce the whole `.claude/` tree — as a clean "new file" add the first
+time, or as a modify/delete conflict on a later merge once a previous merge has already stripped it. This
+isn't a bug to fix; it's the direct, expected consequence of keeping the harness off `main`. Resolve it
+the same way every time, by dropping `.claude/` from the merge before committing:
+
+```powershell
+git merge --no-ff --no-commit night/<date>
+# resolve any real conflicts first, then:
+git rm -r --cached .claude
+git commit
+```
+
+Use `--cached` — **never** a plain `rm -rf .claude`. The working directory's `.claude/` may be backing
+the *current* interactive Claude Code session's own settings/hooks, not just merge leftovers; `--cached`
+only unstages the files from the merge commit and leaves the working tree untouched.
+
 ## Boundaries (enforced by the harness)
 
 - Never commits to `main` or `night-base`; work lands only on `night/<date>`.
