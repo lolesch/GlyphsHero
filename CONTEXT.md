@@ -96,6 +96,9 @@ _Avoid_: "resource gen on the weapon" — gain left the weapon; a mana-cost weap
 **Resource Pool**:
 A pawn-side reservoir an attack spends from or restores to (`ResourceType` — Mana, Health, …). Cost and
 Gain each name a pool independently. `Resource.CanSpend` already guards spending Health as a resource.
+Both health and mana **regenerate on the combat tick** (ADR-0008) — the attack-cost economy is balanced
+around a weapon's *sustained* fire rate (`min(naturalCadence, regen/cost)`), not a one-shot budget that
+permanently silences a pawn once its pool empties.
 
 ## Space & range
 

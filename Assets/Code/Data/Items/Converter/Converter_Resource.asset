@@ -24,9 +24,9 @@ MonoBehaviour:
   - <position>k__BackingField: {x: 0, y: 0}
     <direction>k__BackingField: 2
   pawnStatMod:
-    stat: 0
-    value: 0
-    type: 0
+    stat: 1
+    value: 8
+    type: 1
   <Axis>k__BackingField: 3
   <ToDelivery>k__BackingField: 1
   <ToAffinity>k__BackingField: 1

@@ -24,14 +24,14 @@ MonoBehaviour:
   - <position>k__BackingField: {x: 1, y: 0}
     <direction>k__BackingField: 0
   pawnStatMod:
-    stat: 2
-    value: 5
-    type: 2
+    stat: 4
+    value: 3
+    type: 1
   <inputStatMod>k__BackingField:
     stat: 0
-    value: 0
-    type: 0
+    value: 30
+    type: 2
   <outputStatMod>k__BackingField:
     stat: 0
-    value: 0
-    type: 0
+    value: -15
+    type: 2

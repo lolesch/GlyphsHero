@@ -68,5 +68,6 @@ issue trail**, not the ADR. The `Lifecycle` header field is the ADR's pointer at
 | [0005](0005-resource-economy-cost-gain-magnitude.md) | Resource economy decomposes into Cost / Gain-on-hit / Magnitude | Implemented |
 | [0006](0006-payload-propagation-cost-economy.md) | Payload propagation is a fail-forward cost economy | Implemented |
 | [0007](0007-weapon-payload-direction-and-reactor-boundary.md) | Weapon→weapon payloads; reactor is the firing boundary; age-stamped origin | **Partially implemented** (Decision 1 only) |
+| [0008](0008-mana-regenerates-during-combat.md) | Mana regenerates during combat, on the same tick as health | **Partially implemented** (not yet playtested) |
 
 Keep this table's `Lifecycle` column in step with each ADR's header when state changes.

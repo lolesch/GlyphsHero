@@ -26,7 +26,7 @@ MonoBehaviour:
     <direction>k__BackingField: 2
   pawnStatMod:
     stat: 1
-    value: 10
+    value: 5
     type: 1
   <outputStatMod>k__BackingField:
     stat: 0

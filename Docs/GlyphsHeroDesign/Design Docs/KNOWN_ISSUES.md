@@ -1,7 +1,7 @@
 
 # TODO
 
-- [x] resource regen on pawns. Done (2026-06-22): `Resource.Regenerate(rate, dt)` driven by `CombatCoordinator` on the `CombatClock` (combat-only); enemies full-heal at combat start. Mana regen left unwired on purpose (attack-cost economy).
+- [x] resource regen on pawns. Done (2026-06-22): `Resource.Regenerate(rate, dt)` driven by `CombatCoordinator` on the `CombatClock` (combat-only); enemies full-heal at combat start. ~~Mana regen left unwired on purpose (attack-cost economy).~~ **Superseded 2026-07-02 by [[../adr/0008-mana-regenerates-during-combat|ADR-0008]]** — the one-shot mana budget made empty-mana permanent for the rest of a fight; mana now regenerates on the same tick as health.
 - [ ] converter should only show cenvertable types, not the input enum and actually apply the change
 - [x] Enemies should not be draggable
 	- [ ] enemies inventory should not be interactable ( inspect, but no add/remove/drag )

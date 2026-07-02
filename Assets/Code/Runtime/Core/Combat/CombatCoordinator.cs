@@ -179,16 +179,25 @@ namespace Code.Runtime.Core.Combat
         }
 
         /// <summary>
-        /// Health regen on the combat clock: every alive pawn restores healthRegen-per-second,
-        /// scaled by the tick interval. Combat-only — the clock advances solely while combat runs.
-        /// Regen only raises current, so it can't unregister a pawn mid-iteration.
+        /// Health/mana regen on the combat clock: every alive pawn restores healthRegen- and
+        /// manaRegen-per-second, scaled by the tick interval. Combat-only — the clock advances solely
+        /// while combat runs. Regen only raises current, so it can't unregister a pawn mid-iteration.
+        /// Mana regen during combat is a deliberate reversal of the earlier "unwired on purpose"
+        /// stance (ADR-0008) — the attack-cost economy is balanced around a *sustainable* fire rate,
+        /// not a one-shot mana pool that permanently silences a pawn for the rest of the fight.
         /// </summary>
         private void RegenerateResources()
         {
             foreach (var unit in playerUnits)
+            {
                 unit.Stats.health.Regenerate(unit.Stats.healthRegen, _clock.TickInterval);
+                unit.Stats.mana.Regenerate(unit.Stats.manaRegen, _clock.TickInterval);
+            }
             foreach (var unit in enemyUnits)
+            {
                 unit.Stats.health.Regenerate(unit.Stats.healthRegen, _clock.TickInterval);
+                unit.Stats.mana.Regenerate(unit.Stats.manaRegen, _clock.TickInterval);
+            }
         }
 
         private void ResolveMovement()
