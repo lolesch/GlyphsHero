@@ -129,6 +129,16 @@ namespace Code.Tests.EditMode.Statistics
         }
 
         [Test]
+        public void Percentage_WhenMaxIsZero_IsZeroNotNaN()
+        {
+            // A 0-mana pawn must not yield 0/0 = NaN and corrupt a fill bar.
+            var mana = new Resource(PawnStat.ManaMax, 0f);
+
+            mana.Percentage.Should().Be(0f);
+            float.IsNaN(mana.Percentage).Should().BeFalse();
+        }
+
+        [Test]
         public void LoweringMaxBelowCurrent_ClampsCurrentDown()
         {
             var mana = new Resource(PawnStat.ManaMax, 100f);

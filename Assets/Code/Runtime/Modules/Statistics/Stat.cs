@@ -24,6 +24,18 @@ namespace Code.Runtime.Modules.Statistics
 
         public static implicit operator float( Stat stat ) => stat.MaxValue;
 
+        /// <summary>
+        /// Fires with the new total whenever a modifier changes this stat's value.
+        /// Forwards to the wrapped <see cref="MaxValue"/> so <see cref="Stat"/> stays the sole
+        /// modifier gate — <see cref="MutableFloat"/> itself is never handed out. Value reads use
+        /// the implicit <c>float</c> operator.
+        /// </summary>
+        public event Action<float> OnTotalChanged
+        {
+            add => MaxValue.OnTotalChanged += value;
+            remove => MaxValue.OnTotalChanged -= value;
+        }
+
         public void AddModifier( Modifier modifier ) => MaxValue.AddModifier( modifier );
         public bool TryRemoveModifier( Modifier modifier ) => MaxValue.TryRemoveModifier( modifier );
         

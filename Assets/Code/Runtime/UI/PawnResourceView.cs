@@ -21,15 +21,31 @@ namespace Code.Runtime.UI
         {
             if( res == null )
                 return;
-            
+
             var previous = resource;
             if( previous != null )
                 previous.OnCurrentChanged -= UpdateView;
-            
+
             resource = res;
             resource.OnCurrentChanged += UpdateView;
+
+            // Paint the current value immediately — OnCurrentChanged only fires on later changes,
+            // so without this the bar stays at its authored fill until the first damage/regen tick.
+            Paint();
         }
 
-        private void UpdateView( float prev, float curr, float max ) => bar.fillAmount = resource.Percentage;
+        private void OnDestroy()
+        {
+            if( resource != null )
+                resource.OnCurrentChanged -= UpdateView;
+        }
+
+        private void UpdateView( float prev, float curr, float max ) => Paint();
+
+        private void Paint()
+        {
+            if( bar != null && resource != null )
+                bar.fillAmount = resource.Percentage;
+        }
     }
 }

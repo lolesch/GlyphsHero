@@ -6,8 +6,8 @@ namespace Code.Runtime.UI.Inventory
 {
     /// <summary>
     /// Source-selection policy for an <see cref="InventoryView"/>: drives the
-    /// renderer with the currently hovered pawn's inventory. The view itself
-    /// knows nothing about pawns or hover.
+    /// renderer with the currently selected pawn's inventory. The view itself
+    /// knows nothing about pawns or selection.
     /// </summary>
     [RequireComponent(typeof(InventoryView))]
     public sealed class PawnInventoryView : MonoBehaviour
@@ -20,8 +20,8 @@ namespace Code.Runtime.UI.Inventory
                 _view = GetComponent<InventoryView>();
         }
 
-        private void OnEnable()  => HexSelectionHandler.OnPawnHovered += Show;
-        private void OnDisable() => HexSelectionHandler.OnPawnHovered -= Show;
+        private void OnEnable()  => HexSelectionHandler.OnPawnSelected += Show;
+        private void OnDisable() => HexSelectionHandler.OnPawnSelected -= Show;
 
         public void Show(IPawn pawn) => _view.RefreshView(pawn.Inventory);
     }

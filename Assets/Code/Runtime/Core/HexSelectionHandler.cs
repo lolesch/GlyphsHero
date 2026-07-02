@@ -33,6 +33,18 @@ namespace Code.Runtime.UI.Inventory
         
         public static event Action<IPawn> OnPawnHovered;
 
+        /// <summary>Fired when the click-selected pawn changes (never on re-clicking the same pawn).</summary>
+        public static event Action<IPawn> OnPawnSelected;
+
+        /// <summary>The click-selected pawn (any team). Null until the first selection; never cleared.</summary>
+        public static IPawn SelectedPawn { get; private set; }
+
+        /// <summary>
+        /// Pure selection policy: clicking a pawn selects it, clicking empty (<paramref name="clicked"/> null)
+        /// keeps the current selection. No deselect, no toggle — re-clicking the same pawn is a no-op.
+        /// </summary>
+        public static IPawn ResolveSelection(IPawn current, IPawn clicked) => clicked ?? current;
+
         private static GUIStyle _centeredStyle;
         private static IEnumerable<Vector3Int> _allCells;
         
@@ -46,12 +58,23 @@ namespace Code.Runtime.UI.Inventory
 
         private void Update()
         {
-            if (hoveredPawn != null)
+            // Click selection: reuse the pawn already resolved under the cursor by CheckHexForUnit.
+            if (Input.GetMouseButtonDown(0))
+            {
+                var next = ResolveSelection(SelectedPawn, hoveredPawn);
+                if (!ReferenceEquals(next, SelectedPawn))
+                {
+                    SelectedPawn = next;
+                    OnPawnSelected?.Invoke(SelectedPawn);
+                }
+            }
+
+            if (SelectedPawn != null)
             {
                 if (Input.GetKeyDown(KeyCode.Q))
-                    hoveredPawn.PawnEffects.Rotate(false);
+                    SelectedPawn.PawnEffects.Rotate(false);
                 if (Input.GetKeyDown(KeyCode.E))
-                    hoveredPawn.PawnEffects.Rotate(true);
+                    SelectedPawn.PawnEffects.Rotate(true);
             }
 
             var ray = _cam.ScreenPointToRay(Input.mousePosition);

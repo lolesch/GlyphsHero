@@ -14,6 +14,10 @@ namespace Code.Runtime.Pawns
     public sealed class Pawn : MonoBehaviour, IPawn
     {
         [SerializeField, ReadOnly, PreviewIcon] private Sprite _icon;
+        // Player-facing identity surfaced to the UI HUD (IPawn.Icon/DisplayName). Cached from the
+        // config at spawn (the config itself isn't retained); the display name is the config asset
+        // name. Read-only from UI — keeps the UI → Pawns layering without exposing Pawn internals.
+        [SerializeField, ReadOnly] private string _displayName;
         // TODO: move pawn effect into config!
         [SerializeField] private PawnEffect _pawnEffects;
         [SerializeField] private AnimationCurve _moveEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
@@ -42,6 +46,8 @@ namespace Code.Runtime.Pawns
         public IPawnStats       Stats         => _stats;
         public ITetrisContainer Inventory     { get; private set; }
         public IPawnEffect      PawnEffects   { get; private set; }
+        public Sprite           Icon          => _icon;
+        public string           DisplayName   => _displayName;
 
         // Runtime-only mirror of this pawn's resolved attacks (weapon + chain mods → WeaponStats),
         // rebuilt on every inventory change so the live damage/fire-rate is inspectable like _stats.
@@ -74,6 +80,7 @@ namespace Code.Runtime.Pawns
 
             _grid         = grid;
             _icon         = config.icon;
+            _displayName  = config.name;
             _stats        = new PawnStats(config);
             Inventory     = new TetrisContainer(new Vector2Int(6, 3));
             PawnEffects   = _pawnEffects;
@@ -178,6 +185,10 @@ namespace Code.Runtime.Pawns
         IPawnEffect      PawnEffects   { get; }
         IPawnStats       Stats         { get; }
         ITetrisContainer Inventory     { get; }
+        // Player-facing identity for the HUD (pawn-ui spec §Decision 3). Read-only accessors so UI
+        // never reaches into Pawn internals or the Data config; the smallest addition the spec allows.
+        Sprite           Icon          { get; }
+        string           DisplayName   { get; }
     }
 
     public interface ICombatParticipant
