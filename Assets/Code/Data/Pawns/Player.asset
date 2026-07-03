@@ -19,6 +19,9 @@ MonoBehaviour:
   baseManaRegen: 8
   movementSpeed: 1
   starterWeapon: {fileID: 11400000, guid: fd4a579c748d3414f88c941336c65ec9, type: 2}
+  starterItems:
+  - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
+  - {fileID: 11400000, guid: 3aafe504aba36954f9fe01fa03622533, type: 2}
   movementCosts:
     _entries:
     - terrain: 0

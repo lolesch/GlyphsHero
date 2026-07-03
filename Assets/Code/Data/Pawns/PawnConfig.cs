@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Code.Data.Items;
 using Code.Data.Items.Weapon;
 using Submodules.Utility.Attributes;
 using UnityEngine;
@@ -19,6 +21,7 @@ namespace Code.Data.Pawns
         [Min(1)] public uint baseRange = 1;
 
         public WeaponConfig starterWeapon;
+        public List<ItemConfig> starterItems = new();
         public TerrainCostConfig movementCosts;
         
         //public PawnEffectConfig pawnEffects;
