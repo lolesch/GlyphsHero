@@ -18,3 +18,13 @@
 
 from **plan & deploy** to **battle reward**
 build item chains explained here
+
+
+---
+
+## Design Goals
+
+- No combinatorial explosion
+- High systemic depth
+- Strong player readability
+- Emergent gameplay through interaction
