@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Code.Data.Enums;
 using Code.Data.Pawns;
 using Code.Runtime.Modules.Inventory;
@@ -86,6 +87,9 @@ namespace Code.Runtime.Pawns
             PawnEffects   = _pawnEffects;
             MovementCosts = config.movementCosts;
             
+            foreach (var item in config.starterItems.Where(x => x != null))
+                Inventory.TryAdd(ItemFactory.Create(item));
+
             if (config.starterWeapon != null)
                 Inventory.TryAdd(ItemFactory.Create(config.starterWeapon));
             else

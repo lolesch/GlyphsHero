@@ -19,8 +19,22 @@ multiple Weapons fire simultaneously
 # Hex-grid Properties
 - position / positioning
 - terrain / obstacles / LoS
-- attack shape / range 
+- attack shape / range — see [[Attack Targeting|Attack Delivery]]
 - movement / projectiles
+
+**Two-phase model:** The hex grid operates differently across the two combat phases.
+
+| Phase | Player control | Movement |
+|---|---|---|
+| **Placement** | Full — position pawns, read enemy patterns | Unrestricted |
+| **Resolution** | None — chains fire autonomously | Effect-driven only (push/pull payloads) |
+
+> [!warning] Design fork — not what is implemented today
+> The stationary-resolution row conflicts with the current implementation: pawns auto-move into
+> weapon range on the combat clock, with terrain costs and movement speed (ADR-0001,
+> `CombatCoordinator`). Adopting effect-driven-only movement (`PositionPayloadEffect`, stalemates
+> broken via fatigue) would supersede that system — decide and record in an ADR before building on
+> either assumption.
 
 **Positional conditions** (flanked, adjacent to ally, terrain type) — deferred to hex layer. See [[Pawn|Pawn Design]].
 

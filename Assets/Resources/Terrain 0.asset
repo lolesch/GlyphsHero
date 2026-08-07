@@ -1,0 +1,428 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35a1a78f780247aaa652224b89de59ef, type: 3}
+  m_Name: Terrain 0
+  m_EditorClassIdentifier: Grids:Code.Runtime.Modules.HexGrid:TerrainConfig
+  levelIndex: 0
+  terrainTiles:
+  - name: "(-6, -5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, -5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, -5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, -5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, -5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -2, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-1, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: -1, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(0, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 0, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(1, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 1, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(2, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 2, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(3, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 3, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(4, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, -5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: -5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, -4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, -4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, -4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, -4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, -4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -2, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-1, -4, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: -1, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(0, -4, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 0, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(1, -4, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 1, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(2, -4, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 2, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(3, -4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 3, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(4, -4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, -4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(6, -4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 6, y: -4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, -3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, -3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, -3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, -3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, -3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -2, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-1, -3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -1, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(0, -3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 0, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(1, -3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 1, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(2, -3, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 2, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(3, -3, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 3, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(4, -3, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, -3, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: -3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, -2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, -2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, -2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, -2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, -2, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -2, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-1, -2, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -1, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(0, -2, 0)\tCeramic_02_hard"
+    <cell>k__BackingField: {x: 0, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 33aaf24485c87a745917d55143656a83, type: 2}
+  - name: "(1, -2, 0)\tCeramic_02_hard"
+    <cell>k__BackingField: {x: 1, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 33aaf24485c87a745917d55143656a83, type: 2}
+  - name: "(2, -2, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 2, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(3, -2, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 3, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(4, -2, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, -2, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(6, -2, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 6, y: -2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, -1, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, -1, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, -1, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, -1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -3, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-2, -1, 0)\tCeramic_01_hard"
+    <cell>k__BackingField: {x: -2, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 6aa015c24a1a6d8429a1eb5f220ea4c4, type: 2}
+  - name: "(-1, -1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -1, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(0, -1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 0, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(1, -1, 0)\tCeramic_02_hard"
+    <cell>k__BackingField: {x: 1, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 33aaf24485c87a745917d55143656a83, type: 2}
+  - name: "(2, -1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 2, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(3, -1, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 3, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(4, -1, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, -1, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: -1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, 0, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, 0, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, 0, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, 0, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -3, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-2, 0, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -2, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-1, 0, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -1, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(0, 0, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 0, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(1, 0, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 1, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(2, 0, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 2, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(3, 0, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 3, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(4, 0, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 4, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(5, 0, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(6, 0, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 6, y: 0, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, 1, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, 1, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, 1, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, 1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -3, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-2, 1, 0)\tCeramic_02_hard"
+    <cell>k__BackingField: {x: -2, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 33aaf24485c87a745917d55143656a83, type: 2}
+  - name: "(-1, 1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -1, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(0, 1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 0, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(1, 1, 0)\tCeramic_01_hard"
+    <cell>k__BackingField: {x: 1, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 6aa015c24a1a6d8429a1eb5f220ea4c4, type: 2}
+  - name: "(2, 1, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 2, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(3, 1, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 3, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(4, 1, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, 1, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: 1, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, 2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, 2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, 2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, 2, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, 2, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -2, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-1, 2, 0)\tCeramic_02_hard"
+    <cell>k__BackingField: {x: -1, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 33aaf24485c87a745917d55143656a83, type: 2}
+  - name: "(0, 2, 0)\tCeramic_02_hard"
+    <cell>k__BackingField: {x: 0, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 33aaf24485c87a745917d55143656a83, type: 2}
+  - name: "(1, 2, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 1, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(2, 2, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 2, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(3, 2, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 3, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(4, 2, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, 2, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(6, 2, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 6, y: 2, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, 3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, 3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, 3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, 3, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, 3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -2, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(-1, 3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: -1, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(0, 3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 0, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(1, 3, 0)\tTerrain_Dirt"
+    <cell>k__BackingField: {x: 1, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: eadd267434d270e4ea5db7c186c0f007, type: 2}
+  - name: "(2, 3, 0)\tTerrain_Sand"
+    <cell>k__BackingField: {x: 2, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: fae58a3ed160ddc47aaabbbd23b9703b, type: 2}
+  - name: "(3, 3, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 3, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(4, 3, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, 3, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: 3, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -2, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-1, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -1, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(0, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: 0, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(1, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: 1, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(2, 4, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: 2, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(3, 4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 3, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(4, 4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, 4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(6, 4, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 6, y: 4, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(-6, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -6, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-5, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -5, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-4, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -4, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-3, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -3, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-2, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -2, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(-1, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: -1, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(0, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: 0, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(1, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: 1, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(2, 5, 0)\tTerrain_Honey"
+    <cell>k__BackingField: {x: 2, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 2a85b5df7a4aced47b12e97384c0c179, type: 2}
+  - name: "(3, 5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 3, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(4, 5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 4, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  - name: "(5, 5, 0)\tTerrain_Snow"
+    <cell>k__BackingField: {x: 5, y: 5, z: 0}
+    <tile>k__BackingField: {fileID: 11400000, guid: 0624944ec731a5543ab0a550d10dc9f1, type: 2}
+  json: '{"index":0,"tiles":[{"x":-6,"y":-5,"t":2},{"x":-5,"y":-5,"t":2},{"x":-4,"y":-5,"t":2},{"x":-3,"y":-5,"t":2},{"x":-2,"y":-5,"t":2},{"x":-1,"y":-5,"t":3},{"x":0,"y":-5,"t":3},{"x":1,"y":-5,"t":3},{"x":2,"y":-5,"t":3},{"x":3,"y":-5,"t":3},{"x":4,"y":-5,"t":3},{"x":5,"y":-5,"t":3},{"x":-6,"y":-4,"t":2},{"x":-5,"y":-4,"t":2},{"x":-4,"y":-4,"t":2},{"x":-3,"y":-4,"t":2},{"x":-2,"y":-4,"t":2},{"x":-1,"y":-4,"t":2},{"x":0,"y":-4,"t":2},{"x":1,"y":-4,"t":2},{"x":2,"y":-4,"t":2},{"x":3,"y":-4,"t":3},{"x":4,"y":-4,"t":3},{"x":5,"y":-4,"t":3},{"x":6,"y":-4,"t":3},{"x":-6,"y":-3,"t":2},{"x":-5,"y":-3,"t":2},{"x":-4,"y":-3,"t":2},{"x":-3,"y":-3,"t":2},{"x":-2,"y":-3,"t":1},{"x":-1,"y":-3,"t":1},{"x":0,"y":-3,"t":1},{"x":1,"y":-3,"t":1},{"x":2,"y":-3,"t":2},{"x":3,"y":-3,"t":3},{"x":4,"y":-3,"t":3},{"x":5,"y":-3,"t":3},{"x":-6,"y":-2,"t":2},{"x":-5,"y":-2,"t":2},{"x":-4,"y":-2,"t":2},{"x":-3,"y":-2,"t":2},{"x":-2,"y":-2,"t":1},{"x":-1,"y":-2,"t":1},{"x":0,"y":-2,"t":0},{"x":1,"y":-2,"t":0},{"x":2,"y":-2,"t":1},{"x":3,"y":-2,"t":2},{"x":4,"y":-2,"t":3},{"x":5,"y":-2,"t":3},{"x":6,"y":-2,"t":3},{"x":-6,"y":-1,"t":2},{"x":-5,"y":-1,"t":2},{"x":-4,"y":-1,"t":2},{"x":-3,"y":-1,"t":1},{"x":-2,"y":-1,"t":0},{"x":-1,"y":-1,"t":1},{"x":0,"y":-1,"t":1},{"x":1,"y":-1,"t":0},{"x":2,"y":-1,"t":1},{"x":3,"y":-1,"t":2},{"x":4,"y":-1,"t":3},{"x":5,"y":-1,"t":3},{"x":-6,"y":0,"t":2},{"x":-5,"y":0,"t":2},{"x":-4,"y":0,"t":2},{"x":-3,"y":0,"t":1},{"x":-2,"y":0,"t":1},{"x":-1,"y":0,"t":1},{"x":0,"y":0,"t":2},{"x":1,"y":0,"t":1},{"x":2,"y":0,"t":1},{"x":3,"y":0,"t":1},{"x":4,"y":0,"t":2},{"x":5,"y":0,"t":3},{"x":6,"y":0,"t":3},{"x":-6,"y":1,"t":2},{"x":-5,"y":1,"t":2},{"x":-4,"y":1,"t":2},{"x":-3,"y":1,"t":1},{"x":-2,"y":1,"t":0},{"x":-1,"y":1,"t":1},{"x":0,"y":1,"t":1},{"x":1,"y":1,"t":0},{"x":2,"y":1,"t":1},{"x":3,"y":1,"t":2},{"x":4,"y":1,"t":3},{"x":5,"y":1,"t":3},{"x":-6,"y":2,"t":2},{"x":-5,"y":2,"t":2},{"x":-4,"y":2,"t":2},{"x":-3,"y":2,"t":2},{"x":-2,"y":2,"t":1},{"x":-1,"y":2,"t":0},{"x":0,"y":2,"t":0},{"x":1,"y":2,"t":1},{"x":2,"y":2,"t":1},{"x":3,"y":2,"t":2},{"x":4,"y":2,"t":3},{"x":5,"y":2,"t":3},{"x":6,"y":2,"t":3},{"x":-6,"y":3,"t":2},{"x":-5,"y":3,"t":2},{"x":-4,"y":3,"t":2},{"x":-3,"y":3,"t":2},{"x":-2,"y":3,"t":1},{"x":-1,"y":3,"t":1},{"x":0,"y":3,"t":1},{"x":1,"y":3,"t":1},{"x":2,"y":3,"t":2},{"x":3,"y":3,"t":3},{"x":4,"y":3,"t":3},{"x":5,"y":3,"t":3},{"x":-6,"y":4,"t":2},{"x":-5,"y":4,"t":2},{"x":-4,"y":4,"t":2},{"x":-3,"y":4,"t":2},{"x":-2,"y":4,"t":2},{"x":-1,"y":4,"t":2},{"x":0,"y":4,"t":2},{"x":1,"y":4,"t":2},{"x":2,"y":4,"t":2},{"x":3,"y":4,"t":3},{"x":4,"y":4,"t":3},{"x":5,"y":4,"t":3},{"x":6,"y":4,"t":3},{"x":-6,"y":5,"t":2},{"x":-5,"y":5,"t":2},{"x":-4,"y":5,"t":2},{"x":-3,"y":5,"t":2},{"x":-2,"y":5,"t":2},{"x":-1,"y":5,"t":2},{"x":0,"y":5,"t":2},{"x":1,"y":5,"t":2},{"x":2,"y":5,"t":2},{"x":3,"y":5,"t":3},{"x":4,"y":5,"t":3},{"x":5,"y":5,"t":3}]}'

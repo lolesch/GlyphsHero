@@ -20,6 +20,7 @@ namespace Code.Runtime.UI.Inventory
         [SerializeField] private Grid          grid;
         [SerializeField] private Tilemap       levelMap;
         [SerializeField] private Tilemap       pawnEffectMap;
+        [SerializeField] private Tilemap       pawnPositionMap;
         [SerializeField] private TileBase      effectTile;
 
         private PawnRegistry _registry;
@@ -54,6 +55,27 @@ namespace Code.Runtime.UI.Inventory
         {
             _registry = registry;
             _cam = Camera.main;
+
+            _registry.OnPawnRegistered   += UpdatePawnPositions;
+            _registry.OnPawnUnregistered += UpdatePawnPositions;
+            UpdatePawnPositions(null);
+        }
+
+        private void OnDisable()
+        {
+            if (_registry == null) return;
+            _registry.OnPawnRegistered   -= UpdatePawnPositions;
+            _registry.OnPawnUnregistered -= UpdatePawnPositions;
+        }
+
+        // Marks every occupied hex on the position tilemap; refreshed whenever a pawn spawns or dies.
+        private void UpdatePawnPositions(IPawn _)
+        {
+            if (pawnPositionMap == null) return;
+            pawnPositionMap.ClearAllTiles();
+
+            foreach (var pawn in _registry.allPawns)
+                pawnPositionMap.SetTile(pawn.HexPosition.ToCell(), effectTile);
         }
 
         private void Update()
