@@ -84,7 +84,7 @@ namespace Code.Runtime.UI.Inventory
         /// read from the piece's before/with snapshots rather than the item, so it stays a chain-positional
         /// delta. <b>Additive</b>: a line appears only for an axis this piece actually changes.
         ///
-        /// <paramref name="detailed"/> is the Alt expansion (spec §3 Converter row): off, each line names
+        /// <paramref name="detailed"/> is the Details expansion (spec §3 Converter row): off, each line names
         /// only the <em>result</em> (<c>→ Aoe</c> — "converts to"); on, it shows the full <em>from → to</em>
         /// (<c>Single → Aoe</c>). Color stays the presenter's job (direction only) — these are the semantic
         /// strings, uncolored, so the axis logic is unit-testable without driving Unity.
@@ -99,7 +99,7 @@ namespace Code.Runtime.UI.Inventory
             return parts;
         }
 
-        // One reclassified axis: "→ To" (result only), or with Alt the whole move "From → To".
+        // One reclassified axis: "→ To" (result only), or with Details mode the whole move "From → To".
         private static void AddAxis<T>(ICollection<string> parts, T before, T with, bool detailed)
             where T : struct, Enum
         {
@@ -116,12 +116,12 @@ namespace Code.Runtime.UI.Inventory
 
         /// <summary>
         /// A reactor's own <b>input</b> equation (spec §3 Reactor row): the modifier alone
-        /// (<c>ManaCost * 120 %</c>) or, under Alt, the full <c>[base X] modifier = result</c> equation —
+        /// (<c>ManaCost * 120 %</c>) or, under Details mode, the full <c>[base X] modifier = result</c> equation —
         /// the base/result read off whichever <see cref="WeaponStats"/> field <c>inputMod.stat</c>
         /// targets, from the piece's own before/with snapshot (so it reflects this reactor's marginal
         /// contribution, not the whole chain). <c>ProcChance</c> has no backing <see cref="WeaponStats"/>
         /// field (<see cref="WeaponStatResolver"/> drops it silently), so it falls back to the modifier
-        /// alone even under Alt. Empty when the modifier is a no-op (same additive threshold as
+        /// alone even under Details mode. Empty when the modifier is a no-op (same additive threshold as
         /// <see cref="Describe"/>), so the caller can skip the line entirely.
         /// </summary>
         public static string ReactorInputEquation(IReactorItem reactor, PieceDelta piece, bool detailed)
@@ -159,7 +159,7 @@ namespace Code.Runtime.UI.Inventory
 
         /// <summary>
         /// The per-attachment <b>active-delta content</b> (tooltip-redesign spec §3, slice 4): the §3
-        /// table's "active delta (no Alt)" column, read <em>intrinsically</em> from the item's own
+        /// table's "active delta (no Details)" column, read <em>intrinsically</em> from the item's own
         /// modifiers/axis — not from a chain diff. This is the "what does this piece do?" answer for an
         /// attachment's <em>own</em> hover:
         /// <list type="bullet">
@@ -168,11 +168,11 @@ namespace Code.Runtime.UI.Inventory
         ///   e.g. <c>ManaCost * 120 %</c>.</item>
         ///   <item><b>Shifter</b> — the input↔output economy trade.</item>
         ///   <item><b>Converter</b> — the target it converts <em>to</em>, e.g. <c>→ Aoe</c> (the <em>from</em>
-        ///   side is an Alt/later-slice concern).</item>
+        ///   side is a Details/later-slice concern).</item>
         /// </list>
         /// <b>Additive</b>: a numeric line appears only when its modifier is non-default, so future fields
-        /// don't force layout churn (spec §3 note). Non-attachments return an empty list. The Alt "before →
-        /// after" equation expansion is a later slice; this is the active (no-Alt) content only.
+        /// don't force layout churn (spec §3 note). Non-attachments return an empty list. The Details "before →
+        /// after" equation expansion is a later slice; this is the active (no-Details) content only.
         /// </summary>
         public static IReadOnlyList<string> Describe(ITetrisItem item)
         {

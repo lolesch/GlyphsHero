@@ -133,7 +133,7 @@ namespace Code.Runtime.UI.Inventory
             if (compareHeld != null)
             {
                 // Drag-compare render path (slice 8): a flat held-vs-slot standalone read — no chain
-                // topology and no Alt detail (leaving _cachedTopology null skips LateUpdate's alt rebuild).
+                // topology and no Details content (leaving _cachedTopology null skips LateUpdate's Details rebuild).
                 _cachedItem       = null;
                 _cachedTopology   = null;
                 _text.text        = BuildCompare(CompareBlock.Build(compareHeld, item));
@@ -243,7 +243,7 @@ namespace Code.Runtime.UI.Inventory
                 sb.AppendLine(new string('─', 24));
                 if (detailed)
                 {
-                    // Alt breadcrumb (tooltip-redesign §4): the chain in real connection order
+                    // Details breadcrumb (tooltip-redesign §4): the chain in real connection order
                     // (root → weapon), the hovered item bracketed. Replaces the deleted
                     // BuildChainSentence, whose ↓ diagram walked outward and read backwards to the grid.
                     sb.AppendLine(Breadcrumb.Build(chain, item));
@@ -384,7 +384,7 @@ namespace Code.Runtime.UI.Inventory
             if (!Mathf.Approximately(p.Before.ResourceCost, p.With.ResourceCost))
                 parts.Add($"cost {Stat(p.Before.ResourceCost, p.With.ResourceCost, detailed, invert: true)}");
             // Categorical axis reclassifications (a converter's Delivery/Affinity/Anchor/pool change).
-            // Under Alt these expand to the full "from → to" (spec §3 Converter row); factored into the
+            // Under Details mode these expand to the full "from → to" (spec §3 Converter row); factored into the
             // pure, testable PositionalDelta so the equation logic isn't buried in the MonoBehaviour.
             parts.AddRange(PositionalDelta.AxisDeltas(p, detailed));
 
@@ -392,7 +392,7 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition, else
-        /// the resolved attack interval — under Alt, the base interval leads it (spec §2.2).</summary>
+        /// the resolved attack interval — under Details mode, the base interval leads it (spec §2.2).</summary>
         private static string TerminalRate(IItemChain chain, float baseSpeed, float finalSpeed, bool detailed)
         {
             var reactor = chain.Root as IReactorItem

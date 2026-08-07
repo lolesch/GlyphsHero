@@ -5,7 +5,7 @@ using Code.Runtime.Modules.Inventory;
 namespace Code.Runtime.UI.Inventory
 {
     /// <summary>
-    /// The tooltip's Alt-only <b>breadcrumb</b> (tooltip-redesign spec 2026-06-30, §4, slice 6): a single
+    /// The tooltip's Details-only <b>breadcrumb</b> (tooltip-redesign spec 2026-06-30, §4, slice 6): a single
     /// horizontal path of a chain's items in <em>real connection order</em> — <c>Root → … → Weapon</c> —
     /// with the hovered item bracketed:
     /// <code>Reactor → Amp → [Iron Amp] → Crossblades</code>
