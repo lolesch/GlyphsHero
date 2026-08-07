@@ -6,19 +6,20 @@ using NUnit.Framework;
 namespace Code.Tests.EditMode.UI
 {
     /// <summary>
-    /// Locks the symmetric two-state model (tooltip-redesign spec §2, slice 5): <see cref="TwoStateBlock"/>
-    /// resolves every item's two states and <em>which is active</em> — a weapon's driving vs payload role,
-    /// an attachment's chained delta vs its loose unchained affix — from the <c>primaryActive</c> flag the
-    /// presenter passes (<c>isChained</c> for attachments, <c>!isPayload</c> for weapons).
+    /// Locks the symmetric two-state model (tooltip-redesign spec §2, slice 5; fixed order per issue #20):
+    /// <see cref="TwoStateBlock"/> resolves every item's two states, but their <em>render position</em> is
+    /// fixed regardless of which is live — <see cref="TwoStateView.Default"/> is always
+    /// Unchained/Driving, <see cref="TwoStateView.Secondary"/> is always Chained/Payload. Only
+    /// <see cref="ItemStateView.IsActive"/> tracks the <c>primaryActive</c> flag the presenter passes
+    /// (<c>isChained</c> for attachments, <c>!isPayload</c> for weapons).
     ///
-    /// Red-green: each case pins the Active/Other <see cref="ItemStateKind"/> arrangement and, where the
-    /// fakes make it deterministic, the exact content lines. Mutations that turn these red (a human can
-    /// confirm in Rider):
-    ///  - swapping the active/other order (ignoring <c>primaryActive</c>) → the Kind assertions flip;
-    ///  - sourcing the chained lines from something other than <see cref="PositionalDelta.Describe"/> →
-    ///    the amplifier/reactor content mismatches;
-    ///  - reading the wrong side of the affix (or dropping it) → the unchained lines mismatch;
-    ///  - building the driving line off the wrong axes → the delivery sentence changes.
+    /// Red-green: before issue #20's fix, <c>Build</c> swapped which <em>slot</em> (not just which
+    /// <c>IsActive</c> flag) each state landed in based on <c>primaryActive</c> — i.e.
+    /// <c>Build(item, primaryActive: true).Default.Kind</c> would be <c>Chained</c>, while
+    /// <c>Build(item, primaryActive: false).Default.Kind</c> would be <c>Unchained</c>. The
+    /// <c>*_DefaultSlotNeverMoves</c> tests below pin <c>Default.Kind</c>/<c>Secondary.Kind</c> as
+    /// constant across both values of <c>primaryActive</c> — reverting to the old swap-by-slot logic turns
+    /// them red immediately (a human can confirm in Rider by re-introducing the ternary swap).
     ///
     /// Fake defaults leaned on (ChainFakes): FakeWeapon Damage = 1, Single/Hostile/Target, no Payload;
     /// FakeAmplifier outputMod = Damage +1; FakeReactor = OnSelfHit + AttackSpeed +1; FakeDualAmplifier =
@@ -27,13 +28,37 @@ namespace Code.Tests.EditMode.UI
     [TestFixture]
     public sealed class TwoStateBlockTests
     {
-        // ── Weapon: driving ⇄ payload, active side follows primaryActive ───
+        // ── Fixed render position: Default/Secondary never swap slots ──────
+
+        [Test]
+        public void Weapon_DefaultSlotNeverMoves_DrivingFirstPayloadSecond(
+            [Values(true, false)] bool primaryActive)
+        {
+            var block = TwoStateBlock.Build(new FakeWeapon("w"), primaryActive);
+
+            block.Default.Kind.Should().Be(ItemStateKind.Driving);
+            block.Secondary.Kind.Should().Be(ItemStateKind.Payload);
+        }
+
+        [Test]
+        public void Attachment_DefaultSlotNeverMoves_UnchainedFirstChainedSecond(
+            [Values(true, false)] bool primaryActive)
+        {
+            var block = TwoStateBlock.Build(new FakeAmplifier("a"), primaryActive);
+
+            block.Default.Kind.Should().Be(ItemStateKind.Unchained);
+            block.Secondary.Kind.Should().Be(ItemStateKind.Chained);
+        }
+
+        // ── IsActive (not slot position) tracks primaryActive ──────────────
 
         [Test]
         public void Weapon_PrimaryActive_DrivingIsActive_PayloadIsOther()
         {
             var block = TwoStateBlock.Build(new FakeWeapon("w"), primaryActive: true);
 
+            block.Default.IsActive.Should().BeTrue();   // Driving
+            block.Secondary.IsActive.Should().BeFalse(); // Payload
             block.Active.Kind.Should().Be(ItemStateKind.Driving);
             block.Other.Kind.Should().Be(ItemStateKind.Payload);
         }
@@ -43,6 +68,8 @@ namespace Code.Tests.EditMode.UI
         {
             var block = TwoStateBlock.Build(new FakeWeapon("w"), primaryActive: false);
 
+            block.Default.IsActive.Should().BeFalse();  // Driving, now dim
+            block.Secondary.IsActive.Should().BeTrue(); // Payload, now live
             block.Active.Kind.Should().Be(ItemStateKind.Payload);
             block.Other.Kind.Should().Be(ItemStateKind.Driving);
         }
@@ -52,19 +79,17 @@ namespace Code.Tests.EditMode.UI
         {
             var block = TwoStateBlock.Build(new FakeWeapon("w"), primaryActive: true);
 
-            block.Active.Lines.Should().Equal("1.0 dmg", "Strikes a single enemy at the target");
+            block.Default.Lines.Should().Equal("1.0 dmg", "Strikes a single enemy at the target");
         }
-
-        // ── Attachment: chained ⇄ unchained, active side follows primaryActive ──
 
         [Test]
         public void Amplifier_Chained_ChainedActive_ShowsOutputMod()
         {
             var block = TwoStateBlock.Build(new FakeAmplifier("a"), primaryActive: true);
 
-            block.Active.Kind.Should().Be(ItemStateKind.Chained);
-            block.Active.Lines.Should().Equal("Damage +1"); // PositionalDelta.Describe(amp)
-            block.Other.Kind.Should().Be(ItemStateKind.Unchained);
+            block.Secondary.IsActive.Should().BeTrue(); // Chained
+            block.Secondary.Lines.Should().Equal("Damage +1"); // PositionalDelta.Describe(amp)
+            block.Default.IsActive.Should().BeFalse();  // Unchained, dim
         }
 
         [Test]
@@ -72,8 +97,8 @@ namespace Code.Tests.EditMode.UI
         {
             var block = TwoStateBlock.Build(new FakeAmplifier("a"), primaryActive: false);
 
-            block.Active.Kind.Should().Be(ItemStateKind.Unchained);
-            block.Other.Kind.Should().Be(ItemStateKind.Chained);
+            block.Default.IsActive.Should().BeTrue();    // Unchained
+            block.Secondary.IsActive.Should().BeFalse(); // Chained, dim
         }
 
         [Test]
@@ -81,8 +106,8 @@ namespace Code.Tests.EditMode.UI
         {
             var block = TwoStateBlock.Build(new FakeReactor("r"), primaryActive: true);
 
-            block.Active.Kind.Should().Be(ItemStateKind.Chained);
-            block.Active.Lines.Should().Equal("fires when hit", "AttackSpeed +1");
+            block.Secondary.Kind.Should().Be(ItemStateKind.Chained);
+            block.Secondary.Lines.Should().Equal("fires when hit", "AttackSpeed +1");
         }
 
         // ── The loose affix is the unchained state's content ──────────────
@@ -93,10 +118,10 @@ namespace Code.Tests.EditMode.UI
             // FakeDualAmplifier is both an output amplifier (Damage +2) and a loose affix (LifeMax +5).
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: true);
 
-            block.Active.Kind.Should().Be(ItemStateKind.Chained);
-            block.Active.Lines.Should().Equal("Damage +2");
-            block.Other.Kind.Should().Be(ItemStateKind.Unchained);
-            block.Other.Lines.Should().Equal("LifeMax +5");
+            block.Secondary.Kind.Should().Be(ItemStateKind.Chained);
+            block.Secondary.Lines.Should().Equal("Damage +2");
+            block.Default.Kind.Should().Be(ItemStateKind.Unchained);
+            block.Default.Lines.Should().Equal("LifeMax +5");
         }
 
         [Test]
@@ -105,8 +130,19 @@ namespace Code.Tests.EditMode.UI
             // A plain FakeAmplifier is not an IAttachmentItem, so it carries no loose affix.
             var block = TwoStateBlock.Build(new FakeAmplifier("a"), primaryActive: true);
 
-            block.Other.Kind.Should().Be(ItemStateKind.Unchained);
-            block.Other.Lines.Should().BeEmpty();
+            block.Default.Kind.Should().Be(ItemStateKind.Unchained);
+            block.Default.Lines.Should().BeEmpty();
+        }
+
+        // ── Glyph labels replace the old plain-text state labels ───────────
+
+        [Test]
+        public void EachState_LabelIsItsGlyph_NotPlainText()
+        {
+            var block = TwoStateBlock.Build(new FakeWeapon("w"), primaryActive: true);
+
+            block.Default.Label.Should().Be(StateGlyphs.For(ItemStateKind.Driving));
+            block.Secondary.Label.Should().Be(StateGlyphs.For(ItemStateKind.Payload));
         }
     }
 }

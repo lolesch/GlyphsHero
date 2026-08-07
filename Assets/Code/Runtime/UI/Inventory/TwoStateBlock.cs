@@ -10,8 +10,7 @@ namespace Code.Runtime.UI.Inventory
     /// The tooltip's <b>symmetric two-state model</b> (tooltip-redesign spec 2026-06-30, §2, slice 5):
     /// every item has two states and <em>both are always shown</em> — the live one emphasised, the other
     /// dim. This is the pure, Unity-free logic that decides <em>which two states</em> an item has and
-    /// <em>which is active</em>; the presenter (the tooltip) supplies the bold/dim emphasis (the only
-    /// state marker — there is no badge).
+    /// <em>which is active</em>; the presenter (the tooltip) supplies the bold/dim emphasis.
     ///
     /// The two states by item family:
     /// <list type="bullet">
@@ -27,8 +26,10 @@ namespace Code.Runtime.UI.Inventory
     ///
     /// <paramref name="primaryActive"/> tells the builder whether the <em>primary</em> state (chained for
     /// an attachment, driving for a weapon) is the live one, so the caller passes <c>isChained</c> for an
-    /// attachment and <c>!isPayload</c> for a weapon. The Alt "before → after" math expansion is a later
-    /// slice; this is the active-vs-other framing and the no-Alt content only.
+    /// attachment and <c>!isPayload</c> for a weapon. Render <b>position</b> is fixed regardless of which
+    /// side is live (issue #20): <see cref="TwoStateView.Default"/> is always Unchained/Driving,
+    /// <see cref="TwoStateView.Secondary"/> is always Chained/Payload — only <see cref="ItemStateView.IsActive"/>
+    /// tracks <paramref name="primaryActive"/>, so the layout no longer jumps when the live side flips.
     /// </summary>
     public static class TwoStateBlock
     {
@@ -38,11 +39,11 @@ namespace Code.Runtime.UI.Inventory
             {
                 case IWeaponItem weapon:
                 {
-                    var driving = new ItemStateView(ItemStateKind.Driving, "as driving weapon", DrivingLines(weapon));
-                    var payload = new ItemStateView(ItemStateKind.Payload, "as payload", PayloadLines(weapon));
-                    return primaryActive
-                        ? new TwoStateView(driving, payload)
-                        : new TwoStateView(payload, driving);
+                    var driving = new ItemStateView(ItemStateKind.Driving, StateGlyphs.For(ItemStateKind.Driving),
+                        DrivingLines(weapon), isActive: primaryActive);
+                    var payload = new ItemStateView(ItemStateKind.Payload, StateGlyphs.For(ItemStateKind.Payload),
+                        PayloadLines(weapon), isActive: !primaryActive);
+                    return new TwoStateView(driving, payload);
                 }
 
                 case IAmplifierItem:
@@ -50,17 +51,15 @@ namespace Code.Runtime.UI.Inventory
                 case IReactorItem:
                 case IConverterItem:
                 {
-                    var chained   = new ItemStateView(ItemStateKind.Chained, "chained",
-                        PositionalDelta.Describe(item));
-                    var unchained = new ItemStateView(ItemStateKind.Unchained, "unchained",
-                        AffixLines(item as IAttachmentItem));
-                    return primaryActive
-                        ? new TwoStateView(chained, unchained)
-                        : new TwoStateView(unchained, chained);
+                    var unchained = new ItemStateView(ItemStateKind.Unchained, StateGlyphs.For(ItemStateKind.Unchained),
+                        AffixLines(item as IAttachmentItem), isActive: !primaryActive);
+                    var chained = new ItemStateView(ItemStateKind.Chained, StateGlyphs.For(ItemStateKind.Chained),
+                        PositionalDelta.Describe(item), isActive: primaryActive);
+                    return new TwoStateView(unchained, chained);
                 }
 
                 default:
-                    var empty = new ItemStateView(ItemStateKind.Chained, "", Array.Empty<string>());
+                    var empty = new ItemStateView(ItemStateKind.Chained, "", Array.Empty<string>(), isActive: true);
                     return new TwoStateView(empty, empty);
             }
         }
@@ -101,35 +100,48 @@ namespace Code.Runtime.UI.Inventory
     public enum ItemStateKind { Chained, Unchained, Driving, Payload }
 
     /// <summary>
-    /// One of an item's two states: its <see cref="Kind"/>, a player-facing <see cref="Label"/>, and the
-    /// content <see cref="Lines"/> for that state (empty when the state carries nothing). Keeping the raw
-    /// lines (rather than a formatted, emphasised string) is what makes the two-state model unit-testable
-    /// without driving Unity — the presenter adds the bold/dim emphasis.
+    /// One of an item's two states: its <see cref="Kind"/>, a player-facing glyph <see cref="Label"/>, the
+    /// content <see cref="Lines"/> for that state (empty when the state carries nothing), and whether this
+    /// is the currently-live state (<see cref="IsActive"/>). Keeping the raw lines (rather than a
+    /// formatted, emphasised string) is what makes the two-state model unit-testable without driving
+    /// Unity — the presenter reads <see cref="IsActive"/> to add the bold/dim emphasis.
     /// </summary>
     public readonly struct ItemStateView
     {
-        public ItemStateKind        Kind  { get; }
-        public string               Label { get; }
-        public IReadOnlyList<string> Lines { get; }
+        public ItemStateKind        Kind     { get; }
+        public string               Label    { get; }
+        public IReadOnlyList<string> Lines   { get; }
+        public bool                 IsActive { get; }
 
-        public ItemStateView(ItemStateKind kind, string label, IReadOnlyList<string> lines)
+        public ItemStateView(ItemStateKind kind, string label, IReadOnlyList<string> lines, bool isActive)
         {
-            Kind  = kind;
-            Label = label;
-            Lines = lines;
+            Kind     = kind;
+            Label    = label;
+            Lines    = lines;
+            IsActive = isActive;
         }
     }
 
-    /// <summary>An item's two states with the live one already resolved to <see cref="Active"/>.</summary>
+    /// <summary>
+    /// An item's two states in <b>fixed render position</b> (issue #20) — <see cref="Default"/> is always
+    /// Unchained (attachment) / Driving (weapon), <see cref="Secondary"/> is always Chained (attachment) /
+    /// Payload (weapon), secondary rendered below a divider. Which one is live moves with
+    /// <c>primaryActive</c> via <see cref="ItemStateView.IsActive"/>, not position. <see cref="Active"/>/
+    /// <see cref="Other"/> are convenience lookups for callers that only need "the live one" or "the dim
+    /// one" without caring which fixed slot it landed in.
+    /// </summary>
     public readonly struct TwoStateView
     {
-        public ItemStateView Active { get; }
-        public ItemStateView Other  { get; }
+        public ItemStateView Default   { get; }
+        public ItemStateView Secondary { get; }
 
-        public TwoStateView(ItemStateView active, ItemStateView other)
+        public TwoStateView(ItemStateView @default, ItemStateView secondary)
         {
-            Active = active;
-            Other  = other;
+            Default   = @default;
+            Secondary = secondary;
         }
+
+        public ItemStateView Active => Default.IsActive ? Default : Secondary;
+        public ItemStateView Other  => Default.IsActive ? Secondary : Default;
     }
 }

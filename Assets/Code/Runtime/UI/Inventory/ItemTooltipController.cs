@@ -261,8 +261,7 @@ namespace Code.Runtime.UI.Inventory
                     // Symmetric two-state (slice 5): the active role renders in full above; show the
                     // weapon's *other* role (a driving weapon "as payload", a payload "as driving
                     // weapon") dim beneath — both states always visible, emphasis the only marker.
-                    AppendState(sb, TwoStateBlock.Build(weaponItem, primaryActive: !payloadRole).Other,
-                        emphasized: false);
+                    AppendState(sb, TwoStateBlock.Build(weaponItem, primaryActive: !payloadRole).Other);
                 }
                 else
                     AppendChainOutput(sb, chain, item, detailed);
@@ -486,22 +485,23 @@ namespace Code.Runtime.UI.Inventory
             if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
                 return;
 
-            // Symmetric two-state (tooltip-redesign spec §2, slice 5): both the chained delta and the
-            // loose unchained affix are always shown; the live one (chained in a chain, the affix
-            // standalone — ADR-0004 item roles) is emphasised, the other dim. Emphasis is the only marker.
+            // Symmetric two-state (tooltip-redesign spec §2, slice 5; fixed order per issue #20): both the
+            // chained delta and the loose unchained affix are always shown, always in the same order
+            // (Unchained then Chained) — the live one (chained in a chain, the affix standalone — ADR-0004
+            // item roles) is emphasised, the other dim, but position never moves.
             var block = TwoStateBlock.Build(item, primaryActive: isChained);
-            AppendState(sb, block.Active, emphasized: true);
-            AppendState(sb, block.Other,  emphasized: false);
+            AppendState(sb, block.Default);
+            AppendState(sb, block.Secondary);
         }
 
-        /// <summary>Renders one <see cref="ItemStateView"/> as a <c>label:   lines…</c> row, bold when the
-        /// state is the live one and dim otherwise — the sole state marker (no badge). An empty state
-        /// prints a dim em-dash so the symmetry (both states always shown) stays visible.</summary>
-        private static void AppendState(StringBuilder sb, in ItemStateView state, bool emphasized)
+        /// <summary>Renders one <see cref="ItemStateView"/> as a <c>glyph label:   lines…</c> row, bold
+        /// when <see cref="ItemStateView.IsActive"/> and dim otherwise — the sole state marker (no badge).
+        /// An empty state prints a dim em-dash so the symmetry (both states always shown) stays visible.</summary>
+        private static void AppendState(StringBuilder sb, in ItemStateView state)
         {
             var body = state.Lines.Count > 0 ? string.Join("   ·   ", state.Lines) : "—";
             var line = $"{state.Label}:   {body}";
-            sb.AppendLine(emphasized ? $"  <b>{line}</b>" : $"  {line.Colored(LightGray)}");
+            sb.AppendLine(state.IsActive ? $"  <b>{line}</b>" : $"  {line.Colored(LightGray)}");
         }
 
         /// <summary>A weapon sitting alone (no chain): it fires on its own timer with its base stats.</summary>
@@ -513,7 +513,7 @@ namespace Code.Runtime.UI.Inventory
             sb.AppendLine($"  every {Interval((float)w.AttackSpeed)}   ·   cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
 
             // Symmetric two-state (slice 5): a loose weapon is driving; show its dim "as payload" state.
-            AppendState(sb, TwoStateBlock.Build(w, primaryActive: true).Other, emphasized: false);
+            AppendState(sb, TwoStateBlock.Build(w, primaryActive: true).Other);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────
