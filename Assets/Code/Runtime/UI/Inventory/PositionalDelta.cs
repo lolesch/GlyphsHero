@@ -193,6 +193,18 @@ namespace Code.Runtime.UI.Inventory
             }
         }
 
+        /// <summary>
+        /// Whether <paramref name="item"/> belongs to the chain's <b>upstream trigger family</b> —
+        /// Reactor and Shifter, the two candidates <c>ChainResolver</c> walks upstream to find a chain's
+        /// root (CLAUDE.md: "root ... resolved by walking upstream to the furthest trigger — a
+        /// Shifter/Reactor — else the weapon itself") — as opposed to the <b>downstream magnitude-modifier
+        /// family</b> (Amplifier, Converter). Issue #18: the weapon's piece list previously gave Shifter
+        /// the same "both equations" numeric-diff framing as Amplifier, which misrepresented its role;
+        /// this is the presentation-side classification the piece list groups by, so Shifter renders with
+        /// Reactor's framing instead. Purely a rendering split — <c>ChainResolver</c> itself is untouched.
+        /// </summary>
+        public static bool IsUpstreamFamily(ITetrisItem item) => item is IReactorItem or IShifterItem;
+
         /// <summary>Player-facing firing-condition phrase for a reactor's trigger event. Shared by the
         /// attachment view, the weapon's terminal rate line, and the piece list so there is one map.</summary>
         public static string FiringCondition(ReactorType type) => type switch

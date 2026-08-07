@@ -115,5 +115,46 @@ namespace Code.Tests.EditMode.UI
 
             PositionalDelta.Pieces(chain).Should().BeEmpty();
         }
+
+        // ── IsUpstreamFamily: piece-list visual grouping (issue #18) ───────
+
+        [Test]
+        public void IsUpstreamFamily_Reactor_IsTrue() =>
+            PositionalDelta.IsUpstreamFamily(new FakeReactor("r")).Should().BeTrue();
+
+        [Test]
+        public void IsUpstreamFamily_Shifter_IsTrue() =>
+            PositionalDelta.IsUpstreamFamily(new FakeShifter("s")).Should().BeTrue();
+
+        [Test]
+        public void IsUpstreamFamily_Amplifier_IsFalse() =>
+            PositionalDelta.IsUpstreamFamily(new FakeAmplifier("a")).Should().BeFalse();
+
+        [Test]
+        public void IsUpstreamFamily_Converter_IsFalse() =>
+            PositionalDelta.IsUpstreamFamily(new FakeConverter("c")).Should().BeFalse();
+
+        [Test]
+        public void IsUpstreamFamily_Weapon_IsFalse() =>
+            PositionalDelta.IsUpstreamFamily(new FakeWeapon("w")).Should().BeFalse();
+
+        // Issue #18 acceptance scenario verbatim: [Reactor, Shifter, Amplifier, Weapon], Reactor root —
+        // Shifter must classify with Reactor's upstream family, distinct from Amplifier's.
+        [Test]
+        public void Pieces_ReactorShifterAmplifierChain_ShifterGroupsWithReactorNotAmplifier()
+        {
+            var reactor   = new FakeReactor("r");
+            var shifter   = new FakeShifter("s");
+            var amplifier = new FakeAmplifier("a");
+            var weapon    = new FakeWeapon("w");
+            var chain     = Chain(reactor, shifter, amplifier, weapon);
+
+            var pieces = PositionalDelta.Pieces(chain);
+
+            pieces.Should().HaveCount(3); // reactor, shifter, amplifier — weapon excluded
+            PositionalDelta.IsUpstreamFamily(pieces[0].Item).Should().BeTrue();  // reactor
+            PositionalDelta.IsUpstreamFamily(pieces[1].Item).Should().BeTrue();  // shifter
+            PositionalDelta.IsUpstreamFamily(pieces[2].Item).Should().BeFalse(); // amplifier
+        }
     }
 }

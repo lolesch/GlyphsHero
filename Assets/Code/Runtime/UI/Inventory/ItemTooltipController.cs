@@ -341,6 +341,13 @@ namespace Code.Runtime.UI.Inventory
                 return line.Colored(LightGray);
             }
 
+            // Shifter is the piece list's other upstream-family member (issue #18): its own economy
+            // trade is one semantic move, not a per-stat magnitude diff, so it shares Reactor's
+            // non-diff, uncolored-by-direction framing instead of falling into the generic dmg/rate/cost
+            // diff below (which stays the Amplifier/Converter — downstream-family — treatment).
+            if (PositionalDelta.IsUpstreamFamily(p.Item))
+                return string.Join("   ", PositionalDelta.Describe(p.Item)).Colored(LightGray);
+
             var parts = new List<string>();
             if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
                 parts.Add($"{Stat(p.Before.Damage, p.With.Damage, detailed)} dmg");
