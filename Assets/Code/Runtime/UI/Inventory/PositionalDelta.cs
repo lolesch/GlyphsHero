@@ -33,6 +33,25 @@ namespace Code.Runtime.UI.Inventory
         public static WeaponStats Totals(IItemChain chain) => WeaponStatResolver.Resolve(chain);
 
         /// <summary>
+        /// Which of the weapon's terminal stats (issue #19) the chain actually touched — one flag per
+        /// numeric <see cref="WeaponStats"/> field the weapon-totals line renders. A stat counts as
+        /// changed when the resolved total differs from the weapon's own base (zero contributors) by
+        /// more than the additive no-op <see cref="Epsilon"/>, so the totals renderer can skip a line
+        /// entirely rather than repeat a value nothing in the chain moved.
+        /// </summary>
+        public static TerminalStats ChangedStats(IItemChain chain)
+        {
+            var weapon = chain.Weapon;
+            if (weapon == null) return default;
+
+            var totals = Totals(chain);
+            return new TerminalStats(
+                Math.Abs((float)weapon.Damage - totals.Damage) > Epsilon,
+                Math.Abs((float)weapon.AttackSpeed - totals.AttackSpeed) > Epsilon,
+                Math.Abs((float)weapon.ResourceCost - totals.ResourceCost) > Epsilon);
+        }
+
+        /// <summary>
         /// The ordered per-piece marginal deltas. Apply order = <see cref="OrderedItems"/> (root first,
         /// then modifiers) — the same order <see cref="WeaponStatResolver"/> folds contributors in, so a
         /// piece's "before" is the chain up to but excluding it and its "with" includes it. Weapons (the
@@ -94,16 +113,6 @@ namespace Code.Runtime.UI.Inventory
             if (before == with) return;
             parts.Add(detailed ? $"pool {before} → {with}" : $"pool → {with}");
         }
-
-        /// <summary>
-        /// The driving weapon's terminal <b>base → final</b> equation (spec §2.2 / §3 "Weapon — driving"
-        /// row): the chain's final value is a terminal readout, not a delta, so it is never colored —
-        /// without Alt only the final value shows, with Alt the base leads it. Takes pre-formatted value
-        /// strings: each stat's own display format (F1 damage, seconds interval, …) stays the caller's
-        /// job; this is only the equation shape, kept pure so it's unit-testable.
-        /// </summary>
-        public static string BaseFinal(string baseValue, string finalValue, bool detailed) =>
-            detailed ? $"base {baseValue} → final {finalValue}" : finalValue;
 
         /// <summary>
         /// A reactor's own <b>input</b> equation (spec §3 Reactor row): the modifier alone
@@ -271,6 +280,22 @@ namespace Code.Runtime.UI.Inventory
             Item   = item;
             Before = before;
             With   = with;
+        }
+    }
+
+    /// <summary>Per-stat "did the chain touch this?" flags for the weapon's terminal totals (issue #19)
+    /// — see <see cref="PositionalDelta.ChangedStats"/>.</summary>
+    public readonly struct TerminalStats
+    {
+        public bool DamageChanged      { get; }
+        public bool AttackSpeedChanged { get; }
+        public bool CostChanged        { get; }
+
+        public TerminalStats(bool damageChanged, bool attackSpeedChanged, bool costChanged)
+        {
+            DamageChanged      = damageChanged;
+            AttackSpeedChanged = attackSpeedChanged;
+            CostChanged        = costChanged;
         }
     }
 }

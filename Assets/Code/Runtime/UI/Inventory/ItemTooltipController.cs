@@ -36,6 +36,8 @@ namespace Code.Runtime.UI.Inventory
         private ITetrisItem   _pendingCompareHeld; // its held counterpart while the show coroutine waits
 
         private static readonly Color LightGray = new(0.7f, 0.7f, 0.7f);
+        private static readonly Color StatUp    = new(0f, 1f, 0.53f);
+        private static readonly Color StatDown  = new(1f, 0.27f, 0.27f);
 
         private void Awake()
         {
@@ -300,20 +302,41 @@ namespace Code.Runtime.UI.Inventory
         /// </summary>
         private static void AppendWeaponTerminal(StringBuilder sb, IItemChain chain, bool detailed)
         {
-            var totals = PositionalDelta.Totals(chain);
-            var weapon = chain.Weapon;
+            var totals  = PositionalDelta.Totals(chain);
+            var weapon  = chain.Weapon;
+            var changed = PositionalDelta.ChangedStats(chain);
 
             var reactorDriven = chain.Root is IReactorItem;
             sb.AppendLine(reactorDriven ? "<b>Attack:</b>  (reactor-driven)" : "<b>Attack:</b>");
-            var dmgStr = PositionalDelta.BaseFinal($"{(float)weapon.Damage:F1}", $"{(float)totals.Damage:F1}", detailed);
-            sb.AppendLine($"  dmg  {dmgStr}   {TerminalRate(chain, (float)weapon.AttackSpeed, totals.AttackSpeed, detailed)}");
+
+            // Issue #19: a stat line only appears when the chain actually touched it — dmg/rate/cost
+            // each stay silent when nothing in the chain moved them, rather than repeating the
+            // weapon's own base value.
+            var dmgPart = changed.DamageChanged
+                ? $"dmg  {TerminalStat((float)weapon.Damage, (float)totals.Damage, detailed)}"
+                : null;
+            // The firing condition isn't itself a stat delta, so a reactor-driven chain always keeps
+            // its rate line even when AttackSpeed happens to be unchanged.
+            var ratePart = reactorDriven || changed.AttackSpeedChanged
+                ? TerminalRate(chain, (float)weapon.AttackSpeed, totals.AttackSpeed, detailed)
+                : null;
+
+            if (dmgPart != null || ratePart != null)
+            {
+                var parts = new[] { dmgPart, ratePart }.Where(s => s != null);
+                sb.AppendLine($"  {string.Join("   ", parts)}");
+            }
+
             sb.AppendLine($"  {DeliverySentence.Build(totals.Delivery, totals.Affinity, totals.Anchor, 0)}");
+
             // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
-            // cover it, nothing fires.
-            var costStr = PositionalDelta.BaseFinal(
-                $"{(float)weapon.ResourceCost:F1}", $"{(float)totals.ResourceCost:F1}", detailed);
-            sb.AppendLine($"  cost {costStr} [{totals.CostResource}]" +
-                          "   (root gate)".Colored(LightGray));
+            // cover it, nothing fires. Silent when the chain never moved the cost off base.
+            if (changed.CostChanged)
+            {
+                var costStr = TerminalStat((float)weapon.ResourceCost, (float)totals.ResourceCost, detailed, invert: true);
+                sb.AppendLine($"  cost {costStr} [{totals.CostResource}]" +
+                              "   (root gate)".Colored(LightGray));
+            }
 
             foreach (var piece in PositionalDelta.Pieces(chain))
                 sb.AppendLine(PieceLine(piece, detailed));
@@ -377,8 +400,10 @@ namespace Code.Runtime.UI.Inventory
             if (reactor != null)
                 return $"fires {PositionalDelta.FiringCondition(reactor.ReactorType)}";
 
-            var intervalStr = PositionalDelta.BaseFinal(Interval(baseSpeed), Interval(finalSpeed), detailed);
-            return $"every {intervalStr}";
+            // Lower interval (higher AttackSpeed) is the improvement — invert like the per-piece FireRate.
+            var before = baseSpeed  > 0f ? 1f / baseSpeed  : 0f;
+            var after  = finalSpeed > 0f ? 1f / finalSpeed : 0f;
+            return $"every {TerminalStat(before, after, detailed, invert: true, unit: "s")}";
         }
 
         private static void AppendChainOutput(StringBuilder sb, IItemChain chain,
@@ -479,10 +504,30 @@ namespace Code.Runtime.UI.Inventory
                 return $"{after:F1}";
 
             var improved  = invert ? after < before : after > before;
-            var color     = improved ? new Color(0f, 1f, 0.53f) : new Color(1f, 0.27f, 0.27f);
+            var color     = improved ? StatUp : StatDown;
             var resultStr = $"{after:F1}".Colored(color);
 
             return detailed ? $"{before:F1} → {resultStr}" : resultStr;
+        }
+
+        /// <summary>
+        /// The weapon-terminal stat line (issue #19): unlike <see cref="Stat"/>'s before→after arrow
+        /// (a piece's marginal move), this answers "how far is the terminal value from the weapon's own
+        /// base" — default mode shows a single colored resolved value; Details mode shows the base value
+        /// followed by the colored delta magnitude. Only called once <see cref="TerminalStats"/> has
+        /// already gated the stat as changed, so before/after are never equal here.
+        /// </summary>
+        private static string TerminalStat(float before, float after, bool detailed, bool invert = false, string unit = "")
+        {
+            var improved = invert ? after < before : after > before;
+            var color    = improved ? StatUp : StatDown;
+
+            if (!detailed)
+                return $"{after:F1}{unit}".Colored(color);
+
+            var delta    = after - before;
+            var deltaStr = $"{(delta >= 0f ? "+" : "")}{delta:F1}{unit}".Colored(color);
+            return $"{before:F1}{unit}  {deltaStr}";
         }
 
         // ── Item stats display ────────────────────────────────────────────

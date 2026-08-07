@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Code.Data.Enums;
 using Code.Runtime.Modules.Inventory;
 using Code.Runtime.UI.Inventory;
 using Code.Tests.EditMode.Inventory.Fakes;
@@ -114,6 +115,74 @@ namespace Code.Tests.EditMode.UI
             var chain = Chain(new FakeAmplifier("a1"), new FakeAmplifier("a2"));
 
             PositionalDelta.Pieces(chain).Should().BeEmpty();
+        }
+
+        // ── ChangedStats: weapon-totals gating (issue #19) ─────────────────
+
+        [Test]
+        public void ChangedStats_DamageOnlyChain_FlagsDamageOnly()
+        {
+            var weapon = new FakeWeapon("w");
+            var chain  = Chain(weapon, new FakeAmplifier("a")); // outputMod Damage +1 (flat)
+
+            var changed = PositionalDelta.ChangedStats(chain);
+
+            changed.DamageChanged.Should().BeTrue();
+            changed.AttackSpeedChanged.Should().BeFalse();
+            changed.CostChanged.Should().BeFalse();
+        }
+
+        [Test]
+        public void ChangedStats_ReactorRoot_FlagsAttackSpeedOnly()
+        {
+            var reactor = new FakeReactor("r"); // inputMod AttackSpeed +1 (flat)
+            var weapon  = new FakeWeapon("w");
+            var chain   = Chain(reactor, weapon);
+
+            var changed = PositionalDelta.ChangedStats(chain);
+
+            changed.DamageChanged.Should().BeFalse();
+            changed.AttackSpeedChanged.Should().BeTrue();
+            changed.CostChanged.Should().BeFalse();
+        }
+
+        [Test]
+        public void ChangedStats_ManaCostModifier_FlagsCostOnly()
+        {
+            var reactor = new StatReactor(Mods.Input(WeaponInputStat.ManaCost, Mods.Flat(5f)));
+            var weapon  = new StatWeapon(damage: 1f, attackSpeed: 1f, resourceCost: 10f);
+            var chain   = Chain(reactor, weapon);
+
+            var changed = PositionalDelta.ChangedStats(chain);
+
+            changed.DamageChanged.Should().BeFalse();
+            changed.AttackSpeedChanged.Should().BeFalse();
+            changed.CostChanged.Should().BeTrue();
+        }
+
+        [Test]
+        public void ChangedStats_NoContributors_AllFalse()
+        {
+            var weapon = new FakeWeapon("w");
+            var chain  = Chain(weapon); // root is the weapon itself, no modifiers
+
+            var changed = PositionalDelta.ChangedStats(chain);
+
+            changed.DamageChanged.Should().BeFalse();
+            changed.AttackSpeedChanged.Should().BeFalse();
+            changed.CostChanged.Should().BeFalse();
+        }
+
+        [Test]
+        public void ChangedStats_NoWeapon_AllFalse()
+        {
+            var chain = Chain(new FakeAmplifier("a"));
+
+            var changed = PositionalDelta.ChangedStats(chain);
+
+            changed.DamageChanged.Should().BeFalse();
+            changed.AttackSpeedChanged.Should().BeFalse();
+            changed.CostChanged.Should().BeFalse();
         }
 
         // ── IsUpstreamFamily: piece-list visual grouping (issue #18) ───────

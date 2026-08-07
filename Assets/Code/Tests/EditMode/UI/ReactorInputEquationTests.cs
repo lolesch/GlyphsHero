@@ -9,38 +9,6 @@ using NUnit.Framework;
 namespace Code.Tests.EditMode.UI
 {
     /// <summary>
-    /// Locks the driving weapon's terminal <b>base → final</b> equation (tooltip-redesign spec §2.2 /
-    /// §3 "Weapon — driving" row, slice 6): <see cref="PositionalDelta.BaseFinal"/> is a plain readout
-    /// shape (never a direction-colored delta — the caller supplies pre-colored/pre-formatted strings),
-    /// so this only pins the equation shape itself.
-    ///
-    /// Red-green: a build that ignores <c>detailed</c> and always/never shows the base fails one of the
-    /// two cases below.
-    /// </summary>
-    [TestFixture]
-    public sealed class TerminalEquationTests
-    {
-        [Test]
-        public void Plain_ShowsOnlyTheFinalValue()
-        {
-            PositionalDelta.BaseFinal("12.0", "18.0", detailed: false).Should().Be("18.0");
-        }
-
-        [Test]
-        public void Alt_ShowsBaseThenFinal()
-        {
-            PositionalDelta.BaseFinal("12.0", "18.0", detailed: true).Should().Be("base 12.0 → final 18.0");
-        }
-
-        [Test]
-        public void Plain_SameBaseAndFinal_StillJustShowsTheValue()
-        {
-            // No change at all is still a valid terminal readout — no phantom equation.
-            PositionalDelta.BaseFinal("12.0", "12.0", detailed: false).Should().Be("12.0");
-        }
-    }
-
-    /// <summary>
     /// Locks the reactor's own <b>input</b> equation (tooltip-redesign spec §2.1 / §3 Reactor row,
     /// slice 6 remainder): <see cref="PositionalDelta.ReactorInputEquation"/> is the modifier alone
     /// without Alt, or the full <c>[base X] modifier = result</c> equation with Alt — read off whichever
