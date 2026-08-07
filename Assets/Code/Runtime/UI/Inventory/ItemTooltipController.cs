@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Code.Data;
 using Code.Data.Enums;
 using Code.Data.Items.Weapon;
 using Code.Runtime.Modules.Inventory;
@@ -22,6 +23,13 @@ namespace Code.Runtime.UI.Inventory
         [SerializeField] private TMP_Text      _text;
         [SerializeField] private Canvas        _canvas;
         [SerializeField] private float         _showDelay = 0.4f;
+
+        // Header icon (v2 slice 5, issue #21): a real Image element, distinct from the in-grid
+        // slot icon (SlotView) — noticeably larger, bound to the same item.Icon sprite. Not yet
+        // wired in the prefab; see the slice ledger for the manual Inspector step.
+        [Header("Header icon")]
+        [SerializeField] private Image _headerIcon;
+        [SerializeField] private float _headerIconSize = Const.InventoryCellSize * 2f;
 
         private float         _anchoredX;
         private Coroutine     _pendingShow;
@@ -47,6 +55,15 @@ namespace Code.Runtime.UI.Inventory
                 Debug.LogWarning("Assign _canvas in Inspector.", this);
             }
             _panel.gameObject.SetActive(false);
+
+            // Top-right of the header, fixed regardless of the panel's content-driven width — mirrors
+            // SlotView's one-time anchor setup for its grid icon.
+            if (_headerIcon != null)
+            {
+                _headerIcon.rectTransform.anchorMin = new Vector2(1, 1);
+                _headerIcon.rectTransform.anchorMax = new Vector2(1, 1);
+                _headerIcon.rectTransform.pivot     = new Vector2(1, 1);
+            }
         }
 
         private void LateUpdate()
@@ -147,6 +164,13 @@ namespace Code.Runtime.UI.Inventory
                 _altWasPressed  = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
                 _text.text      = BuildTooltip(item, topology, _altWasPressed);
 
+                if (_headerIcon != null)
+                {
+                    _headerIcon.sprite                  = item.Icon;
+                    _headerIcon.enabled                 = item.Icon != null;
+                    _headerIcon.rectTransform.sizeDelta = Vector2.one * _headerIconSize;
+                }
+
                 var primaryChain  = PrimaryChain(item, topology);
                 var isWeaponRoot  = item is IWeaponItem && primaryChain != null && !IsPayload(item, primaryChain);
                 _panelFrame.color = ChainComponentColors.GetColor(item, isWeaponRoot);
@@ -216,14 +240,11 @@ namespace Code.Runtime.UI.Inventory
             var isPayload    = item is IWeaponItem && primaryChain != null && IsPayload(item, primaryChain);
             var isWeaponRoot = item is IWeaponItem && !isPayload;
 
-            // Header: name + component tag, coloured by true root/payload state (red root, purple
-            // payload) — not by "is a weapon", which mis-painted every payload with the root colour.
-            var labelColor   = ChainComponentColors.GetColor(item, isWeaponRoot);
-            var componentStr = $"[{ComponentLabel(item, isPayload)}]".Colored(labelColor);
-            // Type channel (tooltip-redesign slice 1): a leading role glyph next to the name. Color
-            // stays reserved for direction, so type is the glyph's job (TypeGlyphs).
-            var typeGlyph    = TypeGlyphs.For(item, isPayload);
-            sb.AppendLine($"<align=left>{typeGlyph} <b>{item.Name}</b><align=right> {componentStr}</align>");
+            // Header: name + type glyph always shown; the type text label ("[Amplifier]") is
+            // Details-mode-only (v2 slice 5, issue #21) — hidden by default so it doesn't compete
+            // with the (Unity-wired) header icon. Coloured by true root/payload state (red root,
+            // purple payload) — not by "is a weapon", which mis-painted every payload with the root colour.
+            sb.AppendLine(HeaderLine.Build(item, isPayload, isWeaponRoot, detailed));
             sb.AppendLine(new string('─', 24));
 
             // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
@@ -617,17 +638,6 @@ namespace Code.Runtime.UI.Inventory
             }
             return false;
         }
-
-        private static string ComponentLabel(ITetrisItem item, bool isPayload) => item switch
-        {
-            IWeaponItem when isPayload => "Payload",
-            IWeaponItem                => "Weapon",
-            IAmplifierItem             => "Amplifier",
-            IConverterItem             => "Converter",
-            IShifterItem               => "Shifter",
-            IReactorItem               => "Reactor",
-            _                          => item.GetType().Name,
-        };
 
         // ── Player-facing word maps ───────────────────────────────────────
 
