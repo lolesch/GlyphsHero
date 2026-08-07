@@ -225,7 +225,7 @@ namespace Code.Runtime.UI.Inventory
 
             // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
             // weapons describe themselves through their firing (standalone / payload / chain output).
-            AppendAttachmentIdentity(sb, item, isChained);
+            AppendAttachmentIdentity(sb, item, isChained, primaryChain, detailed);
 
             if (!isChained)
             {
@@ -336,22 +336,22 @@ namespace Code.Runtime.UI.Inventory
             }
 
             foreach (var piece in PositionalDelta.Pieces(chain))
-                sb.AppendLine(PieceLine(piece, detailed));
+                sb.AppendLine(PieceLine(piece, chain, detailed));
 
             AppendPayloadSummary(sb, chain, totals.CostResource);
         }
 
         /// <summary>One piece-list row: the piece's type glyph, its name, and its marginal delta.</summary>
-        private static string PieceLine(PieceDelta piece, bool detailed)
+        private static string PieceLine(PieceDelta piece, IItemChain chain, bool detailed)
         {
             var glyph = TypeGlyphs.For(piece.Item, isPayload: false); // pieces are never payload weapons
-            return $"  {glyph} {piece.Item.Name}  {PieceDeltaText(piece, detailed)}";
+            return $"  {glyph} {piece.Item.Name}  {PieceDeltaText(piece, chain, detailed)}";
         }
 
         // A piece's marginal effect. Slice 3 keeps this generic (the numeric stat/axis deltas that
         // changed, plus the reactor's firing condition, which has no numeric readout); slice 4 refines
         // it into the full per-attachment views from the spec's §3 table.
-        private static string PieceDeltaText(PieceDelta p, bool detailed)
+        private static string PieceDeltaText(PieceDelta p, IItemChain chain, bool detailed)
         {
             if (p.Item is IReactorItem reactor)
             {
@@ -366,7 +366,7 @@ namespace Code.Runtime.UI.Inventory
             // non-diff, uncolored-by-direction framing instead of falling into the generic dmg/rate/cost
             // diff below (which stays the Amplifier/Converter — downstream-family — treatment).
             if (PositionalDelta.IsUpstreamFamily(p.Item))
-                return string.Join("   ", PositionalDelta.Describe(p.Item)).Colored(LightGray);
+                return string.Join("   ", PositionalDelta.Describe(p.Item, chain, detailed)).Colored(LightGray);
 
             var parts = new List<string>();
             if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
@@ -529,7 +529,8 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Item stats display ────────────────────────────────────────────
 
-        private static void AppendAttachmentIdentity(StringBuilder sb, ITetrisItem item, bool isChained)
+        private static void AppendAttachmentIdentity(
+            StringBuilder sb, ITetrisItem item, bool isChained, IItemChain chain, bool detailed)
         {
             if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
                 return;
@@ -537,8 +538,9 @@ namespace Code.Runtime.UI.Inventory
             // Symmetric two-state (tooltip-redesign spec §2, slice 5; fixed order per issue #20): both the
             // chained delta and the loose unchained affix are always shown, always in the same order
             // (Unchained then Chained) — the live one (chained in a chain, the affix standalone — ADR-0004
-            // item roles) is emphasised, the other dim, but position never moves.
-            var block = TwoStateBlock.Build(item, primaryActive: isChained);
+            // item roles) is emphasised, the other dim, but position never moves. Passing chain/detailed
+            // lets the Chained line resolve to base → result under Details mode (issue #29).
+            var block = TwoStateBlock.Build(item, isChained, chain, detailed);
             AppendState(sb, block.Default);
             AppendState(sb, block.Secondary);
         }

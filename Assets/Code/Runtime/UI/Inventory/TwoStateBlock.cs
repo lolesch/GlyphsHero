@@ -33,7 +33,13 @@ namespace Code.Runtime.UI.Inventory
     /// </summary>
     public static class TwoStateBlock
     {
-        public static TwoStateView Build(ITetrisItem item, bool primaryActive)
+        /// <summary>
+        /// <paramref name="chain"/> and <paramref name="detailed"/> only matter for the attachment
+        /// branch (issue #29 / ADR-0010 Decision 3) — they feed <see cref="PositionalDelta.Describe"/>
+        /// so the Chained line can resolve to <c>base → result</c> under Details mode. The weapon branch
+        /// ignores both, so weapon-only callers can omit them.
+        /// </summary>
+        public static TwoStateView Build(ITetrisItem item, bool primaryActive, IItemChain chain = null, bool detailed = false)
         {
             switch (item)
             {
@@ -54,7 +60,7 @@ namespace Code.Runtime.UI.Inventory
                     var unchained = new ItemStateView(ItemStateKind.Unchained, StateGlyphs.For(ItemStateKind.Unchained),
                         AffixLines(item as IAttachmentItem), isActive: !primaryActive);
                     var chained = new ItemStateView(ItemStateKind.Chained, StateGlyphs.For(ItemStateKind.Chained),
-                        PositionalDelta.Describe(item), isActive: primaryActive);
+                        PositionalDelta.Describe(item, chain, detailed), isActive: primaryActive);
                     return new TwoStateView(unchained, chained);
                 }
 

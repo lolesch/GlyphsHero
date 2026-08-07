@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Code.Data.Enums;
 using Code.Runtime.Modules.Inventory;
 using Code.Runtime.Modules.Statistics;
@@ -35,7 +36,7 @@ namespace Code.Tests.EditMode.UI
         [Test]
         public void Amplifier_ShowsItsOutputModifier()
         {
-            PositionalDelta.Describe(new FakeAmplifier("a"))
+            PositionalDelta.Describe(new FakeAmplifier("a"), chain: null, detailed: false)
                 .Should().Equal("Damage +1");
         }
 
@@ -44,7 +45,7 @@ namespace Code.Tests.EditMode.UI
         {
             var amp = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Percent(20f)));
 
-            PositionalDelta.Describe(amp).Should().Equal("Damage +20 %");
+            PositionalDelta.Describe(amp, chain: null, detailed: false).Should().Equal("Damage +20 %");
         }
 
         [Test]
@@ -52,7 +53,7 @@ namespace Code.Tests.EditMode.UI
         {
             var amp = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Flat(0f)));
 
-            PositionalDelta.Describe(amp).Should().BeEmpty();
+            PositionalDelta.Describe(amp, chain: null, detailed: false).Should().BeEmpty();
         }
 
         [Test]
@@ -62,7 +63,7 @@ namespace Code.Tests.EditMode.UI
             var mult = new WeaponOutputModifier(WeaponOutputStat.Damage,
                 new Modifier(0f, ModifierType.PercentMult, Guid.NewGuid()));
 
-            PositionalDelta.Describe(new StatAmplifier(mult)).Should().ContainSingle();
+            PositionalDelta.Describe(new StatAmplifier(mult), chain: null, detailed: false).Should().ContainSingle();
         }
 
         // ── Reactor: firing condition + input delta ───────────────────────
@@ -70,7 +71,7 @@ namespace Code.Tests.EditMode.UI
         [Test]
         public void Reactor_ShowsFiringConditionThenInputDelta()
         {
-            PositionalDelta.Describe(new FakeReactor("r"))
+            PositionalDelta.Describe(new FakeReactor("r"), chain: null, detailed: false)
                 .Should().Equal("fires when hit", "AttackSpeed +1");
         }
 
@@ -80,7 +81,7 @@ namespace Code.Tests.EditMode.UI
             var reactor = new StatReactor(Mods.Input(WeaponInputStat.AttackSpeed, Mods.Flat(0f)),
                 ReactorType.OnManaDeplete);
 
-            PositionalDelta.Describe(reactor).Should().Equal("fires when mana empties");
+            PositionalDelta.Describe(reactor, chain: null, detailed: false).Should().Equal("fires when mana empties");
         }
 
         // ── Shifter: input↔output economy trade ───────────────────────────
@@ -88,7 +89,7 @@ namespace Code.Tests.EditMode.UI
         [Test]
         public void Shifter_ShowsInputToOutputMove()
         {
-            PositionalDelta.Describe(new FakeShifter("s"))
+            PositionalDelta.Describe(new FakeShifter("s"), chain: null, detailed: false)
                 .Should().Equal("AttackSpeed +1 ↔ Damage +1");
         }
 
@@ -97,7 +98,7 @@ namespace Code.Tests.EditMode.UI
         [Test]
         public void Converter_ShowsDeliveryTarget()
         {
-            PositionalDelta.Describe(new FakeConverter("c")) // Delivery → Aoe
+            PositionalDelta.Describe(new FakeConverter("c"), chain: null, detailed: false) // Delivery → Aoe
                 .Should().Equal("→ Aoe");
         }
 
@@ -106,7 +107,7 @@ namespace Code.Tests.EditMode.UI
         {
             var converter = new StatConverter(ConverterAxis.Resource, toResource: ResourceType.Health);
 
-            PositionalDelta.Describe(converter).Should().Equal("→ Health");
+            PositionalDelta.Describe(converter, chain: null, detailed: false).Should().Equal("→ Health");
         }
 
         [Test]
@@ -114,7 +115,58 @@ namespace Code.Tests.EditMode.UI
         {
             var converter = new StatConverter(ConverterAxis.Affinity, toAffinity: Affinity.Friendly);
 
-            PositionalDelta.Describe(converter).Should().Equal("→ Friendly");
+            PositionalDelta.Describe(converter, chain: null, detailed: false).Should().Equal("→ Friendly");
+        }
+
+        // ── Details mode (issue #29 / ADR-0010 Decision 3): base → result ──
+        //
+        // Root cause of #29: Describe() printed Modifier.ToString() regardless of Details mode, so a
+        // PercentAdd amplifier read "+ 50 %" even under Details, disagreeing with the piece list's own
+        // "base → result" numbers for the identical modifier. These pin the fix: given a chain that
+        // resolves this item's own before/with, Details mode now reuses those exact numbers; without a
+        // chain (a loose item, or Details off) it still falls back to the compact modifier form.
+
+        [Test]
+        public void Amplifier_Detailed_WithChain_ResolvesBaseToResult()
+        {
+            var weapon = new FakeWeapon("w"); // Damage = 1
+            var amp    = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Percent(50f)));
+            var chain  = new ItemChain(weapon, new List<ITetrisItem> { amp });
+
+            // base 1 * 1.5 = 1.5 — the same number PositionalDelta.Pieces already resolves for this amp.
+            PositionalDelta.Describe(amp, chain, detailed: true).Should().Equal("Damage 1.0 → 1.5");
+        }
+
+        [Test]
+        public void Amplifier_Detailed_WithoutChain_FallsBackToCompactForm()
+        {
+            var amp = new FakeAmplifier("a"); // outputMod Damage +1 (flat)
+
+            // No chain to resolve a position in → nothing to diff, so Details mode can't expand it.
+            PositionalDelta.Describe(amp, chain: null, detailed: true).Should().Equal("Damage +1");
+        }
+
+        [Test]
+        public void Reactor_Detailed_WithChain_EquationMatchesPieceList()
+        {
+            var reactor = new FakeReactor("r");        // inputMod AttackSpeed +1 (flat)
+            var weapon  = new FakeWeapon("w");          // AttackSpeed = 1
+            var chain   = new ItemChain(reactor, new List<ITetrisItem> { weapon });
+
+            // Reuses PositionalDelta.ReactorInputEquation — the exact formatter the piece list calls.
+            PositionalDelta.Describe(reactor, chain, detailed: true)
+                .Should().Equal("fires when hit", "[base 1] +1 = 2");
+        }
+
+        [Test]
+        public void Shifter_Detailed_WithChain_ExpandsBothSides()
+        {
+            var shifter = new FakeShifter("s"); // AttackSpeed +1 ↔ Damage +1 (flat)
+            var weapon  = new FakeWeapon("w");   // AttackSpeed = 1, Damage = 1
+            var chain   = new ItemChain(shifter, new List<ITetrisItem> { weapon });
+
+            PositionalDelta.Describe(shifter, chain, detailed: true)
+                .Should().Equal("AttackSpeed 1.0 → 2.0 ↔ Damage 1.0 → 2.0");
         }
 
         // ── Non-attachments carry no active-delta content ─────────────────
@@ -122,7 +174,7 @@ namespace Code.Tests.EditMode.UI
         [Test]
         public void Weapon_HasNoAttachmentContent()
         {
-            PositionalDelta.Describe(new FakeWeapon("w")).Should().BeEmpty();
+            PositionalDelta.Describe(new FakeWeapon("w"), chain: null, detailed: false).Should().BeEmpty();
         }
 
         // ── Firing-condition map ──────────────────────────────────────────

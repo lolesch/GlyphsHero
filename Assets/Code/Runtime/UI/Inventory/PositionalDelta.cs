@@ -159,9 +159,8 @@ namespace Code.Runtime.UI.Inventory
 
         /// <summary>
         /// The per-attachment <b>active-delta content</b> (tooltip-redesign spec §3, slice 4): the §3
-        /// table's "active delta (no Details)" column, read <em>intrinsically</em> from the item's own
-        /// modifiers/axis — not from a chain diff. This is the "what does this piece do?" answer for an
-        /// attachment's <em>own</em> hover:
+        /// table's "active delta" column, read from the item's own modifiers/axis — not a chain-wide
+        /// diff. This is the "what does this piece do?" answer for an attachment's <em>own</em> hover:
         /// <list type="bullet">
         ///   <item><b>Amplifier</b> — its output modifier, e.g. <c>Damage +6</c>.</item>
         ///   <item><b>Reactor</b> — the firing condition (<c>fires when hit</c>) plus its input modifier,
@@ -171,27 +170,42 @@ namespace Code.Runtime.UI.Inventory
         ///   side is a Details/later-slice concern).</item>
         /// </list>
         /// <b>Additive</b>: a numeric line appears only when its modifier is non-default, so future fields
-        /// don't force layout churn (spec §3 note). Non-attachments return an empty list. The Details "before →
-        /// after" equation expansion is a later slice; this is the active (no-Details) content only.
+        /// don't force layout churn (spec §3 note). Non-attachments return an empty list.
+        ///
+        /// <b>Details mode</b> (ADR-0010 Decision 3, issue #29): when <paramref name="detailed"/> is true
+        /// and <paramref name="chain"/> places this item at a resolvable position, every numeric modifier
+        /// resolves to <c>base → result</c> — the same positional diff <see cref="Pieces"/> already
+        /// computes for the piece list — instead of printing <see cref="Modifier.ToString"/> directly.
+        /// <paramref name="chain"/> is null for a loose (unchained) item, or when Details mode is off;
+        /// either way the line falls back to the compact modifier form.
         /// </summary>
-        public static IReadOnlyList<string> Describe(ITetrisItem item)
+        public static IReadOnlyList<string> Describe(ITetrisItem item, IItemChain chain, bool detailed)
         {
+            var piece = detailed ? OwnPiece(item, chain) : null;
+
             switch (item)
             {
                 case IAmplifierItem amp:
-                    return ModLine(amp.outputMod.stat, amp.outputMod.modifier);
+                    return ModLine(amp.outputMod.stat, amp.outputMod.modifier, piece, detailed);
 
                 case IShifterItem sh:
                     // The economy trade is one semantic move — the shifter's identity, always shown.
                     return new[]
                     {
-                        $"{sh.inputMod.stat} {sh.inputMod.modifier} ↔ {sh.outputMod.stat} {sh.outputMod.modifier}",
+                        $"{StatSegment(sh.inputMod.stat, sh.inputMod.modifier, piece, detailed)} ↔ " +
+                        $"{StatSegment(sh.outputMod.stat, sh.outputMod.modifier, piece, detailed)}",
                     };
 
                 case IReactorItem reactor:
                     var lines = new List<string> { $"fires {FiringCondition(reactor.ReactorType)}" };
-                    if (IsMeaningful(reactor.inputMod.modifier))
-                        lines.Add($"{reactor.inputMod.stat} {reactor.inputMod.modifier}");
+                    // Reuse the piece list's own reactor equation rather than growing a second formatter
+                    // for the same before/after numbers (ADR-0010 Decision 3).
+                    var equation = piece.HasValue
+                        ? ReactorInputEquation(reactor, piece.Value, detailed)
+                        : IsMeaningful(reactor.inputMod.modifier)
+                            ? $"{reactor.inputMod.stat} {reactor.inputMod.modifier}"
+                            : string.Empty;
+                    if (equation.Length > 0) lines.Add(equation);
                     return lines;
 
                 case IConverterItem converter:
@@ -200,6 +214,16 @@ namespace Code.Runtime.UI.Inventory
                 default:
                     return Array.Empty<string>();
             }
+        }
+
+        // This item's own marginal delta within chain, if it's a resolvable piece there — null when the
+        // item is loose (no chain) or the chain carries no weapon (Pieces is then empty).
+        private static PieceDelta? OwnPiece(ITetrisItem item, IItemChain chain)
+        {
+            if (chain == null) return null;
+            foreach (var p in Pieces(chain))
+                if (p.Item == item) return p;
+            return null;
         }
 
         /// <summary>
@@ -238,9 +262,37 @@ namespace Code.Runtime.UI.Inventory
             _                      => c.Axis.ToString(),
         };
 
-        // Amp/shifter-style "stat modifier" line, dropped when the modifier is a no-op (additive rule).
-        private static IReadOnlyList<string> ModLine<T>(T stat, Modifier mod) where T : Enum =>
-            IsMeaningful(mod) ? new[] { $"{stat} {mod}" } : Array.Empty<string>();
+        // Amplifier's output-modifier line, dropped when the modifier is a no-op (additive rule).
+        private static IReadOnlyList<string> ModLine(WeaponOutputStat stat, Modifier mod, PieceDelta? piece, bool detailed) =>
+            IsMeaningful(mod) ? new[] { StatSegment(stat, mod, piece, detailed) } : Array.Empty<string>();
+
+        // "{stat} {modifier}", or under Details mode with a resolvable piece, "{stat} {before} → {after}"
+        // — the same base→result shape Stat()/ReactorInputEquation already give the weapon-terminal and
+        // piece-list paths (ADR-0010 Decision 3).
+        private static string StatSegment(WeaponOutputStat stat, Modifier mod, PieceDelta? piece, bool detailed) =>
+            detailed && piece.HasValue && OutputField(stat, piece.Value, out var before, out var after)
+                ? $"{stat} {before:F1} → {after:F1}"
+                : $"{stat} {mod}";
+
+        private static string StatSegment(WeaponInputStat stat, Modifier mod, PieceDelta? piece, bool detailed) =>
+            detailed && piece.HasValue && InputField(stat, piece.Value, out var before, out var after)
+                ? $"{stat} {before:F1} → {after:F1}"
+                : $"{stat} {mod}";
+
+        // The WeaponStats field an Amplifier/Shifter's outputMod targets — mirrors InputField's shape.
+        private static bool OutputField(WeaponOutputStat stat, PieceDelta piece, out float before, out float after)
+        {
+            switch (stat)
+            {
+                case WeaponOutputStat.Damage:
+                    before = piece.Before.Damage;
+                    after  = piece.With.Damage;
+                    return true;
+                default:
+                    before = after = 0f;
+                    return false;
+            }
+        }
 
         private const float Epsilon = 1e-4f;
 

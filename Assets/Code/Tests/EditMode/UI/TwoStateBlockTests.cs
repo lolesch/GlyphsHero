@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Code.Data.Enums;
+using Code.Runtime.Modules.Inventory;
 using Code.Runtime.UI.Inventory;
 using Code.Tests.EditMode.Inventory.Fakes;
 using FluentAssertions;
@@ -90,6 +93,21 @@ namespace Code.Tests.EditMode.UI
             block.Secondary.IsActive.Should().BeTrue(); // Chained
             block.Secondary.Lines.Should().Equal("Damage +1"); // PositionalDelta.Describe(amp)
             block.Default.IsActive.Should().BeFalse();  // Unchained, dim
+        }
+
+        [Test]
+        public void Amplifier_Chained_Detailed_ChainedLineResolvesBaseToResult()
+        {
+            // Issue #29 / ADR-0010 Decision 3: Build threads chain+detailed through to
+            // PositionalDelta.Describe, so the Chained line expands to base → result instead of the
+            // compact "+50 %" once Details mode is on.
+            var weapon = new FakeWeapon("w"); // Damage = 1
+            var amp    = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Percent(50f)));
+            var chain  = new ItemChain(weapon, new List<ITetrisItem> { amp });
+
+            var block = TwoStateBlock.Build(amp, primaryActive: true, chain: chain, detailed: true);
+
+            block.Secondary.Lines.Should().Equal("Damage 1.0 → 1.5");
         }
 
         [Test]
