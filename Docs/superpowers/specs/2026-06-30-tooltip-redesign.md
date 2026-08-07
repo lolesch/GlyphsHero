@@ -2,7 +2,16 @@
 
 **Date:** 2026-06-30 (v1 slices 1–8 shipped 2026-06-30/07-01; v2 addendum added 2026-07-02)
 **Status:** Approved — v1 (slices 1–8) implemented; issues #3–#10 merged (GitHub state stale, needs
-closing). v2 addendum below is a follow-up review pass, not yet sliced into issues.
+closing). v2 addendum below is a follow-up review pass, sliced into issues #17–#25, human-verified
+2026-07-02 as inconsistent per-component (tracked as
+[#26](https://github.com/lolesch/GlyphsHero/issues/26), now resolved — see below). **This spec's
+"both states always shown" rule (§2) is superseded by
+[ADR-0010](../../adr/0010-tooltip-two-tier-disclosure.md)** (Accepted, 2026-08-07) — the counterfactual
+state moves to Details-only, and `PositionalDelta.Describe` must match the weapon-terminal
+`base → result` format. Everything else below — including the v2 addendum's other rules (header
+layout, two-state fixed order, stash unchained value, Shifter's visual family, cost-line styling,
+universal stat glyphs) — is **unaffected** and still governs; ADR-0010 deliberately doesn't touch
+them (see its Consequences "scope check").
 **Scope:** Full rewrite of the item tooltip (`ItemTooltipController`). Presentation only — no
 combat/chain/economy rules change. This is a two-way door (UI), so no ADR; decisions are logged in
 the [Slice ledger](#slice-ledger) below. **Exception:** the v2 "Amplifier cost modifiers" item is a

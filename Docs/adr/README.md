@@ -70,5 +70,6 @@ issue trail**, not the ADR. The `Lifecycle` header field is the ADR's pointer at
 | [0007](0007-weapon-payload-direction-and-reactor-boundary.md) | Weapon→weapon payloads; reactor is the firing boundary; age-stamped origin | **Partially implemented** (Decision 1 only) |
 | [0008](0008-mana-regenerates-during-combat.md) | Mana regenerates during combat, on the same tick as health | **Partially implemented** (not yet playtested) |
 | [0009](0009-item-cost-modifiers-are-generic.md) | Cost modification is a generic, opt-in secondary property of any chain item | Accepted, design-only — not implemented |
+| [0010](0010-tooltip-two-tier-disclosure.md) | Tooltip is a two-tier disclosure: Tier-1 active-context only, Details mode is the "why" layer | Accepted, design-only — not implemented |
 
 Keep this table's `Lifecycle` column in step with each ADR's header when state changes.
