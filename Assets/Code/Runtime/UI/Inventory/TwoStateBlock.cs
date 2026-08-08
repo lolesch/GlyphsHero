@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Code.Data.Enums;
 using Code.Runtime.Modules.Inventory;
+using Code.Runtime.Modules.Statistics;
 
 namespace Code.Runtime.UI.Inventory
 {
@@ -39,7 +40,17 @@ namespace Code.Runtime.UI.Inventory
         /// so the Chained line can resolve to <c>base → result</c> under Details mode. The weapon branch
         /// ignores both, so weapon-only callers can omit them.
         /// </summary>
-        public static TwoStateView Build(ITetrisItem item, bool primaryActive, IItemChain chain = null, bool detailed = false)
+        /// <param name="isOwned">Whether the item sits in a pawn's own grid versus an ownerless
+        /// container (the stash, tooltip issue #22). Only the Unchained affix content reacts — there
+        /// is no pawn to diff a stash item's affix against, so Details mode there adds descriptive
+        /// text instead of a fabricated before→after equation. Defaults to owned so every existing
+        /// call site (none of which pass it yet) keeps today's behavior unchanged.</param>
+        /// <param name="stats">The owning pawn's live stats (issue #22) — only read when
+        /// <paramref name="isOwned"/> and <paramref name="detailed"/> are both true, to compute the
+        /// affix's real before→after via <see cref="IPawnStats.PreviewAffix"/>. Null falls back to the
+        /// flat value line.</param>
+        public static TwoStateView Build(ITetrisItem item, bool primaryActive, IItemChain chain = null,
+            bool detailed = false, bool isOwned = true, IPawnStats stats = null)
         {
             switch (item)
             {
@@ -58,7 +69,7 @@ namespace Code.Runtime.UI.Inventory
                 case IConverterItem:
                 {
                     var unchained = new ItemStateView(ItemStateKind.Unchained, StateGlyphs.For(ItemStateKind.Unchained),
-                        AffixLines(item as IAttachmentItem), isActive: !primaryActive);
+                        AffixLines(item as IAttachmentItem, detailed, isOwned, stats), isActive: !primaryActive);
                     var chained = new ItemStateView(ItemStateKind.Chained, StateGlyphs.For(ItemStateKind.Chained),
                         PositionalDelta.Describe(item, chain, detailed), isActive: primaryActive);
                     return new TwoStateView(unchained, chained);
@@ -96,10 +107,49 @@ namespace Code.Runtime.UI.Inventory
         // The loose (unchained) pawn-stat affixes an attachment applies when it sits alone in the grid.
         // Empty when the item carries no affix (or isn't an IAttachmentItem) — the presenter shows a dim
         // placeholder rather than a phantom line.
-        private static IReadOnlyList<string> AffixLines(IAttachmentItem attachment) =>
-            attachment == null || attachment.affixes.Count == 0
-                ? Array.Empty<string>()
-                : attachment.affixes.Select(a => $"{a.PawnStat} {a.Modifier}").ToList();
+        //
+        // Ownerless (stash) Details mode never expands into a before→after equation — there is no
+        // owning pawn's live stat to diff against, and fabricating one (e.g. "0 → +10") would misread
+        // as a real pawn floor (tooltip issue #22). It gets descriptive text instead. Owned-context
+        // Details mode expands into the pawn's real before→after, read off IPawnStats.PreviewAffix —
+        // that math is correct whether the affix is currently applied (item unchained) or currently
+        // suppressed by a chain (item chained), since PreviewAffix always diffs against the rest of the
+        // stat's modifier list. A null stats (no owner wired yet) falls back to the same flat line as
+        // the default read, never a guess.
+        private static IReadOnlyList<string> AffixLines(IAttachmentItem attachment, bool detailed, bool isOwned,
+            IPawnStats stats)
+        {
+            if (attachment == null || attachment.affixes.Count == 0)
+                return Array.Empty<string>();
+
+            return attachment.affixes.Select(a =>
+            {
+                if (!detailed)
+                    return $"{a.PawnStat} {a.Modifier}";
+
+                if (!isOwned)
+                    return $"{a.PawnStat} {a.Modifier} — {PawnStatDescription(a.PawnStat)}";
+
+                if (stats == null)
+                    return $"{a.PawnStat} {a.Modifier}";
+
+                var (before, after) = stats.PreviewAffix(a);
+                return $"{a.PawnStat} {before:0.###} → {after:0.###}";
+            }).ToList();
+        }
+
+        // Player-facing "what does this stat do" text — ownerless Details mode's only addition, since
+        // it has no pawn to compute a real before→after against (tooltip issue #22).
+        private static string PawnStatDescription(PawnStat stat) => stat switch
+        {
+            PawnStat.LifeMax       => "increases max health",
+            PawnStat.LifeRegen     => "increases health regen per second",
+            PawnStat.ManaMax       => "increases max mana",
+            PawnStat.ManaRegen     => "increases mana regen per second",
+            PawnStat.MovementSpeed => "increases movement speed",
+            PawnStat.Range         => "increases weapon reach ceiling",
+            _                      => string.Empty,
+        };
     }
 
     /// <summary>Which of an item's two states a <see cref="ItemStateView"/> describes.</summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Runtime.Modules.Statistics;
 using UnityEngine;
 
 namespace Code.Runtime.Modules.Inventory
@@ -8,10 +9,20 @@ namespace Code.Runtime.Modules.Inventory
     [Serializable]
     public sealed class TetrisContainer : ITetrisContainer
     {
-        public TetrisContainer(Vector2Int gridSize)
+        /// <param name="isOwned">Whether this grid belongs to a pawn versus an ownerless container
+        /// (the stash, tooltip issue #22) — defaults to ownerless so existing call sites (the stash)
+        /// need no change.</param>
+        /// <param name="ownerStats">The owning pawn's live stats, for a Details-mode affix preview
+        /// (tooltip issue #22). Null for an ownerless container.</param>
+        public TetrisContainer(Vector2Int gridSize, bool isOwned = false, IPawnStats ownerStats = null)
         {
-            GridSize = gridSize;
+            GridSize   = gridSize;
+            IsOwned    = isOwned;
+            OwnerStats = ownerStats;
         }
+
+        public bool       IsOwned    { get; }
+        public IPawnStats OwnerStats { get; }
 
         private readonly Dictionary<Vector2Int, ITetrisItem> _contents       = new();
         private readonly Dictionary<Vector2Int, Vector2Int>  _contentPointer = new();
@@ -205,6 +216,14 @@ namespace Code.Runtime.Modules.Inventory
         Vector2Int GridSize { get; }
         IReadOnlyDictionary<Vector2Int, ITetrisItem> Contents       { get; }
         IReadOnlyDictionary<Vector2Int, Vector2Int>  ContentPointer { get; }
+
+        /// <summary>Whether this grid belongs to a pawn versus an ownerless container (the stash,
+        /// tooltip issue #22) — false for the stash.</summary>
+        bool IsOwned { get; }
+
+        /// <summary>The owning pawn's live stats, for a Details-mode affix preview (tooltip issue #22).
+        /// Null for an ownerless container.</summary>
+        IPawnStats OwnerStats { get; }
 
         /// <summary>The resolved chain topology for the current contents. Owned and cached by the
         /// container — resolved once per content change, read by all consumers (no per-hover re-resolve).</summary>

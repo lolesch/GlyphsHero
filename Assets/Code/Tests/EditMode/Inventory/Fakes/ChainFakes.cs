@@ -31,6 +31,8 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public Vector2Int GridSize { get; }
         public IReadOnlyDictionary<Vector2Int, ITetrisItem> Contents       => _contents;
         public IReadOnlyDictionary<Vector2Int, Vector2Int>  ContentPointer => _pointer;
+        public bool       IsOwned    { get; set; }
+        public IPawnStats OwnerStats { get; set; }
 
         // The fake recomputes; caching is exercised on the real TetrisContainer.
         public ChainTopology Topology => ChainResolver.ResolveTopology(this);
@@ -238,6 +240,8 @@ namespace Code.Tests.EditMode.Inventory.Fakes
         public Vector2Int GridSize => new(6, 3);
         public IReadOnlyDictionary<Vector2Int, ITetrisItem> Contents       => _contents;
         public IReadOnlyDictionary<Vector2Int, Vector2Int>  ContentPointer => throw new NotSupportedException();
+        public bool       IsOwned    { get; set; }
+        public IPawnStats OwnerStats { get; set; }
         public ChainTopology Topology => new(_chains, new(), new(), new(), new());
 
         public event Action<IReadOnlyDictionary<Vector2Int, ITetrisItem>> OnContentsChanged;
@@ -280,6 +284,7 @@ namespace Code.Tests.EditMode.Inventory.Fakes
 
         public void ApplyMod(PawnStatModifier mod)  => Active.Add(mod);
         public void RemoveMod(PawnStatModifier mod) => Active.Remove(mod);
+        public (float before, float after) PreviewAffix(PawnStatModifier mod) => throw new NotSupportedException();
 
         public Resource health        => throw new NotSupportedException();
         public Resource mana          => throw new NotSupportedException();

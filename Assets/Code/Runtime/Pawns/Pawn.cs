@@ -83,7 +83,7 @@ namespace Code.Runtime.Pawns
             _icon         = config.icon;
             _displayName  = config.name;
             _stats        = new PawnStats(config);
-            Inventory     = new TetrisContainer(new Vector2Int(6, 3));
+            Inventory     = new TetrisContainer(new Vector2Int(6, 3), isOwned: true, ownerStats: _stats);
             PawnEffects   = _pawnEffects;
             MovementCosts = config.movementCosts;
             

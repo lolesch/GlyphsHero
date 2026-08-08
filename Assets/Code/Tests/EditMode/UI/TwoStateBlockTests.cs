@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using Code.Data.Enums;
+using Code.Data.Pawns;
 using Code.Runtime.Modules.Inventory;
+using Code.Runtime.Modules.Statistics;
 using Code.Runtime.UI.Inventory;
 using Code.Tests.EditMode.Inventory.Fakes;
 using FluentAssertions;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Code.Tests.EditMode.UI
 {
@@ -150,6 +153,58 @@ namespace Code.Tests.EditMode.UI
 
             block.Default.Kind.Should().Be(ItemStateKind.Unchained);
             block.Default.Lines.Should().BeEmpty();
+        }
+
+        // ── Ownerless (stash) vs owned-pawn context for the unchained affix line (issue #22) ──
+
+        private static PawnStats NewPawnStats() => new(ScriptableObject.CreateInstance<PawnConfig>());
+
+        [Test]
+        public void Ownerless_Default_AffixLineStaysFlat()
+        {
+            var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
+                detailed: false, isOwned: false);
+
+            block.Default.Lines.Should().Equal("LifeMax +5");
+        }
+
+        [Test]
+        public void Ownerless_Details_AffixLineAddsDescriptionButNeverAnArrow()
+        {
+            var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
+                detailed: true, isOwned: false);
+
+            block.Default.Lines.Should().Equal("LifeMax +5 — increases max health");
+        }
+
+        [Test]
+        public void Owned_Details_NoStatsWired_FallsBackFlat()
+        {
+            // Owned context, but the caller (e.g. no live pawn wired yet) passed no stats — never guess.
+            var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
+                detailed: true, isOwned: true, stats: null);
+
+            block.Default.Lines.Should().Equal("LifeMax +5");
+        }
+
+        [Test]
+        public void Owned_Default_StaysFlatEvenWithStatsAvailable()
+        {
+            // Details mode is the gate, not stats availability — default mode never expands.
+            var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
+                detailed: false, isOwned: true, stats: NewPawnStats());
+
+            block.Default.Lines.Should().Equal("LifeMax +5");
+        }
+
+        [Test]
+        public void Owned_Details_WithStats_ResolvesRealBeforeAfterMath()
+        {
+            // PawnConfig's default baseHealth is 100; FakeDualAmplifier's affix is LifeMax +5.
+            var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
+                detailed: true, isOwned: true, stats: NewPawnStats());
+
+            block.Default.Lines.Should().Equal("LifeMax 100 → 105");
         }
 
         // ── Glyph labels replace the old plain-text state labels ───────────

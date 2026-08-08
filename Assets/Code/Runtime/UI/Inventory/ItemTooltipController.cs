@@ -31,6 +31,8 @@ namespace Code.Runtime.UI.Inventory
         private bool          _hideScheduled;
         private ITetrisItem   _cachedItem;
         private ChainTopology _cachedTopology;
+        private bool          _cachedIsOwned;
+        private IPawnStats    _cachedOwnerStats;
         private bool          _altWasPressed;
         private ITetrisItem   _compareHeld;        // non-null ⇒ visible tooltip is a drag-compare (held vs slot)
         private ITetrisItem   _pendingCompareHeld; // its held counterpart while the show coroutine waits
@@ -66,7 +68,7 @@ namespace Code.Runtime.UI.Inventory
                 _altWasPressed = altNow;
                 if (_cachedItem != null && _cachedTopology != null)
                 {
-                    _text.text = BuildTooltip(_cachedItem, _cachedTopology, altNow);
+                    _text.text = BuildTooltip(_cachedItem, _cachedTopology, altNow, _cachedIsOwned, _cachedOwnerStats);
                     LayoutRebuilder.ForceRebuildLayoutImmediate(_panel);
                 }
             }
@@ -141,11 +143,13 @@ namespace Code.Runtime.UI.Inventory
             }
             else
             {
-                var topology    = container.Topology;   // container-owned, resolved once — no per-hover re-resolve
-                _cachedItem     = item;
-                _cachedTopology = topology;
-                _altWasPressed  = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-                _text.text      = BuildTooltip(item, topology, _altWasPressed);
+                var topology      = container.Topology;   // container-owned, resolved once — no per-hover re-resolve
+                _cachedItem       = item;
+                _cachedTopology   = topology;
+                _cachedIsOwned    = container.IsOwned;
+                _cachedOwnerStats = container.OwnerStats;
+                _altWasPressed    = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                _text.text        = BuildTooltip(item, topology, _altWasPressed, _cachedIsOwned, _cachedOwnerStats);
 
                 var primaryChain  = PrimaryChain(item, topology);
                 var isWeaponRoot  = item is IWeaponItem && primaryChain != null && !IsPayload(item, primaryChain);
@@ -204,7 +208,8 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Tooltip text ──────────────────────────────────────────────────
 
-        private static string BuildTooltip(ITetrisItem item, ChainTopology topology, bool detailed)
+        private static string BuildTooltip(ITetrisItem item, ChainTopology topology, bool detailed,
+            bool isOwned, IPawnStats ownerStats)
         {
             var sb = new StringBuilder();
 
@@ -225,7 +230,7 @@ namespace Code.Runtime.UI.Inventory
 
             // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
             // weapons describe themselves through their firing (standalone / payload / chain output).
-            AppendAttachmentIdentity(sb, item, isChained, primaryChain, detailed);
+            AppendAttachmentIdentity(sb, item, isChained, primaryChain, detailed, isOwned, ownerStats);
 
             if (!isChained)
             {
@@ -529,8 +534,8 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Item stats display ────────────────────────────────────────────
 
-        private static void AppendAttachmentIdentity(
-            StringBuilder sb, ITetrisItem item, bool isChained, IItemChain chain, bool detailed)
+        private static void AppendAttachmentIdentity(StringBuilder sb, ITetrisItem item, bool isChained,
+            IItemChain chain, bool detailed, bool isOwned, IPawnStats ownerStats)
         {
             if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
                 return;
@@ -539,8 +544,10 @@ namespace Code.Runtime.UI.Inventory
             // chained delta and the loose unchained affix are always shown, always in the same order
             // (Unchained then Chained) — the live one (chained in a chain, the affix standalone — ADR-0004
             // item roles) is emphasised, the other dim, but position never moves. Passing chain/detailed
-            // lets the Chained line resolve to base → result under Details mode (issue #29).
-            var block = TwoStateBlock.Build(item, isChained, chain, detailed);
+            // lets the Chained line resolve to base → result under Details mode (issue #29); isOwned/
+            // ownerStats lets the Unchained affix line resolve the same way for an owned pawn, or add
+            // descriptive text instead for an ownerless stash item (issue #22).
+            var block = TwoStateBlock.Build(item, isChained, chain, detailed, isOwned, ownerStats);
             AppendState(sb, block.Default);
             AppendState(sb, block.Secondary);
         }

@@ -43,5 +43,48 @@ namespace Code.Tests.EditMode.Statistics
 
             act.Should().NotThrow();
         }
+
+        // ── PreviewAffix: non-mutating owned-context Details math (tooltip issue #22) ──
+
+        [Test]
+        public void PreviewAffix_NoneStat_ReturnsZeroZeroAndDoesNotThrow()
+        {
+            var stats = NewStats();
+
+            Action act = () => stats.PreviewAffix(NoneMod());
+
+            act.Should().NotThrow();
+            stats.PreviewAffix(NoneMod()).Should().Be((0f, 0f));
+        }
+
+        [Test]
+        public void PreviewAffix_ModAlreadyLive_ReportsWithoutAndWithButLeavesItApplied()
+        {
+            // Mirrors a loose (unchained) attachment: OnUnchained already applied the affix.
+            var stats = NewStats();
+            var mod   = new PawnStatModifier(PawnStat.LifeMax, new Modifier(10f, ModifierType.FlatAdd, Guid.NewGuid()));
+            stats.ApplyMod(mod);
+            ((float)stats.health).Should().Be(110f);
+
+            var (before, after) = stats.PreviewAffix(mod);
+
+            before.Should().Be(100f);
+            after.Should().Be(110f);
+            ((float)stats.health).Should().Be(110f); // untouched by the preview
+        }
+
+        [Test]
+        public void PreviewAffix_ModNotYetApplied_ReportsWithoutAndWithAndNeverMutatesTheLiveStat()
+        {
+            // Mirrors a chained attachment: its affix is currently suppressed (never ApplyMod'd).
+            var stats = NewStats();
+            var mod   = new PawnStatModifier(PawnStat.LifeMax, new Modifier(10f, ModifierType.FlatAdd, Guid.NewGuid()));
+
+            var (before, after) = stats.PreviewAffix(mod);
+
+            before.Should().Be(100f);
+            after.Should().Be(110f);
+            ((float)stats.health).Should().Be(100f); // preview never applied it
+        }
     }
 }
