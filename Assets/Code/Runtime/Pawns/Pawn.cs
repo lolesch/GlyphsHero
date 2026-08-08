@@ -19,6 +19,9 @@ namespace Code.Runtime.Pawns
         // config at spawn (the config itself isn't retained); the display name is the config asset
         // name. Read-only from UI — keeps the UI → Pawns layering without exposing Pawn internals.
         [SerializeField, ReadOnly] private string _displayName;
+        // The on-field sprite (first child of the prefab) — separate from _icon, which only feeds
+        // the HUD. Wired in the prefab to the "Square" child's SpriteRenderer.
+        [SerializeField] private SpriteRenderer _spriteRenderer;
         // TODO: move pawn effect into config!
         [SerializeField] private PawnEffect _pawnEffects;
         [SerializeField] private AnimationCurve _moveEase = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
@@ -82,6 +85,9 @@ namespace Code.Runtime.Pawns
             _grid         = grid;
             _icon         = config.icon;
             _displayName  = config.name;
+            gameObject.name = config.name;
+            if (_spriteRenderer != null)
+                _spriteRenderer.sprite = config.icon;
             _stats        = new PawnStats(config);
             Inventory     = new TetrisContainer(new Vector2Int(6, 3), isOwned: true, ownerStats: _stats);
             PawnEffects   = _pawnEffects;

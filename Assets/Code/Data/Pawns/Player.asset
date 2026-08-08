@@ -12,24 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3afcb0ff45fd4981a00b3a4aef0ce144, type: 3}
   m_Name: Player
   m_EditorClassIdentifier: Data::Code.Data.SO.PawnConfig
-  icon: {fileID: -1458120510, guid: f53c29de7123b714d9b24a977fb43f39, type: 3}
+  icon: {fileID: 21300000, guid: d0cf2d8c50a74974db22851499a4fc51, type: 3}
   baseHealth: 50
   baseHealthRegen: 1
   baseMana: 80
   baseManaRegen: 8
   movementSpeed: 1
+  baseRange: 1
   starterWeapon: {fileID: 11400000, guid: fd4a579c748d3414f88c941336c65ec9, type: 2}
   starterItems:
   - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
   - {fileID: 11400000, guid: 3aafe504aba36954f9fe01fa03622533, type: 2}
   movementCosts:
-    _entries:
-    - terrain: 0
-      cost: 2147483647
-    - terrain: 1
-      cost: 10
-    - terrain: 2
-      cost: 12
-    - terrain: 3
-      cost: 14
+    map: []
     _defaultCost: 1
