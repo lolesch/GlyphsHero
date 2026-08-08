@@ -26,13 +26,32 @@ namespace Code.Runtime.Modules.Statistics
 
         public event Action<float> OnTotalChanged;
 
+        /// <summary>
+        /// An independent copy: a fresh modifier list and no subscribers. Mutating the clone (e.g.
+        /// removing one modifier to answer "what would this be without it?") never touches this
+        /// instance and never fires this instance's <see cref="OnTotalChanged"/>.
+        /// </summary>
+        public MutableFloat Clone()
+        {
+            var clone = new MutableFloat( baseValue ) { modifiers = new List<Modifier>( modifiers ) };
+            clone.CalculateTotalValue();
+            return clone;
+        }
+
         public void AddModifier( Modifier modifier )
         {
             modifiers.Add( modifier );
             CalculateTotalValue();
         }
 
-        public bool TryRemoveModifier( Modifier modifier )
+        public bool TryRemoveModifier( Modifier modifier ) => TryRemoveModifier( modifier, warnIfMissing: true );
+
+        /// <summary>
+        /// A caller that expects the modifier might already be gone — e.g. probing a clone — can
+        /// pass <paramref name="warnIfMissing"/> false to skip the warning instead of spamming the
+        /// console on an expected miss.
+        /// </summary>
+        public bool TryRemoveModifier( Modifier modifier, bool warnIfMissing )
         {
             for( var i = modifiers.Count; i-- > 0; )
                 if( modifiers[i].Equals( modifier ) )
@@ -43,7 +62,8 @@ namespace Code.Runtime.Modules.Statistics
                     return true;
                 }
 
-            Debug.LogWarning( $"Modifier {modifier} not found" );
+            if( warnIfMissing )
+                Debug.LogWarning( $"Modifier {modifier} not found" );
             return false;
         }
 

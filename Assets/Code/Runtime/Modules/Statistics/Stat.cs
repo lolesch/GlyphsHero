@@ -38,15 +38,21 @@ namespace Code.Runtime.Modules.Statistics
 
         public void AddModifier( Modifier modifier ) => MaxValue.AddModifier( modifier );
         public bool TryRemoveModifier( Modifier modifier ) => MaxValue.TryRemoveModifier( modifier );
-        
+        public bool TryRemoveModifier( Modifier modifier, bool warnIfMissing ) => MaxValue.TryRemoveModifier( modifier, warnIfMissing );
+
         //public bool TryRemoveAllModifiersBySource( IModifierSource source ) => MaxValue.TryRemoveAllModifiersBySource( source.guid );
 
+        /// <summary>
+        /// An independent copy — <see cref="MaxValue"/> is deep-copied (see <see cref="MutableFloat.Clone"/>),
+        /// not aliased, so mutating the copy (e.g. removing a modifier to probe "what would this be
+        /// without it?") never touches this instance.
+        /// </summary>
         public virtual Stat GetDeepCopy()
         {
             var other = (Stat) MemberwiseClone();
-            other.name = string.Copy( name );
+            other.name = name; // string is immutable, plain assignment is already an independent copy
             other.pawnStat = pawnStat;
-            other.MaxValue = MaxValue;
+            other.MaxValue = MaxValue.Clone();
 
             return other;
         }

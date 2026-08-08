@@ -77,14 +77,24 @@ namespace Code.Runtime.Modules.Statistics
         public void RefillCurrent() => SetCurrentTo( MaxValue );
         //public void DepleteCurrent() => SetCurrentTo(0);
 
+        /// <summary>
+        /// An independent copy — <see cref="Stat.MaxValue"/> is deep-copied (not aliased) and none of
+        /// the three events carry over (they'd otherwise still point at this instance's subscribers,
+        /// e.g. a pawn's despawn-on-depleted handler firing off a probe's clone). This also means the
+        /// copy's <c>MaxValue.OnTotalChanged -&gt; SetCurrentTo(CurrentValue)</c> wiring the constructor
+        /// sets up is never re-established, so a clone doesn't auto-track its own max changes — fine
+        /// for a read-only probe, not a substitute for a real spawned pawn resource.
+        /// </summary>
         public override Stat GetDeepCopy()
         {
             var other = (Resource) MemberwiseClone();
-            other.name = string.Copy( name );
+            other.name = name; // string is immutable, plain assignment is already an independent copy
             other.pawnStat = pawnStat;
-            other.MaxValue = MaxValue;
+            other.MaxValue = MaxValue.Clone();
             other.CurrentValue = CurrentValue;
             other.OnCurrentChanged = null; //have no listeners to these deep copies
+            other.OnDepleted      = null;
+            other.OnRecharged     = null;
 
             return other;
         }
@@ -104,13 +114,17 @@ namespace Code.Runtime.Modules.Statistics
                 OnRecharged?.Invoke();
         }
 
+        /// <summary>Same independent-copy contract as <see cref="GetDeepCopy"/>, typed as <see cref="Resource"/>
+        /// so callers that need the Resource-only members don't have to downcast.</summary>
         public Resource GetResourceCopy()
         {
             var other = (Resource) MemberwiseClone();
-            other.name = string.Copy( name );
+            other.name = name; // string is immutable, plain assignment is already an independent copy
             other.pawnStat = pawnStat;
-            other.MaxValue = MaxValue;
+            other.MaxValue = MaxValue.Clone();
             other.OnCurrentChanged = null; //have no listeners to these deep copies
+            other.OnDepleted      = null;
+            other.OnRecharged     = null;
 
             return other;
         }

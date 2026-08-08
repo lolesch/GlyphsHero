@@ -59,5 +59,34 @@ namespace Code.Tests.EditMode.Statistics
 
             fired.Should().BeFalse();
         }
+
+        // ── GetDeepCopy: must be an independent copy, not an aliased MaxValue ──
+
+        [Test]
+        public void GetDeepCopy_RemovingAModifierOnTheCopy_LeavesTheOriginalUntouched()
+        {
+            var range = new Stat(PawnStat.Range, 5f);
+            var mod = Mod(3f, ModifierType.FlatAdd);
+            range.AddModifier(mod); // 5 -> 8
+
+            var copy = range.GetDeepCopy();
+            copy.TryRemoveModifier(mod).Should().BeTrue();
+
+            ((float)copy).Should().Be(5f);   // copy: reverted
+            ((float)range).Should().Be(8f);  // original: unaffected — was aliased, so this used to also drop to 5
+        }
+
+        [Test]
+        public void GetDeepCopy_DoesNotForwardOnTotalChangedToTheOriginalsSubscribers()
+        {
+            var range = new Stat(PawnStat.Range, 5f);
+            var originalFired = false;
+            range.OnTotalChanged += _ => originalFired = true;
+
+            var copy = range.GetDeepCopy();
+            copy.AddModifier(Mod(3f, ModifierType.FlatAdd));
+
+            originalFired.Should().BeFalse();
+        }
     }
 }

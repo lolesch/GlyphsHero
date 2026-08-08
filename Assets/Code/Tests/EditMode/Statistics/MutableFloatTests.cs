@@ -90,5 +90,66 @@ namespace Code.Tests.EditMode.Statistics
 
             observed.Should().BeApproximately(110f, 0.0001f);
         }
+
+        // ── Clone: an independent "what if" probe (tooltip issue #22 groundwork) ──
+
+        [Test]
+        public void Clone_CarriesTheSameModifiersAndTotal()
+        {
+            var stat = new MutableFloat(100f);
+            stat.AddModifier(Mod(10f, ModifierType.FlatAdd));
+
+            var clone = stat.Clone();
+
+            ((float)clone).Should().BeApproximately(110f, 0.0001f);
+        }
+
+        [Test]
+        public void Clone_RemovingAModifierOnTheClone_LeavesTheOriginalUntouched()
+        {
+            var stat = new MutableFloat(100f);
+            var flat = Mod(10f, ModifierType.FlatAdd);
+            stat.AddModifier(flat);
+
+            var clone = stat.Clone();
+            clone.TryRemoveModifier(flat).Should().BeTrue();
+
+            ((float)clone).Should().BeApproximately(100f, 0.0001f);   // clone: "before" this modifier
+            ((float)stat).Should().BeApproximately(110f, 0.0001f);    // original: unaffected
+        }
+
+        [Test]
+        public void Clone_DoesNotCarryOverSubscribers()
+        {
+            var stat = new MutableFloat(100f);
+            var fired = false;
+            stat.OnTotalChanged += _ => fired = true;
+
+            var clone = stat.Clone();
+            clone.AddModifier(Mod(10f, ModifierType.FlatAdd));
+
+            fired.Should().BeFalse();
+        }
+
+        // ── TryRemoveModifier(modifier, warnIfMissing): quiet probe variant ──
+
+        [Test]
+        public void TryRemoveModifier_QuietOverload_StillRemovesAPresentModifier()
+        {
+            var stat = new MutableFloat(100f);
+            var flat = Mod(10f, ModifierType.FlatAdd);
+            stat.AddModifier(flat);
+
+            stat.TryRemoveModifier(flat, warnIfMissing: false).Should().BeTrue();
+            ((float)stat).Should().BeApproximately(100f, 0.0001f);
+        }
+
+        [Test]
+        public void TryRemoveModifier_QuietOverload_NotPresent_ReturnsFalseWithoutLogging()
+        {
+            var stat = new MutableFloat(100f);
+
+            stat.TryRemoveModifier(Mod(5f, ModifierType.FlatAdd), warnIfMissing: false).Should().BeFalse();
+        }
     }
 }

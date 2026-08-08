@@ -150,5 +150,52 @@ namespace Code.Tests.EditMode.Statistics
             mana.TryRemoveModifier(shrink); // max -> 100, current stays 40
             mana.CurrentValue.Should().Be(40f);
         }
+
+        // ── GetDeepCopy / GetResourceCopy: must be independent copies, not an aliased MaxValue ──
+
+        [Test]
+        public void GetDeepCopy_RemovingAModifierOnTheCopy_LeavesTheOriginalUntouched()
+        {
+            var health = new Resource(PawnStat.LifeMax, 100f);
+            var mod = Mod(20f, ModifierType.FlatAdd);
+            health.AddModifier(mod); // max -> 120
+
+            var copy = (Resource)health.GetDeepCopy();
+            copy.TryRemoveModifier(mod).Should().BeTrue();
+
+            ((float)copy).Should().Be(100f);   // copy: reverted
+            ((float)health).Should().Be(120f); // original: unaffected — was aliased, so this used to also drop to 100
+        }
+
+        [Test]
+        public void GetDeepCopy_DoesNotShareOnDepletedWithTheOriginal()
+        {
+            // MemberwiseClone copies delegate fields as-is; without explicitly nulling OnDepleted,
+            // a copy's depletion (e.g. from a read-only tooltip probe) would fire the original pawn's
+            // real despawn handler.
+            var health = new Resource(PawnStat.LifeMax, 100f);
+            var despawned = false;
+            health.OnDepleted += () => despawned = true;
+
+            var copy = (Resource)health.GetDeepCopy();
+            copy.ReduceCurrent(1000f); // depletes the copy, not the original
+
+            despawned.Should().BeFalse();
+            health.IsDepleted.Should().BeFalse();
+        }
+
+        [Test]
+        public void GetResourceCopy_RemovingAModifierOnTheCopy_LeavesTheOriginalUntouched()
+        {
+            var health = new Resource(PawnStat.LifeMax, 100f);
+            var mod = Mod(20f, ModifierType.FlatAdd);
+            health.AddModifier(mod); // max -> 120
+
+            var copy = health.GetResourceCopy();
+            copy.TryRemoveModifier(mod).Should().BeTrue();
+
+            ((float)copy).Should().Be(100f);   // copy: reverted
+            ((float)health).Should().Be(120f); // original: unaffected — was aliased, so this used to also drop to 100
+        }
     }
 }

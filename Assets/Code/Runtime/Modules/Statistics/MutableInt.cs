@@ -1,4 +1,5 @@
 using System;
+using Code.Data.Enums;
 using NaughtyAttributes;
 using UnityEngine;
 
@@ -8,11 +9,13 @@ namespace Code.Runtime.Modules.Statistics
     public sealed class MutableInt : IMutable<int>
     {
         [SerializeField, ReadOnly] private int totalValue;
-        [SerializeField, ReadOnly] private MutableInt mutableFloat;
-        
-        public MutableInt( int baseValue )
+        [SerializeField, ReadOnly] private MutableFloat mutableFloat;
+        [SerializeField, ReadOnly] private RoundingMode roundingMode;
+
+        public MutableInt( int baseValue, RoundingMode roundingMode = RoundingMode.Nearest )
         {
-            mutableFloat = new MutableInt( baseValue );
+            mutableFloat = new MutableFloat( baseValue );
+            this.roundingMode = roundingMode;
             totalValue = baseValue;
             OnTotalChanged = null;
         }
@@ -40,7 +43,7 @@ namespace Code.Runtime.Modules.Statistics
 
         private void CalculateTotalValue()
         {
-            var newTotal = Mathf.RoundToInt( mutableFloat );
+            var newTotal = Round( mutableFloat, roundingMode );
             //newTotal = Mathf.Clamp(newTotal, range.min, range.max);
 
             if( Mathf.Approximately( totalValue, newTotal ) )
@@ -49,5 +52,12 @@ namespace Code.Runtime.Modules.Statistics
             totalValue = newTotal;
             OnTotalChanged?.Invoke( totalValue );
         }
+
+        private static int Round( float value, RoundingMode mode ) => mode switch
+        {
+            RoundingMode.Floor => Mathf.FloorToInt( value ),
+            RoundingMode.Ceil  => Mathf.CeilToInt( value ),
+            _                  => Mathf.RoundToInt( value ),
+        };
     }
 }
