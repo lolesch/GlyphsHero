@@ -5908,7 +5908,7 @@ MonoBehaviour:
     bottomLeft: {r: 1, g: 1, b: 1, a: 1}
     bottomRight: {r: 1, g: 1, b: 1, a: 1}
   m_fontColorGradientPreset: {fileID: 0}
-  m_spriteAsset: {fileID: 0}
+  m_spriteAsset: {fileID: 11400000, guid: 5694f018c5850f042a1ce2eb30654fa4, type: 2}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
   m_TextStyleHashCode: -1183493901
@@ -6898,6 +6898,7 @@ MonoBehaviour:
   grid: {fileID: 1769693919}
   levelMap: {fileID: 1117111160}
   pawnEffectMap: {fileID: 709809114}
+  pawnPositionMap: {fileID: 0}
   effectTile: {fileID: 11400000, guid: 823821f3c2c2e4a40a988953611f2111, type: 2}
   drawCellPos: 1
   drawHexPos: 0

@@ -46,5 +46,20 @@ namespace Code.Tests.EditMode.UI
         public void Details_ContainsName() =>
             HeaderLine.Build(new FakeWeapon("Blade"), isPayload: false, isWeaponRoot: true, detailed: true)
                 .Should().Contain("Blade");
+
+        // Header glyph channel (issue #27): the type glyph reflects the item's current chain
+        // membership, via TypeGlyphs' sprite-tag map — locks that HeaderLine actually forwards
+        // isChained rather than dropping it on the floor.
+        [Test]
+        public void Chained_HeaderGlyphIsChainedSprite() =>
+            HeaderLine.Build(new FakeWeapon("Blade"), isPayload: false, isWeaponRoot: true, detailed: false,
+                    isChained: true)
+                .Should().Contain("Weapon_Chained");
+
+        [Test]
+        public void Unchained_HeaderGlyphIsUnchainedSprite() =>
+            HeaderLine.Build(new FakeWeapon("Blade"), isPayload: false, isWeaponRoot: true, detailed: false,
+                    isChained: false)
+                .Should().Contain("Weapon_Unchained");
     }
 }

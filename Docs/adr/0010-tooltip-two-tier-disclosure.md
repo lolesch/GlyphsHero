@@ -9,7 +9,9 @@ date: 2026-08-07
 # ADR-0010 — Tooltip is a two-tier disclosure: Tier-1 shows only the active context, Details mode is the one "why" layer
 
 **Status:** Accepted (2026-08-07)
-**Lifecycle:** Design-only — not implemented
+**Lifecycle:** Implemented (2026-08-08) — Decisions 1/2/4 landed in `ItemTooltipController.cs`
+(`AppendAttachmentIdentity`, the chained-weapon/standalone-weapon `.Other` lines, `AppendPayloadOutput`),
+red-green-tested in `ItemTooltipControllerTests.cs`; Decision 3 landed earlier (commit `f7e4a5d`).
 **Companion:** ADR-0004 (attack model — item roles: weapon/payload/attachment), ADR-0006 (payload
 propagation cost economy), ADR-0009 (generic Cost `inputMod` — accepted, not yet implemented; this
 ADR's tooltip rules apply to it once it lands, no changes needed here when it does).

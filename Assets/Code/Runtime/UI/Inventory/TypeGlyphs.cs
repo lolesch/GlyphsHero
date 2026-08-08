@@ -7,34 +7,47 @@ namespace Code.Runtime.UI.Inventory
     /// that names an item's role, used both in the item's own header and in the weapon's piece list.
     /// Color is reserved for <em>direction</em> (green up / red down); <em>type</em> is the glyph's job.
     ///
-    /// The map shape is the deliverable, not the specific characters. The primary set is the spec's
-    /// Unicode glyphs; <see cref="UseAsciiFallback"/> flips the whole map to a safe ASCII set in one edit
-    /// if any glyph is missing from the tooltip's TMP font atlas (must be verified in the Unity editor —
-    /// see the slice's VERIFY note). The role distinction mirrors <see cref="ChainComponentColors"/> and
-    /// the tooltip's own ComponentLabel ordering.
+    /// Migrated to TMP sprite tags (issue #27): the primary set renders <c>&lt;sprite
+    /// name="&lt;Type&gt;_&lt;State&gt;"&gt;</c> against the <c>ItemTypeIcons</c> TMP Sprite Asset (6
+    /// item-type roles x Chained/Unchained, extracted from Figma), which must be assigned as the
+    /// tooltip's <c>TMP_Text.spriteAsset</c> for the tag to resolve to an image rather than literal
+    /// text. <see cref="UseAsciiFallback"/> flips the whole map to a safe ASCII set in one edit if that
+    /// wiring is ever missing on some other Text component. The role distinction mirrors
+    /// <see cref="ChainComponentColors"/> and the tooltip's own ComponentLabel ordering.
     /// </summary>
     public static class TypeGlyphs
     {
-        // VERIFY in Unity: the Unicode glyphs below must exist in the tooltip TMP font atlas. If any
-        // render as a missing-glyph box, flip this to true (no other change) to ship the ASCII set.
+        // Escape hatch: flip to true (no other change) to fall back to plain ASCII letters if the
+        // ItemTypeIcons sprite asset isn't wired on some Text component that renders this map's output.
         public const bool UseAsciiFallback = false;
 
         /// <summary>
         /// The role glyph for <paramref name="item"/>. A weapon reads as a <em>payload</em> when
         /// <paramref name="isPayload"/> is true (a weapon downstream of another weapon in its chain);
-        /// the caller owns that classification (the tooltip's IsPayload).
+        /// the caller owns that classification (the tooltip's IsPayload). <paramref name="isChained"/>
+        /// selects the icon's Chained/Unchained variant — whether this specific item instance currently
+        /// sits in a resolved chain.
         /// </summary>
-        public static string For(ITetrisItem item, bool isPayload) =>
-            UseAsciiFallback ? Ascii(item, isPayload) : Glyph(item, isPayload);
+        public static string For(ITetrisItem item, bool isPayload, bool isChained) =>
+            UseAsciiFallback ? Ascii(item, isPayload) : Sprite(item, isPayload, isChained);
 
-        private static string Glyph(ITetrisItem item, bool isPayload) => item switch
+        private static string Sprite(ITetrisItem item, bool isPayload, bool isChained)
         {
-            IWeaponItem when isPayload => "◈", // ◈ payload
-            IWeaponItem                => "⚔", // ⚔ weapon (driving)
-            IAmplifierItem             => "◆", // ◆ amplifier
-            IConverterItem             => "↻", // ↻ converter
-            IShifterItem               => "⇄", // ⇄ shifter
-            IReactorItem               => "▸", // ▸ reactor
+            var type = TypeName(item, isPayload);
+            if (type.Length == 0) return string.Empty;
+
+            var state = isChained ? "Chained" : "Unchained";
+            return $"<sprite name=\"{type}_{state}\">";
+        }
+
+        private static string TypeName(ITetrisItem item, bool isPayload) => item switch
+        {
+            IWeaponItem when isPayload => "Payload",
+            IWeaponItem                => "Weapon",
+            IAmplifierItem             => "Amplifier",
+            IConverterItem             => "Converter",
+            IShifterItem               => "Shifter",
+            IReactorItem               => "Reactor",
             _                          => string.Empty,
         };
 

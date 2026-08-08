@@ -208,7 +208,7 @@ namespace Code.Runtime.UI.Inventory
 
         // ── Tooltip text ──────────────────────────────────────────────────
 
-        private static string BuildTooltip(ITetrisItem item, ChainTopology topology, bool detailed,
+        internal static string BuildTooltip(ITetrisItem item, ChainTopology topology, bool detailed,
             bool isOwned, IPawnStats ownerStats)
         {
             var sb = new StringBuilder();
@@ -225,7 +225,7 @@ namespace Code.Runtime.UI.Inventory
             // Details-mode-only (v2 slice 5, issue #21) — hidden by default so it doesn't compete
             // with the (Unity-wired) header icon. Coloured by true root/payload state (red root,
             // purple payload) — not by "is a weapon", which mis-painted every payload with the root colour.
-            sb.AppendLine(HeaderLine.Build(item, isPayload, isWeaponRoot, detailed));
+            sb.AppendLine(HeaderLine.Build(item, isPayload, isWeaponRoot, detailed, isChained));
             sb.AppendLine(new string('─', 24));
 
             // Attachments (Amplifier/Shifter/Reactor/Converter) carry an intrinsic affix identity;
@@ -235,7 +235,7 @@ namespace Code.Runtime.UI.Inventory
             if (!isChained)
             {
                 if (item is IWeaponItem w)
-                    AppendStandaloneWeapon(sb, w);
+                    AppendStandaloneWeapon(sb, w, detailed);
                 return sb.ToString().TrimEnd();
             }
 
@@ -258,14 +258,15 @@ namespace Code.Runtime.UI.Inventory
                 {
                     var payloadRole = IsPayload(item, chain);
                     if (payloadRole)
-                        AppendPayloadOutput(sb, chain, weaponItem);
+                        AppendPayloadOutput(sb, chain, weaponItem, detailed);
                     else
                         AppendWeaponTerminal(sb, chain, detailed);
 
-                    // Symmetric two-state (slice 5): the active role renders in full above; show the
-                    // weapon's *other* role (a driving weapon "as payload", a payload "as driving
-                    // weapon") dim beneath — both states always visible, emphasis the only marker.
-                    AppendState(sb, TwoStateBlock.Build(weaponItem, primaryActive: !payloadRole).Other);
+                    // Symmetric two-state (ADR-0010 Decision 2): the active role renders in full above;
+                    // the weapon's *other* role (a driving weapon "as payload", a payload "as driving
+                    // weapon") is planning info, not combat info — Details-only, not Tier-1.
+                    if (detailed)
+                        AppendState(sb, TwoStateBlock.Build(weaponItem, primaryActive: !payloadRole).Other);
                 }
                 else
                     AppendChainOutput(sb, chain, item, detailed);
@@ -356,7 +357,8 @@ namespace Code.Runtime.UI.Inventory
         /// <summary>One piece-list row: the piece's type glyph, its name, and its marginal delta.</summary>
         private static string PieceLine(PieceDelta piece, IItemChain chain, bool detailed)
         {
-            var glyph = TypeGlyphs.For(piece.Item, isPayload: false); // pieces are never payload weapons
+            // pieces are never payload weapons, and only ever appear here because they're chained.
+            var glyph = TypeGlyphs.For(piece.Item, isPayload: false, isChained: true);
             return $"  {glyph} {piece.Item.Name}  {PieceDeltaText(piece, chain, detailed)}";
         }
 
@@ -485,7 +487,7 @@ namespace Code.Runtime.UI.Inventory
         /// Tooltip-redesign slice 3: the root name and the "(#n in propagation)" slot text are dropped —
         /// a payload's tooltip is about its own delivery + cost-to-pool, not its position in the root.
         /// </summary>
-        private static void AppendPayloadOutput(StringBuilder sb, IItemChain chain, IWeaponItem payload)
+        private static void AppendPayloadOutput(StringBuilder sb, IItemChain chain, IWeaponItem payload, bool detailed)
         {
             sb.AppendLine("<b>Payload</b>");
 
@@ -495,6 +497,11 @@ namespace Code.Runtime.UI.Inventory
             var anchor    = b?.Anchor    ?? Anchor.Target;
             var shapeSize = b?.ShapeSize ?? 1;
             sb.AppendLine($"  {(float)payload.Damage:F1} dmg   ·   {DeliverySentence.Build(delivery, affinity, anchor, shapeSize)}");
+
+            // Cost-scaling type and delayed timing are optimizer detail (ADR-0010 Decision 4) — useful
+            // for deciding whether to stack a payload deep, irrelevant to "what does this do right now".
+            // Tier-1 payload read stays damage + delivery sentence only, per Decision 1's whitelist.
+            if (!detailed) return;
 
             // What including this payload adds to the one shared pool — the chain root's CostResource
             // (ADR-0006 Decision 4). Type tells the player how it scales: flat, % of base, or compounding.
@@ -555,16 +562,17 @@ namespace Code.Runtime.UI.Inventory
             if (item is not (IAmplifierItem or IShifterItem or IReactorItem or IConverterItem))
                 return;
 
-            // Symmetric two-state (tooltip-redesign spec §2, slice 5; fixed order per issue #20): both the
-            // chained delta and the loose unchained affix are always shown, always in the same order
-            // (Unchained then Chained) — the live one (chained in a chain, the affix standalone — ADR-0004
-            // item roles) is emphasised, the other dim, but position never moves. Passing chain/detailed
-            // lets the Chained line resolve to base → result under Details mode (issue #29); isOwned/
-            // ownerStats lets the Unchained affix line resolve the same way for an owned pawn, or add
-            // descriptive text instead for an ownerless stash item (issue #22).
+            // Symmetric two-state (ADR-0010 Decisions 1+2): the live state (chained in a chain, the
+            // affix standalone — ADR-0004 item roles) always renders — that's Tier-1's "active effect,
+            // and only that". The counterfactual other state is planning info, not combat info, so it's
+            // Details-only. Passing chain/detailed lets the Chained line resolve to base → result under
+            // Details mode (issue #29); isOwned/ownerStats lets the Unchained affix line resolve the
+            // same way for an owned pawn, or add descriptive text instead for an ownerless stash item
+            // (issue #22).
             var block = TwoStateBlock.Build(item, isChained, chain, detailed, isOwned, ownerStats);
-            AppendState(sb, block.Default);
-            AppendState(sb, block.Secondary);
+            AppendState(sb, block.Active);
+            if (detailed)
+                AppendState(sb, block.Other);
         }
 
         /// <summary>Renders one <see cref="ItemStateView"/> as a <c>glyph label:   lines…</c> row, bold
@@ -587,15 +595,17 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>A weapon sitting alone (no chain): it fires on its own timer with its base stats.</summary>
-        private static void AppendStandaloneWeapon(StringBuilder sb, IWeaponItem w)
+        private static void AppendStandaloneWeapon(StringBuilder sb, IWeaponItem w, bool detailed)
         {
             sb.AppendLine();
             sb.AppendLine("<b>Attack:</b>");
             sb.AppendLine($"  {(float)w.Damage:F1} dmg   ·   {DeliverySentence.Build(w.Delivery, w.Affinity, w.Anchor, 0)}");
             sb.AppendLine($"  every {Interval((float)w.AttackSpeed)}   ·   cost {(float)w.ResourceCost:F1} [{w.CostResource}]");
 
-            // Symmetric two-state (slice 5): a loose weapon is driving; show its dim "as payload" state.
-            AppendState(sb, TwoStateBlock.Build(w, primaryActive: true).Other);
+            // Symmetric two-state (ADR-0010 Decision 2): a loose weapon is driving; its dim "as payload"
+            // state is planning info, Details-only.
+            if (detailed)
+                AppendState(sb, TwoStateBlock.Build(w, primaryActive: true).Other);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────
