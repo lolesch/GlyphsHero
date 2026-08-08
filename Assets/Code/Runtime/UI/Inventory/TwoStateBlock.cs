@@ -71,7 +71,8 @@ namespace Code.Runtime.UI.Inventory
                     var unchained = new ItemStateView(ItemStateKind.Unchained, StateGlyphs.For(ItemStateKind.Unchained),
                         AffixLines(item as IAttachmentItem, detailed, isOwned, stats), isActive: !primaryActive);
                     var chained = new ItemStateView(ItemStateKind.Chained, StateGlyphs.For(ItemStateKind.Chained),
-                        PositionalDelta.Describe(item, chain, detailed), isActive: primaryActive);
+                        PositionalDelta.Describe(item, chain, detailed), isActive: primaryActive,
+                        costLine: PositionalDelta.CostLine(item));
                     return new TwoStateView(unchained, chained);
                 }
 
@@ -161,6 +162,12 @@ namespace Code.Runtime.UI.Inventory
     /// is the currently-live state (<see cref="IsActive"/>). Keeping the raw lines (rather than a
     /// formatted, emphasised string) is what makes the two-state model unit-testable without driving
     /// Unity — the presenter reads <see cref="IsActive"/> to add the bold/dim emphasis.
+    ///
+    /// <see cref="CostLine"/> (v2 slice 7, issue #23) is a resource/cost modifier — today a chained
+    /// Reactor/Amplifier/Converter's own trigger/input cost, via <see cref="PositionalDelta.CostLine"/> —
+    /// kept out of <see cref="Lines"/> so the presenter can render it as its own separately-styled row
+    /// instead of dot-joining it into the rest of the state's content. Empty for every state that carries
+    /// none (the default for every constructor call that doesn't pass one).
     /// </summary>
     public readonly struct ItemStateView
     {
@@ -168,13 +175,16 @@ namespace Code.Runtime.UI.Inventory
         public string               Label    { get; }
         public IReadOnlyList<string> Lines   { get; }
         public bool                 IsActive { get; }
+        public string                CostLine { get; }
 
-        public ItemStateView(ItemStateKind kind, string label, IReadOnlyList<string> lines, bool isActive)
+        public ItemStateView(ItemStateKind kind, string label, IReadOnlyList<string> lines, bool isActive,
+            string costLine = "")
         {
             Kind     = kind;
             Label    = label;
             Lines    = lines;
             IsActive = isActive;
+            CostLine = costLine ?? string.Empty;
         }
     }
 

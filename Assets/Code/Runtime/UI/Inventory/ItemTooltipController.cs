@@ -554,12 +554,21 @@ namespace Code.Runtime.UI.Inventory
 
         /// <summary>Renders one <see cref="ItemStateView"/> as a <c>glyph label:   lines…</c> row, bold
         /// when <see cref="ItemStateView.IsActive"/> and dim otherwise — the sole state marker (no badge).
-        /// An empty state prints a dim em-dash so the symmetry (both states always shown) stays visible.</summary>
+        /// An empty state prints a dim em-dash so the symmetry (both states always shown) stays visible.
+        /// A non-empty <see cref="ItemStateView.CostLine"/> (v2 slice 7, issue #23) gets its own indented
+        /// row beneath — separately tagged, not dot-joined into <c>body</c> with the rest of the state's
+        /// content — matching the state's own emphasis.</summary>
         private static void AppendState(StringBuilder sb, in ItemStateView state)
         {
             var body = state.Lines.Count > 0 ? string.Join("   ·   ", state.Lines) : "—";
             var line = $"{state.Label}:   {body}";
             sb.AppendLine(state.IsActive ? $"  <b>{line}</b>" : $"  {line.Colored(LightGray)}");
+
+            if (!string.IsNullOrEmpty(state.CostLine))
+            {
+                var costLine = $"    {state.CostLine}";
+                sb.AppendLine(state.IsActive ? $"  <b>{costLine}</b>" : $"  {costLine.Colored(LightGray)}");
+            }
         }
 
         /// <summary>A weapon sitting alone (no chain): it fires on its own timer with its base stats.</summary>

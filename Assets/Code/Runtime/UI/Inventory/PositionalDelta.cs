@@ -163,14 +163,22 @@ namespace Code.Runtime.UI.Inventory
         /// diff. This is the "what does this piece do?" answer for an attachment's <em>own</em> hover:
         /// <list type="bullet">
         ///   <item><b>Amplifier</b> — its output modifier, e.g. <c>Damage +6</c>.</item>
-        ///   <item><b>Reactor</b> — the firing condition (<c>fires when hit</c>) plus its input modifier,
-        ///   e.g. <c>ManaCost * 120 %</c>.</item>
-        ///   <item><b>Shifter</b> — the input↔output economy trade.</item>
+        ///   <item><b>Reactor</b> — the firing condition (<c>fires when hit</c>) plus any non-cost input
+        ///   modifier (e.g. a Shifter-style <c>AttackSpeed +1</c>). A <em>resource-cost</em> input modifier
+        ///   (e.g. <c>ManaCost * 120 %</c>) is <b>not</b> included here — it's <see cref="CostLine"/>'s
+        ///   separately-tagged line instead (v2 slice 7, issue #23).</item>
+        ///   <item><b>Shifter</b> — the input↔output economy trade (its own semantic identity line, always
+        ///   shown as-is — not routed through <see cref="CostLine"/> even when its input targets a resource,
+        ///   since the trade reads as one move, not a cost).</item>
         ///   <item><b>Converter</b> — the target it converts <em>to</em>, e.g. <c>→ Aoe</c> (the <em>from</em>
         ///   side is a Details/later-slice concern).</item>
         /// </list>
         /// <b>Additive</b>: a numeric line appears only when its modifier is non-default, so future fields
         /// don't force layout churn (spec §3 note). Non-attachments return an empty list.
+        ///
+        /// A <b>resource-cost</b> input modifier (e.g. a Reactor's <c>ManaCost * 120 %</c> trigger cost)
+        /// is <b>not</b> included here — it's <see cref="CostLine"/>'s own separately-tagged line instead
+        /// (v2 slice 7, issue #23), not folded into this generic list.
         ///
         /// <b>Details mode</b> (ADR-0010 Decision 3, issue #29): when <paramref name="detailed"/> is true
         /// and <paramref name="chain"/> places this item at a resolvable position, every numeric modifier
@@ -198,14 +206,18 @@ namespace Code.Runtime.UI.Inventory
 
                 case IReactorItem reactor:
                     var lines = new List<string> { $"fires {FiringCondition(reactor.ReactorType)}" };
-                    // Reuse the piece list's own reactor equation rather than growing a second formatter
-                    // for the same before/after numbers (ADR-0010 Decision 3).
-                    var equation = piece.HasValue
-                        ? ReactorInputEquation(reactor, piece.Value, detailed)
-                        : IsMeaningful(reactor.inputMod.modifier)
-                            ? $"{reactor.inputMod.stat} {reactor.inputMod.modifier}"
-                            : string.Empty;
-                    if (equation.Length > 0) lines.Add(equation);
+                    // A resource-cost input mod (e.g. ManaCost) is CostLine's own row now (issue #23) —
+                    // never folded into this generic line, even though ReactorInputEquation (the
+                    // piece-list's shared formatter) still includes it there for that other presenter.
+                    if (ResourceOf(reactor.inputMod.stat) == null)
+                    {
+                        var equation = piece.HasValue
+                            ? ReactorInputEquation(reactor, piece.Value, detailed)
+                            : IsMeaningful(reactor.inputMod.modifier)
+                                ? $"{reactor.inputMod.stat} {reactor.inputMod.modifier}"
+                                : string.Empty;
+                        if (equation.Length > 0) lines.Add(equation);
+                    }
                     return lines;
 
                 case IConverterItem converter:
@@ -225,6 +237,57 @@ namespace Code.Runtime.UI.Inventory
                 if (p.Item == item) return p;
             return null;
         }
+
+        /// <summary>
+        /// The chained-state's <b>cost line</b> (tooltip-redesign v2 slice 7, issue #23): a resource-cost
+        /// input modifier — a Reactor's trigger cost, or an Amplifier/Converter's own <c>inputMod</c>
+        /// (ADR-0009 / issue #25) — rendered as its own separately-tagged <c>[resource icon] ×N%</c> line,
+        /// distinguishable from <see cref="Describe"/>'s generic stat-list lines rather than folded into
+        /// them. Empty when the item carries no cost-eligible input modifier, its input doesn't target a
+        /// resource-cost stat, or the modifier is a no-op (additive rule, mirrors <see cref="IsMeaningful"/>).
+        ///
+        /// Shifter is excluded even though it also carries an <c>inputMod</c>: its input↔output pair is
+        /// one semantic economy-trade line in <see cref="Describe"/>, not a cost to call out separately
+        /// (2026-07-02 scope note on issue #23: "any item carrying a non-default inputMod — Reactor,
+        /// Amplifier, or Converter alike" — Shifter was never included in that widening).
+        /// </summary>
+        public static string CostLine(ITetrisItem item)
+        {
+            var mod = InputModOf(item);
+            if (mod == null) return string.Empty;
+
+            var resource = ResourceOf(mod.stat);
+            if (resource == null || !IsMeaningful(mod.modifier)) return string.Empty;
+
+            return $"{ResourceGlyphs.For(resource.Value)} {CostMultiplierText(mod.modifier)}";
+        }
+
+        // The inputMod-carrying families CostLine considers — Reactor's trigger cost plus Amplifier/
+        // Converter's own inputMod (ADR-0009 / issue #25). Shifter deliberately excluded (see CostLine's
+        // own doc); null for anything else (a bare Weapon, or an attachment with no inputMod at all).
+        private static WeaponInputModifier InputModOf(ITetrisItem item) => item switch
+        {
+            IReactorItem reactor     => reactor.inputMod,
+            IAmplifierItem amplifier => amplifier.inputMod,
+            IConverterItem converter => converter.inputMod,
+            _                        => null,
+        };
+
+        // The resource a WeaponInputStat's cost draws from — null when the stat isn't a resource cost at
+        // all (AttackSpeed, ProcChance). Only ManaCost exists today (WeaponInputStat.cs: LifeCost was
+        // retired per ADR-0005 §4 — Cost is one pool), so Health never actually resolves here yet.
+        private static ResourceType? ResourceOf(WeaponInputStat stat) => stat switch
+        {
+            WeaponInputStat.ManaCost => ResourceType.Mana,
+            _                        => null,
+        };
+
+        // "×N%"-shaped text (spec's own worked example: a Reactor's ×120% mana trigger cost). PercentMult
+        // stores the authored percent directly (120 => ×120%). Other modifier types don't occur on a cost
+        // stat in any authored config today; falling back to the modifier's own ToString avoids
+        // fabricating a misleading "×" shape for a case that isn't real yet.
+        private static string CostMultiplierText(Modifier mod) =>
+            mod.Type == ModifierType.PercentMult ? $"×{(float)mod:0.###}%" : mod.ToString();
 
         /// <summary>
         /// Whether <paramref name="item"/> belongs to the chain's <b>upstream trigger family</b> —

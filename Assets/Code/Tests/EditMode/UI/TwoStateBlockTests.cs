@@ -131,6 +131,50 @@ namespace Code.Tests.EditMode.UI
             block.Secondary.Lines.Should().Equal("fires when hit", "AttackSpeed +1");
         }
 
+        // ── Chained state's cost line (v2 slice 7, issue #23) ──────────────
+
+        [Test]
+        public void Reactor_Chained_NonCostInput_HasNoCostLine()
+        {
+            // FakeReactor's inputMod targets AttackSpeed, not a resource cost.
+            var block = TwoStateBlock.Build(new FakeReactor("r"), primaryActive: true);
+
+            block.Active.CostLine.Should().BeEmpty();
+        }
+
+        [Test]
+        public void Reactor_Chained_ManaCostInput_CarriesCostLineSeparateFromLines()
+        {
+            var reactor = new StatReactor(Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)));
+
+            var block = TwoStateBlock.Build(reactor, primaryActive: true);
+
+            block.Active.Kind.Should().Be(ItemStateKind.Chained);
+            block.Active.Lines.Should().Equal("fires when hit"); // ManaCost line excluded from Lines
+            block.Active.CostLine.Should().Be($"{ResourceGlyphs.For(ResourceType.Mana)} ×120%");
+        }
+
+        [Test]
+        public void Amplifier_HasNoCostLine()
+        {
+            var block = TwoStateBlock.Build(new FakeAmplifier("a"), primaryActive: true);
+
+            block.Active.CostLine.Should().BeEmpty();
+        }
+
+        [Test]
+        public void Amplifier_Chained_ManaCostInput_CarriesCostLine()
+        {
+            // Widened scope (2026-07-02 note on issue #23): once ADR-0009/#25 gave Amplifier its own
+            // inputMod, the chained-state wiring picks up its cost line too — not Reactor-only.
+            var amp = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Flat(1f)),
+                Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)));
+
+            var block = TwoStateBlock.Build(amp, primaryActive: true);
+
+            block.Active.CostLine.Should().Be($"{ResourceGlyphs.For(ResourceType.Mana)} ×120%");
+        }
+
         // ── The loose affix is the unchained state's content ──────────────
 
         [Test]

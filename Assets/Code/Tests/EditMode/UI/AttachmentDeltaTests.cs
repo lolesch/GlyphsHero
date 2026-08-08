@@ -84,6 +84,101 @@ namespace Code.Tests.EditMode.UI
             PositionalDelta.Describe(reactor, chain: null, detailed: false).Should().Equal("fires when mana empties");
         }
 
+        // ── Cost line (v2 slice 7, issue #23): a resource-cost input mod gets its own row ──
+
+        [Test]
+        public void Reactor_ManaCostInput_IsExcludedFromDescribe()
+        {
+            // A resource-cost input mod (ManaCost) is CostLine's own separately-tagged row now — Describe
+            // must not also fold it into its generic stat-list line (that's the "not folded into a
+            // generic bulleted stat list" acceptance bar).
+            var reactor = new StatReactor(Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)));
+
+            PositionalDelta.Describe(reactor, chain: null, detailed: false).Should().Equal("fires when hit");
+        }
+
+        [Test]
+        public void Reactor_ManaCostInput_CostLineShowsResourceIconAndPercent()
+        {
+            var reactor = new StatReactor(Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)));
+
+            PositionalDelta.CostLine(reactor).Should().Be($"{ResourceGlyphs.For(ResourceType.Mana)} ×120%");
+        }
+
+        [Test]
+        public void Reactor_NonCostInput_HasNoCostLine()
+        {
+            // AttackSpeed/ProcChance input mods aren't a resource cost — they stay in Describe's generic
+            // line (Reactor_ShowsFiringConditionThenInputDelta above), never CostLine.
+            PositionalDelta.CostLine(new FakeReactor("r")).Should().BeEmpty();
+        }
+
+        [Test]
+        public void Reactor_ZeroPercentMultManaCost_StillShowsCostLine()
+        {
+            // Mirrors Amplifier_PercentMultAlwaysShows_EvenAtZero: PercentMult is always a deliberate
+            // authored value (a ×0 % trigger cost reads as "free to trigger", not "no cost mod authored"),
+            // so IsMeaningful never treats it as a no-op — same rule CostLine inherits.
+            var reactor = new StatReactor(Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(0f)));
+
+            PositionalDelta.CostLine(reactor).Should().Be($"{ResourceGlyphs.For(ResourceType.Mana)} ×0%");
+        }
+
+        [Test]
+        public void Reactor_ZeroFlatManaCost_CostLineIsEmpty()
+        {
+            // Unlike PercentMult, FlatAdd/PercentAdd near-zero is treated as no-op (IsMeaningful's epsilon
+            // rule) — an authored-but-inert flat cost mod shouldn't grow a phantom cost line.
+            var reactor = new StatReactor(Mods.Input(WeaponInputStat.ManaCost, Mods.Flat(0f)));
+
+            PositionalDelta.CostLine(reactor).Should().BeEmpty();
+        }
+
+        [Test]
+        public void Shifter_HasNoCostLine()
+        {
+            // Shifter's inputMod feeds its own input↔output economy-trade identity line — never routed
+            // through CostLine even when it targets a resource stat (Shifter is excluded from the
+            // Reactor/Amplifier/Converter widening below).
+            var shifter = new StatShifter(Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)),
+                Mods.Output(WeaponOutputStat.Damage, Mods.Flat(1f)));
+
+            PositionalDelta.CostLine(shifter).Should().BeEmpty();
+        }
+
+        // ── Cost line widening (2026-07-02 scope note on issue #23): once ADR-0009/#25 gave Amplifier
+        // and Converter their own inputMod, CostLine covers them too — not Reactor-only. ──
+
+        [Test]
+        public void Amplifier_ManaCostInput_CostLineShowsResourceIconAndPercent()
+        {
+            var amp = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Flat(1f)),
+                Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)));
+
+            PositionalDelta.CostLine(amp).Should().Be($"{ResourceGlyphs.For(ResourceType.Mana)} ×120%");
+        }
+
+        [Test]
+        public void Amplifier_NonCostInput_HasNoCostLine()
+        {
+            PositionalDelta.CostLine(new FakeAmplifier("a")).Should().BeEmpty();
+        }
+
+        [Test]
+        public void Converter_ManaCostInput_CostLineShowsResourceIconAndPercent()
+        {
+            var converter = new StatConverter(ConverterAxis.Delivery,
+                inputMod: Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)));
+
+            PositionalDelta.CostLine(converter).Should().Be($"{ResourceGlyphs.For(ResourceType.Mana)} ×120%");
+        }
+
+        [Test]
+        public void Converter_NonCostInput_HasNoCostLine()
+        {
+            PositionalDelta.CostLine(new FakeConverter("c")).Should().BeEmpty();
+        }
+
         // ── Shifter: input↔output economy trade ───────────────────────────
 
         [Test]

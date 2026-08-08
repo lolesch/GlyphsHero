@@ -14,8 +14,9 @@ namespace Code.Tests.EditMode.Inventory.Fakes
     /// </summary>
     internal static class Mods
     {
-        public static Modifier Flat(float value)    => new Modifier(value, ModifierType.FlatAdd,    Guid.NewGuid());
-        public static Modifier Percent(float value) => new Modifier(value, ModifierType.PercentAdd, Guid.NewGuid());
+        public static Modifier Flat(float value)        => new Modifier(value, ModifierType.FlatAdd,     Guid.NewGuid());
+        public static Modifier Percent(float value)     => new Modifier(value, ModifierType.PercentAdd,  Guid.NewGuid());
+        public static Modifier PercentMult(float value) => new Modifier(value, ModifierType.PercentMult, Guid.NewGuid());
 
         public static WeaponInputModifier  Input(WeaponInputStat stat, Modifier modifier)   => new WeaponInputModifier(stat, modifier);
         public static WeaponOutputModifier Output(WeaponOutputStat stat, Modifier modifier) => new WeaponOutputModifier(stat, modifier);
