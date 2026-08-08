@@ -94,7 +94,7 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeAmplifier("a"), primaryActive: true);
 
             block.Secondary.IsActive.Should().BeTrue(); // Chained
-            block.Secondary.Lines.Should().Equal("Damage +1"); // PositionalDelta.Describe(amp)
+            block.Secondary.Lines.Should().Equal($"{StatGlyphs.For(StatKind.Damage)} +1"); // PositionalDelta.Describe(amp)
             block.Default.IsActive.Should().BeFalse();  // Unchained, dim
         }
 
@@ -110,7 +110,7 @@ namespace Code.Tests.EditMode.UI
 
             var block = TwoStateBlock.Build(amp, primaryActive: true, chain: chain, detailed: true);
 
-            block.Secondary.Lines.Should().Equal("Damage 1.0 → 1.5");
+            block.Secondary.Lines.Should().Equal($"{StatGlyphs.For(StatKind.Damage)} 1.0 → 1.5 Damage");
         }
 
         [Test]
@@ -128,7 +128,7 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeReactor("r"), primaryActive: true);
 
             block.Secondary.Kind.Should().Be(ItemStateKind.Chained);
-            block.Secondary.Lines.Should().Equal("fires when hit", "AttackSpeed +1");
+            block.Secondary.Lines.Should().Equal("fires when hit", $"{StatGlyphs.For(StatKind.AttackSpeed)} +1");
         }
 
         // ── Chained state's cost line (v2 slice 7, issue #23) ──────────────
@@ -184,9 +184,9 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: true);
 
             block.Secondary.Kind.Should().Be(ItemStateKind.Chained);
-            block.Secondary.Lines.Should().Equal("Damage +2");
+            block.Secondary.Lines.Should().Equal($"{StatGlyphs.For(StatKind.Damage)} +2");
             block.Default.Kind.Should().Be(ItemStateKind.Unchained);
-            block.Default.Lines.Should().Equal("LifeMax +5");
+            block.Default.Lines.Should().Equal($"{StatGlyphs.For(StatKind.LifeMax)} +5");
         }
 
         [Test]
@@ -209,7 +209,7 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
                 detailed: false, isOwned: false);
 
-            block.Default.Lines.Should().Equal("LifeMax +5");
+            block.Default.Lines.Should().Equal($"{StatGlyphs.For(StatKind.LifeMax)} +5");
         }
 
         [Test]
@@ -218,17 +218,20 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
                 detailed: true, isOwned: false);
 
-            block.Default.Lines.Should().Equal("LifeMax +5 — increases max health");
+            block.Default.Lines.Should().Equal(
+                $"{StatGlyphs.Format(StatKind.LifeMax, "+5", detailed: true)} — increases max health");
         }
 
         [Test]
         public void Owned_Details_NoStatsWired_FallsBackFlat()
         {
-            // Owned context, but the caller (e.g. no live pawn wired yet) passed no stats — never guess.
+            // Owned context, but the caller (e.g. no live pawn wired yet) passed no stats — never guess a
+            // before→after equation. Still gets the Details-mode glyph+label (issue #24) — that's a
+            // presentation decoration, not a fabricated number.
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
                 detailed: true, isOwned: true, stats: null);
 
-            block.Default.Lines.Should().Equal("LifeMax +5");
+            block.Default.Lines.Should().Equal(StatGlyphs.Format(StatKind.LifeMax, "+5", detailed: true));
         }
 
         [Test]
@@ -238,7 +241,7 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
                 detailed: false, isOwned: true, stats: NewPawnStats());
 
-            block.Default.Lines.Should().Equal("LifeMax +5");
+            block.Default.Lines.Should().Equal($"{StatGlyphs.For(StatKind.LifeMax)} +5");
         }
 
         [Test]
@@ -248,7 +251,7 @@ namespace Code.Tests.EditMode.UI
             var block = TwoStateBlock.Build(new FakeDualAmplifier("d"), primaryActive: false,
                 detailed: true, isOwned: true, stats: NewPawnStats());
 
-            block.Default.Lines.Should().Equal("LifeMax 100 → 105");
+            block.Default.Lines.Should().Equal(StatGlyphs.Format(StatKind.LifeMax, "100 → 105", detailed: true));
         }
 
         // ── Glyph labels replace the old plain-text state labels ───────────

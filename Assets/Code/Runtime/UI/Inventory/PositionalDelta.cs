@@ -115,26 +115,28 @@ namespace Code.Runtime.UI.Inventory
         }
 
         /// <summary>
-        /// A reactor's own <b>input</b> equation (spec §3 Reactor row): the modifier alone
-        /// (<c>ManaCost * 120 %</c>) or, under Details mode, the full <c>[base X] modifier = result</c> equation —
-        /// the base/result read off whichever <see cref="WeaponStats"/> field <c>inputMod.stat</c>
+        /// A reactor's own <b>input</b> equation (spec §3 Reactor row), rendered through
+        /// <see cref="StatGlyphs"/> (v2 slice 8, issue #24): the glyph + modifier alone (<c>⏱ ×120%</c>) or,
+        /// under Details mode with a resolvable piece, the glyph + full <c>[base X] modifier = result</c>
+        /// equation — the base/result read off whichever <see cref="WeaponStats"/> field <c>inputMod.stat</c>
         /// targets, from the piece's own before/with snapshot (so it reflects this reactor's marginal
-        /// contribution, not the whole chain). <c>ProcChance</c> has no backing <see cref="WeaponStats"/>
-        /// field (<see cref="WeaponStatResolver"/> drops it silently), so it falls back to the modifier
-        /// alone even under Details mode. Empty when the modifier is a no-op (same additive threshold as
-        /// <see cref="Describe"/>), so the caller can skip the line entirely.
+        /// contribution, not the whole chain). <paramref name="piece"/> is null for a loose item or when
+        /// Details mode is off. <c>ProcChance</c> has no backing <see cref="WeaponStats"/> field
+        /// (<see cref="WeaponStatResolver"/> drops it silently), so it falls back to the glyph + modifier
+        /// form even under Details mode (still gaining the Details-mode label, per <see cref="StatGlyphs.Format"/>).
+        /// Empty when the modifier is a no-op (same additive threshold as <see cref="Describe"/>), so the
+        /// caller can skip the line entirely.
         /// </summary>
-        public static string ReactorInputEquation(IReactorItem reactor, PieceDelta piece, bool detailed)
+        public static string ReactorInputEquation(IReactorItem reactor, PieceDelta? piece, bool detailed)
         {
             var mod = reactor.inputMod;
             if (!IsMeaningful(mod.modifier)) return string.Empty;
 
-            var label = $"{mod.stat} {mod.modifier}";
-            if (!detailed) return label;
+            var kind = KindOf(mod.stat);
+            if (detailed && piece.HasValue && InputField(mod.stat, piece.Value, out var before, out var after))
+                return StatGlyphs.Format(kind, $"[base {before:0.###}] {mod.modifier} = {after:0.###}", detailed: true);
 
-            return InputField(mod.stat, piece, out var before, out var after)
-                ? $"[base {before:0.###}] {mod.modifier} = {after:0.###}"
-                : label;
+            return StatGlyphs.Format(kind, mod.modifier.ToString(), detailed);
         }
 
         // The WeaponStats field a reactor's inputMod targets — ProcChance has none (WeaponStatResolver
@@ -162,9 +164,10 @@ namespace Code.Runtime.UI.Inventory
         /// table's "active delta" column, read from the item's own modifiers/axis — not a chain-wide
         /// diff. This is the "what does this piece do?" answer for an attachment's <em>own</em> hover:
         /// <list type="bullet">
-        ///   <item><b>Amplifier</b> — its output modifier, e.g. <c>Damage +6</c>.</item>
+        ///   <item><b>Amplifier</b> — its output modifier, e.g. <c>✺ +6</c> (glyph + value —
+        ///   <see cref="StatGlyphs"/>, v2 slice 8, issue #24).</item>
         ///   <item><b>Reactor</b> — the firing condition (<c>fires when hit</c>) plus any non-cost input
-        ///   modifier (e.g. a Shifter-style <c>AttackSpeed +1</c>). A <em>resource-cost</em> input modifier
+        ///   modifier (e.g. a Shifter-style <c>⏱ +1</c>). A <em>resource-cost</em> input modifier
         ///   (e.g. <c>ManaCost * 120 %</c>) is <b>not</b> included here — it's <see cref="CostLine"/>'s
         ///   separately-tagged line instead (v2 slice 7, issue #23).</item>
         ///   <item><b>Shifter</b> — the input↔output economy trade (its own semantic identity line, always
@@ -186,6 +189,10 @@ namespace Code.Runtime.UI.Inventory
         /// computes for the piece list — instead of printing <see cref="Modifier.ToString"/> directly.
         /// <paramref name="chain"/> is null for a loose (unchained) item, or when Details mode is off;
         /// either way the line falls back to the compact modifier form.
+        ///
+        /// Every numeric line renders through <see cref="StatGlyphs"/> (v2 slice 8, issue #24): a leading
+        /// glyph replaces the raw stat-enum name in default mode, and Details mode appends the stat's own
+        /// name after the value (glyph + value + label) — see <see cref="StatGlyphs.Format"/>.
         /// </summary>
         public static IReadOnlyList<string> Describe(ITetrisItem item, IItemChain chain, bool detailed)
         {
@@ -211,11 +218,7 @@ namespace Code.Runtime.UI.Inventory
                     // piece-list's shared formatter) still includes it there for that other presenter.
                     if (ResourceOf(reactor.inputMod.stat) == null)
                     {
-                        var equation = piece.HasValue
-                            ? ReactorInputEquation(reactor, piece.Value, detailed)
-                            : IsMeaningful(reactor.inputMod.modifier)
-                                ? $"{reactor.inputMod.stat} {reactor.inputMod.modifier}"
-                                : string.Empty;
+                        var equation = ReactorInputEquation(reactor, piece, detailed);
                         if (equation.Length > 0) lines.Add(equation);
                     }
                     return lines;
@@ -329,18 +332,42 @@ namespace Code.Runtime.UI.Inventory
         private static IReadOnlyList<string> ModLine(WeaponOutputStat stat, Modifier mod, PieceDelta? piece, bool detailed) =>
             IsMeaningful(mod) ? new[] { StatSegment(stat, mod, piece, detailed) } : Array.Empty<string>();
 
-        // "{stat} {modifier}", or under Details mode with a resolvable piece, "{stat} {before} → {after}"
-        // — the same base→result shape Stat()/ReactorInputEquation already give the weapon-terminal and
-        // piece-list paths (ADR-0010 Decision 3).
-        private static string StatSegment(WeaponOutputStat stat, Modifier mod, PieceDelta? piece, bool detailed) =>
-            detailed && piece.HasValue && OutputField(stat, piece.Value, out var before, out var after)
-                ? $"{stat} {before:F1} → {after:F1}"
-                : $"{stat} {mod}";
+        // Glyph + "{modifier}", or under Details mode with a resolvable piece, glyph + "{before} → {after}"
+        // + the stat's own name — the same base→result numbers Stat()/ReactorInputEquation already give the
+        // weapon-terminal and piece-list paths (ADR-0010 Decision 3), composed via StatGlyphs (issue #24).
+        private static string StatSegment(WeaponOutputStat stat, Modifier mod, PieceDelta? piece, bool detailed)
+        {
+            var valueText = detailed && piece.HasValue && OutputField(stat, piece.Value, out var before, out var after)
+                ? $"{before:F1} → {after:F1}"
+                : mod.ToString();
+            return StatGlyphs.Format(KindOf(stat), valueText, detailed);
+        }
 
-        private static string StatSegment(WeaponInputStat stat, Modifier mod, PieceDelta? piece, bool detailed) =>
-            detailed && piece.HasValue && InputField(stat, piece.Value, out var before, out var after)
-                ? $"{stat} {before:F1} → {after:F1}"
-                : $"{stat} {mod}";
+        private static string StatSegment(WeaponInputStat stat, Modifier mod, PieceDelta? piece, bool detailed)
+        {
+            var valueText = detailed && piece.HasValue && InputField(stat, piece.Value, out var before, out var after)
+                ? $"{before:F1} → {after:F1}"
+                : mod.ToString();
+            return StatGlyphs.Format(KindOf(stat), valueText, detailed);
+        }
+
+        // StatGlyphs' StatKind (UI-only taxonomy) has no domain-enum reuse (StatGlyphs.cs's own doc
+        // comment), so PositionalDelta — the sole reader of WeaponOutputStat/WeaponInputStat in a glyph
+        // context here — owns these two narrow translation maps itself rather than growing StatGlyphs a
+        // dependency on Code.Data.Enums for every domain stat type.
+        private static StatKind KindOf(WeaponOutputStat stat) => stat switch
+        {
+            WeaponOutputStat.Damage => StatKind.Damage,
+            _                       => default,
+        };
+
+        private static StatKind KindOf(WeaponInputStat stat) => stat switch
+        {
+            WeaponInputStat.AttackSpeed => StatKind.AttackSpeed,
+            WeaponInputStat.ManaCost    => StatKind.Cost,
+            WeaponInputStat.ProcChance  => StatKind.ProcChance,
+            _                           => default,
+        };
 
         // The WeaponStats field an Amplifier/Shifter's outputMod targets — mirrors InputField's shape.
         private static bool OutputField(WeaponOutputStat stat, PieceDelta piece, out float before, out float after)

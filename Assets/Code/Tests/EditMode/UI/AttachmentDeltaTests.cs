@@ -37,7 +37,7 @@ namespace Code.Tests.EditMode.UI
         public void Amplifier_ShowsItsOutputModifier()
         {
             PositionalDelta.Describe(new FakeAmplifier("a"), chain: null, detailed: false)
-                .Should().Equal("Damage +1");
+                .Should().Equal($"{StatGlyphs.For(StatKind.Damage)} +1");
         }
 
         [Test]
@@ -45,7 +45,8 @@ namespace Code.Tests.EditMode.UI
         {
             var amp = new StatAmplifier(Mods.Output(WeaponOutputStat.Damage, Mods.Percent(20f)));
 
-            PositionalDelta.Describe(amp, chain: null, detailed: false).Should().Equal("Damage +20 %");
+            PositionalDelta.Describe(amp, chain: null, detailed: false)
+                .Should().Equal($"{StatGlyphs.For(StatKind.Damage)} +20 %");
         }
 
         [Test]
@@ -72,7 +73,7 @@ namespace Code.Tests.EditMode.UI
         public void Reactor_ShowsFiringConditionThenInputDelta()
         {
             PositionalDelta.Describe(new FakeReactor("r"), chain: null, detailed: false)
-                .Should().Equal("fires when hit", "AttackSpeed +1");
+                .Should().Equal("fires when hit", $"{StatGlyphs.For(StatKind.AttackSpeed)} +1");
         }
 
         [Test]
@@ -185,7 +186,7 @@ namespace Code.Tests.EditMode.UI
         public void Shifter_ShowsInputToOutputMove()
         {
             PositionalDelta.Describe(new FakeShifter("s"), chain: null, detailed: false)
-                .Should().Equal("AttackSpeed +1 ↔ Damage +1");
+                .Should().Equal($"{StatGlyphs.For(StatKind.AttackSpeed)} +1 ↔ {StatGlyphs.For(StatKind.Damage)} +1");
         }
 
         // ── Converter: converts-to target on its axis ─────────────────────
@@ -229,7 +230,8 @@ namespace Code.Tests.EditMode.UI
             var chain  = new ItemChain(weapon, new List<ITetrisItem> { amp });
 
             // base 1 * 1.5 = 1.5 — the same number PositionalDelta.Pieces already resolves for this amp.
-            PositionalDelta.Describe(amp, chain, detailed: true).Should().Equal("Damage 1.0 → 1.5");
+            PositionalDelta.Describe(amp, chain, detailed: true)
+                .Should().Equal($"{StatGlyphs.For(StatKind.Damage)} 1.0 → 1.5 Damage");
         }
 
         [Test]
@@ -237,8 +239,11 @@ namespace Code.Tests.EditMode.UI
         {
             var amp = new FakeAmplifier("a"); // outputMod Damage +1 (flat)
 
-            // No chain to resolve a position in → nothing to diff, so Details mode can't expand it.
-            PositionalDelta.Describe(amp, chain: null, detailed: true).Should().Equal("Damage +1");
+            // No chain to resolve a position in → nothing to diff, so the value stays the compact
+            // modifier form — but Details mode still adds the glyph's trailing label (issue #24), since
+            // that's driven by the detailed flag alone, not by whether the equation could be resolved.
+            PositionalDelta.Describe(amp, chain: null, detailed: true)
+                .Should().Equal($"{StatGlyphs.For(StatKind.Damage)} +1 Damage");
         }
 
         [Test]
@@ -250,7 +255,7 @@ namespace Code.Tests.EditMode.UI
 
             // Reuses PositionalDelta.ReactorInputEquation — the exact formatter the piece list calls.
             PositionalDelta.Describe(reactor, chain, detailed: true)
-                .Should().Equal("fires when hit", "[base 1] +1 = 2");
+                .Should().Equal("fires when hit", $"{StatGlyphs.For(StatKind.AttackSpeed)} [base 1] +1 = 2 AttackSpeed");
         }
 
         [Test]
@@ -261,7 +266,8 @@ namespace Code.Tests.EditMode.UI
             var chain   = new ItemChain(shifter, new List<ITetrisItem> { weapon });
 
             PositionalDelta.Describe(shifter, chain, detailed: true)
-                .Should().Equal("AttackSpeed 1.0 → 2.0 ↔ Damage 1.0 → 2.0");
+                .Should().Equal($"{StatGlyphs.For(StatKind.AttackSpeed)} 1.0 → 2.0 AttackSpeed ↔ " +
+                                 $"{StatGlyphs.For(StatKind.Damage)} 1.0 → 2.0 Damage");
         }
 
         // ── Non-attachments carry no active-delta content ─────────────────

@@ -10,11 +10,12 @@ namespace Code.Tests.EditMode.UI
 {
     /// <summary>
     /// Locks the reactor's own <b>input</b> equation (tooltip-redesign spec §2.1 / §3 Reactor row,
-    /// slice 6 remainder): <see cref="PositionalDelta.ReactorInputEquation"/> is the modifier alone
-    /// without Alt, or the full <c>[base X] modifier = result</c> equation with Alt — read off whichever
-    /// <see cref="Code.Runtime.Modules.Inventory.WeaponStats"/> field the reactor's <c>inputMod</c>
-    /// targets, from the piece's own before/with snapshot (its marginal contribution, not the whole
-    /// chain's).
+    /// slice 6 remainder; glyph-wired per v2 slice 8, issue #24):
+    /// <see cref="PositionalDelta.ReactorInputEquation"/> is the glyph + modifier alone without Alt, or
+    /// the glyph + full <c>[base X] modifier = result</c> equation + the stat's own name with Alt — read
+    /// off whichever <see cref="Code.Runtime.Modules.Inventory.WeaponStats"/> field the reactor's
+    /// <c>inputMod</c> targets, from the piece's own before/with snapshot (its marginal contribution, not
+    /// the whole chain's).
     ///
     /// Red-green: a build that always/never expands under Alt, reads the wrong before/after field, or
     /// forgets <c>ProcChance</c> has no backing field fails one of the cases below.
@@ -33,7 +34,7 @@ namespace Code.Tests.EditMode.UI
             var piece   = PositionalDelta.Pieces(chain)[0];
 
             PositionalDelta.ReactorInputEquation(reactor, piece, detailed: false)
-                .Should().Be("AttackSpeed +1");
+                .Should().Be($"{StatGlyphs.For(StatKind.AttackSpeed)} +1");
         }
 
         [Test]
@@ -44,7 +45,7 @@ namespace Code.Tests.EditMode.UI
             var piece   = PositionalDelta.Pieces(chain)[0];
 
             PositionalDelta.ReactorInputEquation(reactor, piece, detailed: true)
-                .Should().Be("[base 1] +1 = 2");
+                .Should().Be($"{StatGlyphs.For(StatKind.AttackSpeed)} [base 1] +1 = 2 AttackSpeed");
         }
 
         [Test]
@@ -56,20 +57,21 @@ namespace Code.Tests.EditMode.UI
             var piece   = PositionalDelta.Pieces(chain)[0];
 
             PositionalDelta.ReactorInputEquation(reactor, piece, detailed: true)
-                .Should().Be("[base 10] +5 = 15");
+                .Should().Be($"{StatGlyphs.For(StatKind.Cost)} [base 10] +5 = 15 Cost");
         }
 
         [Test]
         public void Alt_ProcChance_HasNoBackingField_FallsBackToLabel()
         {
             // ProcChance has no WeaponStats field (WeaponStatResolver drops it silently) — even under
-            // Alt there's no before/after to show, so it falls back to the modifier alone.
+            // Alt there's no before/after to show, so the value stays the modifier alone; it still gains
+            // the glyph + Details-mode label since that's driven by the detailed flag, not by resolution.
             var reactor = new StatReactor(Mods.Input(WeaponInputStat.ProcChance, Mods.Flat(10f)));
             var chain   = Chain(reactor, new StatWeapon());
             var piece   = PositionalDelta.Pieces(chain)[0];
 
             PositionalDelta.ReactorInputEquation(reactor, piece, detailed: true)
-                .Should().Be("ProcChance +10");
+                .Should().Be($"{StatGlyphs.For(StatKind.ProcChance)} +10 ProcChance");
         }
 
         [Test]

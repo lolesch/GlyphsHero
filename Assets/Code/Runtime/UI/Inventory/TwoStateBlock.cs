@@ -115,8 +115,13 @@ namespace Code.Runtime.UI.Inventory
         // Details mode expands into the pawn's real before→after, read off IPawnStats.PreviewAffix —
         // that math is correct whether the affix is currently applied (item unchained) or currently
         // suppressed by a chain (item chained), since PreviewAffix always diffs against the rest of the
-        // stat's modifier list. A null stats (no owner wired yet) falls back to the same flat line as
-        // the default read, never a guess.
+        // stat's modifier list. A null stats (no owner wired yet) falls back to the same flat modifier
+        // value as the default read, never a guess — it still gets the Details-mode glyph+label (issue
+        // #24) since that's a presentation decoration, not a fabricated equation.
+        //
+        // Every line renders through StatGlyphs (v2 slice 8, issue #24) — e.g. LifeMax reads "♥ +10"
+        // by default, "♥ +10 LifeMax" under Details — via a small PawnStat → StatKind map, since
+        // StatGlyphs itself stays domain-enum-free (StatGlyphs.cs's own doc comment).
         private static IReadOnlyList<string> AffixLines(IAttachmentItem attachment, bool detailed, bool isOwned,
             IPawnStats stats)
         {
@@ -125,17 +130,19 @@ namespace Code.Runtime.UI.Inventory
 
             return attachment.affixes.Select(a =>
             {
+                var kind = KindOf(a.PawnStat);
+
                 if (!detailed)
-                    return $"{a.PawnStat} {a.Modifier}";
+                    return StatGlyphs.Format(kind, a.Modifier.ToString(), detailed: false);
 
                 if (!isOwned)
-                    return $"{a.PawnStat} {a.Modifier} — {PawnStatDescription(a.PawnStat)}";
+                    return $"{StatGlyphs.Format(kind, a.Modifier.ToString(), detailed: true)} — {PawnStatDescription(a.PawnStat)}";
 
                 if (stats == null)
-                    return $"{a.PawnStat} {a.Modifier}";
+                    return StatGlyphs.Format(kind, a.Modifier.ToString(), detailed: true);
 
                 var (before, after) = stats.PreviewAffix(a);
-                return $"{a.PawnStat} {before:0.###} → {after:0.###}";
+                return StatGlyphs.Format(kind, $"{before:0.###} → {after:0.###}", detailed: true);
             }).ToList();
         }
 
@@ -150,6 +157,20 @@ namespace Code.Runtime.UI.Inventory
             PawnStat.MovementSpeed => "increases movement speed",
             PawnStat.Range         => "increases weapon reach ceiling",
             _                      => string.Empty,
+        };
+
+        // StatGlyphs' StatKind (UI-only taxonomy) has no domain-enum reuse (StatGlyphs.cs's own doc
+        // comment) — PawnStat's names happen to match 1:1, but an explicit map keeps that an intentional
+        // fact rather than a silent cast.
+        private static StatKind KindOf(PawnStat stat) => stat switch
+        {
+            PawnStat.LifeMax       => StatKind.LifeMax,
+            PawnStat.LifeRegen     => StatKind.LifeRegen,
+            PawnStat.ManaMax       => StatKind.ManaMax,
+            PawnStat.ManaRegen     => StatKind.ManaRegen,
+            PawnStat.MovementSpeed => StatKind.MovementSpeed,
+            PawnStat.Range         => StatKind.Range,
+            _                      => default,
         };
     }
 

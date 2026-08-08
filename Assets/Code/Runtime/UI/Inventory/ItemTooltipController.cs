@@ -301,6 +301,12 @@ namespace Code.Runtime.UI.Inventory
         /// final resolved totals (not a delta) followed by an enumerated piece list — one line per
         /// contributing piece, <c>glyph + name + that piece's marginal delta</c> (coloured by direction).
         /// The math is factored into <see cref="PositionalDelta"/>; this method only formats it.
+        ///
+        /// The dmg/cost lines (and the non-reactor rate line, via <see cref="TerminalRate"/>) render
+        /// through <see cref="StatGlyphs"/> (v2 slice 8, issue #24) — the same glyph-leads-value(+label)
+        /// rule as every other numeric stat line in the tooltip. A reactor's firing condition is an
+        /// identity phrase, not a number, so it stays unglyphed, matching
+        /// <see cref="PositionalDelta.Describe"/>'s own reactor firing-condition line.
         /// </summary>
         private static void AppendWeaponTerminal(StringBuilder sb, IItemChain chain, bool detailed)
         {
@@ -315,7 +321,8 @@ namespace Code.Runtime.UI.Inventory
             // each stay silent when nothing in the chain moved them, rather than repeating the
             // weapon's own base value.
             var dmgPart = changed.DamageChanged
-                ? $"dmg  {TerminalStat((float)weapon.Damage, (float)totals.Damage, detailed)}"
+                ? StatGlyphs.Format(StatKind.Damage,
+                    TerminalStat((float)weapon.Damage, (float)totals.Damage, detailed), detailed)
                 : null;
             // The firing condition isn't itself a stat delta, so a reactor-driven chain always keeps
             // its rate line even when AttackSpeed happens to be unchanged.
@@ -336,7 +343,7 @@ namespace Code.Runtime.UI.Inventory
             if (changed.CostChanged)
             {
                 var costStr = TerminalStat((float)weapon.ResourceCost, (float)totals.ResourceCost, detailed, invert: true);
-                sb.AppendLine($"  cost {costStr} [{totals.CostResource}]" +
+                sb.AppendLine($"  {StatGlyphs.Format(StatKind.Cost, costStr, detailed)} [{totals.CostResource}]" +
                               "   (root gate)".Colored(LightGray));
             }
 
@@ -373,18 +380,22 @@ namespace Code.Runtime.UI.Inventory
             if (PositionalDelta.IsUpstreamFamily(p.Item))
                 return string.Join("   ", PositionalDelta.Describe(p.Item, chain, detailed)).Colored(LightGray);
 
+            // dmg/rate/cost render through StatGlyphs (v2 slice 8, issue #24) — all three fit its
+            // glyph+value(+label) shape, unlike the reactor branch above's sentence-shaped firing line.
             var parts = new List<string>();
             if (!Mathf.Approximately(p.Before.Damage, p.With.Damage))
-                parts.Add($"{Stat(p.Before.Damage, p.With.Damage, detailed)} dmg");
+                parts.Add(StatGlyphs.Format(StatKind.Damage, Stat(p.Before.Damage, p.With.Damage, detailed), detailed));
             if (!Mathf.Approximately(p.Before.AttackSpeed, p.With.AttackSpeed))
             {
                 // Show the attack interval (1/speed), where a shorter interval is the improvement.
                 var beforeInt = p.Before.AttackSpeed > 0f ? 1f / p.Before.AttackSpeed : 0f;
                 var withInt   = p.With.AttackSpeed   > 0f ? 1f / p.With.AttackSpeed   : 0f;
-                parts.Add($"rate {Stat(beforeInt, withInt, detailed, invert: true)}s");
+                parts.Add(StatGlyphs.Format(StatKind.AttackSpeed,
+                    $"{Stat(beforeInt, withInt, detailed, invert: true)}s", detailed));
             }
             if (!Mathf.Approximately(p.Before.ResourceCost, p.With.ResourceCost))
-                parts.Add($"cost {Stat(p.Before.ResourceCost, p.With.ResourceCost, detailed, invert: true)}");
+                parts.Add(StatGlyphs.Format(StatKind.Cost,
+                    Stat(p.Before.ResourceCost, p.With.ResourceCost, detailed, invert: true), detailed));
             // Categorical axis reclassifications (a converter's Delivery/Affinity/Anchor/pool change).
             // Under Details mode these expand to the full "from → to" (spec §3 Converter row); factored into the
             // pure, testable PositionalDelta so the equation logic isn't buried in the MonoBehaviour.
@@ -393,8 +404,11 @@ namespace Code.Runtime.UI.Inventory
             return parts.Count > 0 ? string.Join("   ", parts) : "—".Colored(LightGray);
         }
 
-        /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition, else
-        /// the resolved attack interval — under Details mode, the base interval leads it (spec §2.2).</summary>
+        /// <summary>The terminal fire-rate readout: reactor-driven chains show the firing condition (an
+        /// identity phrase — no glyph, mirroring <see cref="PositionalDelta.Describe"/>'s own unglyphed
+        /// firing-condition line), else the resolved attack interval rendered through <see cref="StatGlyphs"/>
+        /// like every other numeric terminal stat (v2 slice 8, issue #24) — under Details mode, the base
+        /// interval leads it (spec §2.2).</summary>
         private static string TerminalRate(IItemChain chain, float baseSpeed, float finalSpeed, bool detailed)
         {
             var reactor = chain.Root as IReactorItem
@@ -405,7 +419,8 @@ namespace Code.Runtime.UI.Inventory
             // Lower interval (higher AttackSpeed) is the improvement — invert like the per-piece FireRate.
             var before = baseSpeed  > 0f ? 1f / baseSpeed  : 0f;
             var after  = finalSpeed > 0f ? 1f / finalSpeed : 0f;
-            return $"every {TerminalStat(before, after, detailed, invert: true, unit: "s")}";
+            return StatGlyphs.Format(StatKind.AttackSpeed,
+                $"every {TerminalStat(before, after, detailed, invert: true, unit: "s")}", detailed);
         }
 
         private static void AppendChainOutput(StringBuilder sb, IItemChain chain,
