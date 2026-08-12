@@ -80,7 +80,7 @@ namespace Code.Tests.EditMode.UI
         [Test]
         public void Format_Details_AppendsStatNameAfterValue() =>
             StatGlyphs.Format(StatKind.LifeMax, "+10", detailed: true)
-                .Should().Be($"{StatGlyphs.For(StatKind.LifeMax)} +10 LifeMax");
+                .Should().Be($"{StatGlyphs.For(StatKind.LifeMax)} +10 Life Max");
 
         [Test]
         public void Format_Details_AddsLabelEvenWhenValueIsAlreadyAnEquation() =>

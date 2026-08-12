@@ -1,3 +1,5 @@
+using Submodules.Utility.Extensions;
+
 namespace Code.Runtime.UI.Inventory
 {
     /// <summary>
@@ -44,15 +46,23 @@ namespace Code.Runtime.UI.Inventory
 
         /// <summary>
         /// Composes a stat line: <b>default mode</b> is glyph + value (<c>♥ +10</c>); <b>Details mode</b>
-        /// additionally appends the stat's own name (<c>♥ +10 LifeMax</c>) for a player who hasn't learned
-        /// the glyph vocabulary yet — added whenever <paramref name="detailed"/> is true, regardless of
-        /// whether <paramref name="valueText"/> itself expanded into a base → result equation (that's the
-        /// caller's call, not this composer's). <paramref name="valueText"/> is the caller's
+        /// additionally appends the stat's own player-facing name (<c>♥ +10 Life Max</c>) for a player who
+        /// hasn't learned the glyph vocabulary yet — added whenever <paramref name="detailed"/> is true,
+        /// regardless of whether <paramref name="valueText"/> itself expanded into a base → result equation
+        /// (that's the caller's call, not this composer's). <paramref name="valueText"/> is the caller's
         /// already-formatted number (sign, decimals, units) — this builder only owns the icon + label
         /// composition, not number formatting.
         /// </summary>
         public static string Format(StatKind stat, string valueText, bool detailed) =>
-            detailed ? $"{For(stat)} {valueText} {stat}" : $"{For(stat)} {valueText}";
+            detailed ? $"{For(stat)} {valueText} {Label(stat)}" : $"{For(stat)} {valueText}";
+
+        // Player-facing stat names for Details mode. StatKind's own C# identifiers are PascalCase
+        // (AttackSpeed, LifeMax, ...) — fine as code, not as copy a player reads. Routes through the
+        // shared PascalCase → spaced-text humanizer (Submodules.Utility.Extensions.StringExtensions,
+        // also used by Stat.cs for the same job) rather than a hand-maintained map, so a new StatKind
+        // needs no entry here to read correctly. Internal so CompareBlock (slice 8) can reuse it for its
+        // own row labels instead of interpolating a raw domain enum.
+        internal static string Label(StatKind stat) => stat.ToDescription();
 
         private static string Glyph(StatKind stat) => stat switch
         {

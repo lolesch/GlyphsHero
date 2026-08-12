@@ -12,6 +12,10 @@ date: 2026-08-07
 **Lifecycle:** Implemented (2026-08-08) — Decisions 1/2/4 landed in `ItemTooltipController.cs`
 (`AppendAttachmentIdentity`, the chained-weapon/standalone-weapon `.Other` lines, `AppendPayloadOutput`),
 red-green-tested in `ItemTooltipControllerTests.cs`; Decision 3 landed earlier (commit `f7e4a5d`).
+**Amended-by:** [[0011-tooltip-cost-line-drops-root-gate-annotation|ADR-0011]] §Worked example
+(2026-08-13) — the weapon-terminal cost line's `(root gate)` annotation, shown in this ADR's own Worked
+example below, was dropped from the rendered output; the Decisions below are left as-decided-then,
+ADR-0011 is the authority on that one line now.
 **Companion:** ADR-0004 (attack model — item roles: weapon/payload/attachment), ADR-0006 (payload
 propagation cost economy), ADR-0009 (generic Cost `inputMod` — accepted, not yet implemented; this
 ADR's tooltip rules apply to it once it lands, no changes needed here when it does).

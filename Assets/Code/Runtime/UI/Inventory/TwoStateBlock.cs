@@ -120,7 +120,7 @@ namespace Code.Runtime.UI.Inventory
         // #24) since that's a presentation decoration, not a fabricated equation.
         //
         // Every line renders through StatGlyphs (v2 slice 8, issue #24) — e.g. LifeMax reads "♥ +10"
-        // by default, "♥ +10 LifeMax" under Details — via a small PawnStat → StatKind map, since
+        // by default, "♥ +10 Life Max" under Details — via a small PawnStat → StatKind map, since
         // StatGlyphs itself stays domain-enum-free (StatGlyphs.cs's own doc comment).
         private static IReadOnlyList<string> AffixLines(IAttachmentItem attachment, bool detailed, bool isOwned,
             IPawnStats stats)

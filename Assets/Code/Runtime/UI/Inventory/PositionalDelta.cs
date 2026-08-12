@@ -354,19 +354,23 @@ namespace Code.Runtime.UI.Inventory
         // StatGlyphs' StatKind (UI-only taxonomy) has no domain-enum reuse (StatGlyphs.cs's own doc
         // comment), so PositionalDelta — the sole reader of WeaponOutputStat/WeaponInputStat in a glyph
         // context here — owns these two narrow translation maps itself rather than growing StatGlyphs a
-        // dependency on Code.Data.Enums for every domain stat type.
-        private static StatKind KindOf(WeaponOutputStat stat) => stat switch
+        // dependency on Code.Data.Enums for every domain stat type. Internal so CompareBlock (slice 8)
+        // can route its own row labels through the same map instead of interpolating the raw domain enum.
+        // Throws on an unmapped member rather than falling back to default(StatKind) (= StatKind.Damage,
+        // its zero value) — CompareBlock now also uses the result as an alignment key (Align), so a
+        // silently wrong label wouldn't just misprint, it could misalign two unrelated stats into one row.
+        internal static StatKind KindOf(WeaponOutputStat stat) => stat switch
         {
             WeaponOutputStat.Damage => StatKind.Damage,
-            _                       => default,
+            _                       => throw new ArgumentOutOfRangeException(nameof(stat), stat, null),
         };
 
-        private static StatKind KindOf(WeaponInputStat stat) => stat switch
+        internal static StatKind KindOf(WeaponInputStat stat) => stat switch
         {
             WeaponInputStat.AttackSpeed => StatKind.AttackSpeed,
             WeaponInputStat.ManaCost    => StatKind.Cost,
             WeaponInputStat.ProcChance  => StatKind.ProcChance,
-            _                           => default,
+            _                           => throw new ArgumentOutOfRangeException(nameof(stat), stat, null),
         };
 
         // The WeaponStats field an Amplifier/Shifter's outputMod targets — mirrors InputField's shape.

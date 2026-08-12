@@ -104,7 +104,47 @@ namespace Code.Tests.EditMode.UI
             fires.Held.Should().Be("when mana empties");
             fires.Slot.Should().Be("when hit");
             // The reactor's meaningful input modifier is an additive compared row.
-            view.Rows.Single(r => r.Label == "AttackSpeed").Slot.Should().Be("+1");
+            view.Rows.Single(r => r.Label == "Attack Speed").Slot.Should().Be("+1");
+        }
+
+        // ── Matched: a shifter's input and output rows both route through StatLabel ─
+
+        [Test]
+        public void Shifter_InputAndOutputRows_UseStatGlyphsLabel_NotRawEnumText()
+        {
+            // CompareBlock's Shifter branch (unlike ChainFakes' fixed-stat FakeShifter) needs a
+            // configurable stat to prove ManaCost routes to "Cost", not the raw enum name, and that
+            // the input/output rows (different WeaponInputStat/WeaponOutputStat types) don't collide.
+            var held = new StatShifter(
+                Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(120f)),
+                Mods.Output(WeaponOutputStat.Damage, Mods.Flat(2f)), "held");
+            var slot = new StatShifter(
+                Mods.Input(WeaponInputStat.ManaCost, Mods.PercentMult(150f)),
+                Mods.Output(WeaponOutputStat.Damage, Mods.Flat(3f)), "slot");
+
+            var view = CompareBlock.Build(held, slot);
+
+            view.Rows.Select(r => r.Label).Should().Equal("Cost", "Damage");
+            view.Rows.Should().OnlyContain(r => r.Held != null && r.Slot != null); // both matched
+
+            var cost = view.Rows.Single(r => r.Label == "Cost");
+            cost.Held.Should().Be($"{Mods.PercentMult(120f)}");
+            cost.Slot.Should().Be($"{Mods.PercentMult(150f)}");
+        }
+
+        // ── Matched: a reactor's ProcChance input mod also gets the spaced label ────
+
+        [Test]
+        public void Reactors_ProcChanceInputMod_UsesSpacedLabel()
+        {
+            var held = new StatReactor(Mods.Input(WeaponInputStat.ProcChance, Mods.Flat(10f)));
+            var slot = new StatReactor(Mods.Input(WeaponInputStat.ProcChance, Mods.Flat(15f)));
+
+            var view = CompareBlock.Build(held, slot);
+
+            var row = view.Rows.Single(r => r.Label == "Proc Chance");
+            row.Held.Should().Be($"{Mods.Flat(10f)}");
+            row.Slot.Should().Be($"{Mods.Flat(15f)}");
         }
 
         // ── Names + null tolerance ──────────────────────────────────────────

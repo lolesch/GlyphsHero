@@ -45,7 +45,7 @@ namespace Code.Tests.EditMode.UI
             var piece   = PositionalDelta.Pieces(chain)[0];
 
             PositionalDelta.ReactorInputEquation(reactor, piece, detailed: true)
-                .Should().Be($"{StatGlyphs.For(StatKind.AttackSpeed)} [base 1] +1 = 2 AttackSpeed");
+                .Should().Be($"{StatGlyphs.For(StatKind.AttackSpeed)} [base 1] +1 = 2 Attack Speed");
         }
 
         [Test]
@@ -71,7 +71,7 @@ namespace Code.Tests.EditMode.UI
             var piece   = PositionalDelta.Pieces(chain)[0];
 
             PositionalDelta.ReactorInputEquation(reactor, piece, detailed: true)
-                .Should().Be($"{StatGlyphs.For(StatKind.ProcChance)} +10 ProcChance");
+                .Should().Be($"{StatGlyphs.For(StatKind.ProcChance)} +10 Proc Chance");
         }
 
         [Test]

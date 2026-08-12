@@ -340,12 +340,13 @@ namespace Code.Runtime.UI.Inventory
             sb.AppendLine($"  {DeliverySentence.Build(totals.Delivery, totals.Affinity, totals.Anchor, 0)}");
 
             // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
-            // cover it, nothing fires. Silent when the chain never moved the cost off base.
+            // cover it, nothing fires. "Root gate" is internal ChainResolver/ADR-0006 terminology, not
+            // player copy, so it stays out of the rendered line. Silent when the chain never moved the
+            // cost off base.
             if (changed.CostChanged)
             {
                 var costStr = TerminalStat((float)weapon.ResourceCost, (float)totals.ResourceCost, detailed, invert: true);
-                sb.AppendLine($"  {StatGlyphs.Format(StatKind.Cost, costStr, detailed)} [{totals.CostResource}]" +
-                              "   (root gate)".Colored(LightGray));
+                sb.AppendLine($"  {StatGlyphs.Format(StatKind.Cost, costStr, detailed)} [{totals.CostResource}]");
             }
 
             foreach (var piece in PositionalDelta.Pieces(chain))
@@ -450,9 +451,10 @@ namespace Code.Runtime.UI.Inventory
                 ? $" [{before.CostResource}→{with.CostResource}]"
                 : $" [{with.CostResource}]";
             // The weapon's resolved cost is the fail-forward root gate (ADR-0006): if the pool can't
-            // cover it nothing fires. Payload marginals are summarised below and detailed per-payload.
-            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}{poolStr}" +
-                          "   (root gate)".Colored(LightGray));
+            // cover it nothing fires. "Root gate" is internal terminology, kept out of the rendered line
+            // (see the twin comment in AppendWeaponTerminal). Payload marginals are summarised below and
+            // detailed per-payload.
+            sb.AppendLine($"  cost {Stat(before.ResourceCost, with.ResourceCost, detailed, invert: true)}{poolStr}");
 
             AppendPayloadSummary(sb, chain, with.CostResource);
         }

@@ -255,7 +255,7 @@ namespace Code.Tests.EditMode.UI
 
             // Reuses PositionalDelta.ReactorInputEquation — the exact formatter the piece list calls.
             PositionalDelta.Describe(reactor, chain, detailed: true)
-                .Should().Equal("fires when hit", $"{StatGlyphs.For(StatKind.AttackSpeed)} [base 1] +1 = 2 AttackSpeed");
+                .Should().Equal("fires when hit", $"{StatGlyphs.For(StatKind.AttackSpeed)} [base 1] +1 = 2 Attack Speed");
         }
 
         [Test]
@@ -266,7 +266,7 @@ namespace Code.Tests.EditMode.UI
             var chain   = new ItemChain(shifter, new List<ITetrisItem> { weapon });
 
             PositionalDelta.Describe(shifter, chain, detailed: true)
-                .Should().Equal($"{StatGlyphs.For(StatKind.AttackSpeed)} 1.0 → 2.0 AttackSpeed ↔ " +
+                .Should().Equal($"{StatGlyphs.For(StatKind.AttackSpeed)} 1.0 → 2.0 Attack Speed ↔ " +
                                  $"{StatGlyphs.For(StatKind.Damage)} 1.0 → 2.0 Damage");
         }
 

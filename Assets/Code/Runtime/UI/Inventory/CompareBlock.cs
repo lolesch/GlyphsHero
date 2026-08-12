@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Code.Data.Enums;
 using Code.Runtime.Modules.Inventory;
 
 namespace Code.Runtime.UI.Inventory
@@ -51,13 +52,13 @@ namespace Code.Runtime.UI.Inventory
                     };
 
                 case IAmplifierItem amp:
-                    return new[] { ($"{amp.outputMod.stat}", $"{amp.outputMod.modifier}") };
+                    return new[] { (StatLabel(amp.outputMod.stat), $"{amp.outputMod.modifier}") };
 
                 case IShifterItem sh:
                     return new[]
                     {
-                        ($"{sh.inputMod.stat}",  $"{sh.inputMod.modifier}"),
-                        ($"{sh.outputMod.stat}", $"{sh.outputMod.modifier}"),
+                        (StatLabel(sh.inputMod.stat),  $"{sh.inputMod.modifier}"),
+                        (StatLabel(sh.outputMod.stat), $"{sh.outputMod.modifier}"),
                     };
 
                 case IReactorItem r:
@@ -69,7 +70,7 @@ namespace Code.Runtime.UI.Inventory
                     // Additive: the numeric input line appears only when the modifier is a real change
                     // (same no-op gate the piece/two-state views use), so a bare reactor compares clean.
                     if (PositionalDelta.IsMeaningful(r.inputMod.modifier))
-                        list.Add(($"{r.inputMod.stat}", $"{r.inputMod.modifier}"));
+                        list.Add((StatLabel(r.inputMod.stat), $"{r.inputMod.modifier}"));
                     return list;
                 }
 
@@ -114,6 +115,14 @@ namespace Code.Runtime.UI.Inventory
         // mirroring the standalone weapon tooltip's Interval so the compare and the full tooltip agree.
         private static string Interval(float attackSpeed) =>
             attackSpeed > 0f ? $"{1f / attackSpeed:0.00}s" : "—";
+
+        // Row labels for attachment stats route through the same StatKind naming the rest of the tooltip
+        // uses (PositionalDelta.KindOf + StatGlyphs.Label), rather than interpolating the raw
+        // WeaponOutputStat/WeaponInputStat enum — that printed PascalCase identifiers like "ManaCost"
+        // straight into player-facing text. Still doubles as the alignment key: same stat always maps to
+        // the same label, so two items sharing a stat still align into one row.
+        private static string StatLabel(WeaponOutputStat stat) => StatGlyphs.Label(PositionalDelta.KindOf(stat));
+        private static string StatLabel(WeaponInputStat stat)  => StatGlyphs.Label(PositionalDelta.KindOf(stat));
     }
 
     /// <summary>
