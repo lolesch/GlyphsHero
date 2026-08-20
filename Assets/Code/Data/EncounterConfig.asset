@@ -26,3 +26,5 @@ MonoBehaviour:
       <r>k__BackingField: 1
   scriptedLoot:
   - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
+  - {fileID: 11400000, guid: 57ebd3624db0aa6469b794b430703496, type: 2}
+  lootPickCount: 1

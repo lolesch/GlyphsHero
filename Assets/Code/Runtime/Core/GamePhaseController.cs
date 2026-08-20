@@ -47,6 +47,10 @@ namespace Code.Runtime.Core
         public static event Action<ITetrisContainer> StashBound;
         public static ITetrisContainer CurrentStash { get; private set; }
 
+        /// <summary>Same one-way pattern as StashBound, for the Loot phase's offer/pick surface.</summary>
+        public static event Action<ILootOffer> LootOfferBound;
+        public static ILootOffer CurrentLootOffer { get; private set; }
+
         private IGamePhase _placementPhase;
         private IGamePhase _combatPhase;
         private IGamePhase _lootPhase;
@@ -79,11 +83,14 @@ namespace Code.Runtime.Core
                 () => TransitionTo(GamePhase.Loot), // victory
                 OnPlayerDefeated);                  // defeat → Game Over
 
-            _lootPhase = new LootPhase(
+            var lootPhase = new LootPhase(
                 PlayerData,
                 () => CurrentEncounter.scriptedLoot,
+                () => CurrentEncounter.lootPickCount,
                 continueAfterLootButton,
                 OnLootContinue);
+            _lootPhase       = lootPhase;
+            CurrentLootOffer = lootPhase;
 
             gameOverButton.onClick.AddListener(
                 () => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex));
@@ -120,6 +127,7 @@ namespace Code.Runtime.Core
 
             CurrentStash = PlayerData.Stash;
             StashBound?.Invoke(CurrentStash);
+            LootOfferBound?.Invoke(CurrentLootOffer);
 
             TransitionTo(GamePhase.Placement);
         }
