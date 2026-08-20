@@ -26,7 +26,7 @@ namespace Code.Runtime.Pawns
 
             var draggable = pawn.GetComponent<Draggable>();
             if (draggable != null)
-                draggable.Initialize(cam, grid, tilemap);
+                draggable.Initialize(cam, grid, tilemap, _registry);
 
             _registry.Register(pawn);
             pawn.OnDefeated += () => { _registry.Unregister(pawn); };
