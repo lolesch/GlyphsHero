@@ -525,6 +525,7 @@ GameObject:
   - component: {fileID: 4876227807000541500}
   - component: {fileID: 6496576454921074128}
   - component: {fileID: 8032302279461664605}
+  - component: {fileID: 183963606632267494}
   m_Layer: 0
   m_Name: Pawn
   m_TagString: Untagged
@@ -562,7 +563,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Pawn
   _icon: {fileID: 21300000, guid: 9e735fd97a3956f499e8da8a5708e7a6, type: 3}
-  _displayName:
+  _displayName: 
   _spriteRenderer: {fileID: 8141589213139099117}
   _pawnEffects:
     shape:
@@ -786,3 +787,23 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0.3}
   m_Size: {x: 0.8, y: 1.2}
   m_Direction: 0
+--- !u!114 &183963606632267494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5931159786323204307}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e06505c89197b654ab9e24f5a2345c7f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Pawns::Code.Runtime.Pawns.Draggable
+  cam: {fileID: 0}
+  audioSource: {fileID: 6496576454921074128}
+  pickupClip: {fileID: 8300000, guid: 40354ee8014c6aa4b927eeede73a1e21, type: 3}
+  dropClip: {fileID: 8300000, guid: afbacdce463eb944db3aecde8dfef921, type: 3}
+  pawn: {fileID: 4927067294153613365}
+  grid: {fileID: 0}
+  tilemap: {fileID: 0}
+  pawnActor: {fileID: 4876227807000541500}

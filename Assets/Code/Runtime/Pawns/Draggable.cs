@@ -30,8 +30,18 @@ namespace Code.Runtime.Pawns
             if (pawnActor != null) return;
             pawnActor = pawn.GetComponent<Pawn>(); Debug.LogWarning("Assign _pawnActor in Inspector.", this);
         }
-        
+
         void Start() => pawnActor.MoveTo(grid.WorldToCell(pawnActor.transform.position).CellToHex());
+
+        // Grid/tilemap/camera are scene singletons and can't be baked into the prefab asset —
+        // PawnFactory holds them (it already needs grid for spawn positioning) and assigns them
+        // here right after Instantiate, once per spawned pawn.
+        public void Initialize(Camera cam, Grid grid, Tilemap tilemap)
+        {
+            this.cam     = cam;
+            this.grid    = grid;
+            this.tilemap = tilemap;
+        }
 
         
         // TODO: wire PhaseChange from GameLoop side. Pawn/Draggable should expose IPhaseListener OnPhaseChanged()
@@ -67,7 +77,7 @@ namespace Code.Runtime.Pawns
                 pawn.position = grid.CellToWorld(cell);
                 _previousPos  = pawn.position;
                 pawnActor.MoveTo(cell.CellToHex());
-                
+
                 Debug.LogWarning($"Terrain: {terrain.type}");
             }
             else

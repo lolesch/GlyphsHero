@@ -46,9 +46,13 @@ namespace Code.Runtime.Core
         {
             foreach (var pawn in _playerPawns)
             {
-                //var draggable = pawn.GetComponent<Draggable>();
-                //if (draggable != null)
-                //    draggable.enabled = enabled;
+                // IPawn has no GetComponent (it's not Component-shaped by design); Pawn is the only
+                // runtime implementation, so drop to Component here rather than widening the interface.
+                if (pawn is not Component component) continue;
+
+                var draggable = component.GetComponent<Draggable>();
+                if (draggable != null)
+                    draggable.enabled = enabled;
             }
         }
 
