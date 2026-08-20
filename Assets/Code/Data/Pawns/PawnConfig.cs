@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Code.Data.Items;
 using Code.Data.Items.Weapon;
@@ -21,9 +22,20 @@ namespace Code.Data.Pawns
         [Min(1)] public uint baseRange = 1;
 
         public WeaponConfig starterWeapon;
-        public List<ItemConfig> starterItems = new();
+        // Grid cell the starter weapon is placed at on spawn (TryAddAt, not auto-fit) so a scripted
+        // encounter's starting topology — what's connected to the weapon vs. left loose — is
+        // deterministic instead of depending on TryAdd's first-fit scan order.
+        public Vector2Int starterWeaponPosition;
+        public List<StarterItemPlacement> starterItems = new();
         public TerrainCostConfig movementCosts;
-        
+
         //public PawnEffectConfig pawnEffects;
+
+        [Serializable]
+        public struct StarterItemPlacement
+        {
+            public ItemConfig config;
+            public Vector2Int position;
+        }
     }
 }

@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c525ee336ac242b2a8b253a434d8338b, type: 3}
-  m_Name: EncounterConfig
+  m_Name: EncounterConfig2
   m_EditorClassIdentifier: Data::Code.Data.Pawns.MapConfig
   enemies:
   - config: {fileID: 11400000, guid: 4525cc981333f3e429fcc6aff9c4caaa, type: 2}
@@ -18,11 +18,15 @@ MonoBehaviour:
       name: Hex (3, -1)
       <q>k__BackingField: 3
       <r>k__BackingField: -1
-  players:
-  - config: {fileID: 11400000, guid: 5f7e65c9f1b721a49ab1b539386fcbbb, type: 2}
+  - config: {fileID: 11400000, guid: 4525cc981333f3e429fcc6aff9c4caaa, type: 2}
     startHex:
-      name: Hex (-2, 1)
-      <q>k__BackingField: -2
-      <r>k__BackingField: 1
-  scriptedLoot:
-  - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
+      name: Hex (4, -2)
+      <q>k__BackingField: 4
+      <r>k__BackingField: -2
+  players:
+  - config: {fileID: 11400000, guid: 38543e91ffac48ca8b378ea8c84ff4db, type: 2}
+    startHex:
+      name: Hex (-3, 2)
+      <q>k__BackingField: -3
+      <r>k__BackingField: 2
+  scriptedLoot: []

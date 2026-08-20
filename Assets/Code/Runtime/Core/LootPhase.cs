@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Code.Data.Items;
 using Code.Runtime.Modules.Inventory;
 using UnityEngine;
@@ -13,24 +14,21 @@ namespace Code.Runtime.Core
     /// </summary>
     public sealed class LootPhase : IGamePhase
     {
-        private readonly IPlayerData  _playerData;
-        private readonly ItemConfig[] _itemPool;
-        private readonly int          _lootCount;
-        private readonly Button       _continueButton;
-        private readonly Action       _onContinue;
+        private readonly IPlayerData                    _playerData;
+        private readonly Func<IReadOnlyList<ItemConfig>> _getScriptedLoot;
+        private readonly Button                          _continueButton;
+        private readonly Action                          _onContinue;
 
         public LootPhase(
-            IPlayerData  playerData,
-            ItemConfig[] itemPool,
-            int          lootCount,
-            Button       continueButton,
-            Action       onContinue)
+            IPlayerData                     playerData,
+            Func<IReadOnlyList<ItemConfig>> getScriptedLoot,
+            Button                          continueButton,
+            Action                          onContinue)
         {
-            _playerData     = playerData;
-            _itemPool       = itemPool;
-            _lootCount      = lootCount;
-            _continueButton = continueButton;
-            _onContinue     = onContinue;
+            _playerData      = playerData;
+            _getScriptedLoot = getScriptedLoot;
+            _continueButton  = continueButton;
+            _onContinue      = onContinue;
         }
 
         public void Enter()
@@ -51,14 +49,15 @@ namespace Code.Runtime.Core
 
         private void GenerateLoot()
         {
+            var loot  = _getScriptedLoot();
             var added = 0;
 
-            for (var i = 0; i < _lootCount; i++)
+            foreach (var config in loot)
             {
-                var item = ItemFactory.Create(_itemPool);
-
-                if (item == null)
+                if (config == null)
                     continue;
+
+                var item = ItemFactory.Create(config);
 
                 if (_playerData.Stash.TryAdd(item))
                     added++;
@@ -66,7 +65,7 @@ namespace Code.Runtime.Core
                     Debug.LogWarning($"[LootPhase] Stash full — could not add {item.Name}.");
             }
 
-            Debug.Log($"[LootPhase] Added {added}/{_lootCount} items to stash.");
+            Debug.Log($"[LootPhase] Added {added}/{loot.Count} items to stash.");
         }
 
         private void OnContinue() => _onContinue();

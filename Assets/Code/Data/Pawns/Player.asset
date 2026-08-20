@@ -20,9 +20,10 @@ MonoBehaviour:
   movementSpeed: 1
   baseRange: 1
   starterWeapon: {fileID: 11400000, guid: fd4a579c748d3414f88c941336c65ec9, type: 2}
+  starterWeaponPosition: {x: 0, y: 0}
   starterItems:
-  - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
-  - {fileID: 11400000, guid: 3aafe504aba36954f9fe01fa03622533, type: 2}
+  - config: {fileID: 11400000, guid: 57ebd3624db0aa6469b794b430703496, type: 2}
+    position: {x: 3, y: 0}
   movementCosts:
     map: []
     _defaultCost: 1

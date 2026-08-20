@@ -93,13 +93,21 @@ namespace Code.Runtime.Pawns
             PawnEffects   = _pawnEffects;
             MovementCosts = config.movementCosts;
             
-            foreach (var item in config.starterItems.Where(x => x != null))
-                Inventory.TryAdd(ItemFactory.Create(item));
-
             if (config.starterWeapon != null)
-                Inventory.TryAdd(ItemFactory.Create(config.starterWeapon));
+            {
+                ITetrisItem weapon = ItemFactory.Create(config.starterWeapon);
+                if (!Inventory.TryAddAt(config.starterWeaponPosition, ref weapon))
+                    Debug.LogWarning($"{gameObject.name}: starter weapon did not fit at {config.starterWeaponPosition}.", this);
+            }
             else
                 Debug.LogWarning($"{gameObject.name} has no StarterWeapon assigned in PawnConfig.", this);
+
+            foreach (var placement in config.starterItems.Where(x => x.config != null))
+            {
+                ITetrisItem item = ItemFactory.Create(placement.config);
+                if (!Inventory.TryAddAt(placement.position, ref item))
+                    Debug.LogWarning($"{gameObject.name}: starter item {placement.config.name} did not fit at {placement.position}.", this);
+            }
 
             // Bootstrap after the starter weapon is in: it applies loose attachments' passive stats
             // and keeps them in sync as the player chains/unchains items in any phase.

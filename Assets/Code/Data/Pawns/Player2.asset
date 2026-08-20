@@ -10,20 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3afcb0ff45fd4981a00b3a4aef0ce144, type: 3}
-  m_Name: Enemy
+  m_Name: Player2
   m_EditorClassIdentifier: Data::Code.Data.SO.PawnConfig
-  icon: {fileID: 21300000, guid: aa4f36689ed5b234aa20deabc4da6871, type: 3}
+  icon: {fileID: 21300000, guid: d0cf2d8c50a74974db22851499a4fc51, type: 3}
   baseHealth: 50
   baseHealthRegen: 1
   baseMana: 80
   baseManaRegen: 8
   movementSpeed: 1
   baseRange: 1
-  starterWeapon: {fileID: 11400000, guid: 62b0a140624198a4d909ae17f3a25027, type: 2}
+  starterWeapon: {fileID: 11400000, guid: fd4a579c748d3414f88c941336c65ec9, type: 2}
   starterWeaponPosition: {x: 0, y: 0}
-  starterItems:
-  - config: {fileID: 11400000, guid: 57ebd3624db0aa6469b794b430703496, type: 2}
-    position: {x: 3, y: 0}
+  starterItems: []
   movementCosts:
     map: []
     _defaultCost: 1

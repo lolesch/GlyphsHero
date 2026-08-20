@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Generic;
 using Code.Data.Enums;
-using Code.Data.Items;
 using Code.Data.Pawns;
 using Code.Runtime.Core.Combat;
 using Code.Runtime.Modules.Inventory;
@@ -35,10 +35,6 @@ namespace Code.Runtime.Core
         [SerializeField] private Button continueAfterLootButton;
         [SerializeField] private Button gameOverButton;
 
-        [Header("Loot")]
-        [SerializeField] private ItemConfig[] itemPool;
-        [SerializeField, Min(1)] private int lootCount = 3;
-
         [field: SerializeField, ReadOnly] public GamePhase Current { get; private set; }
 
         public IPlayerData PlayerData { get; private set; }
@@ -54,17 +50,25 @@ namespace Code.Runtime.Core
         private IGamePhase _placementPhase;
         private IGamePhase _combatPhase;
         private IGamePhase _lootPhase;
-        
-        [SerializeField] private EncounterConfig currentEncounter;
-        
+
+        // Hand-authored escalating sequence, played in order. Index 0 is the tutorial fight; the
+        // sequence clamps on its last entry once exhausted (no "victory" end-state yet — noted as
+        // a gap, out of scope for this slice).
+        [SerializeField] private List<EncounterConfig> encounters = new();
+        private int _encounterIndex;
+        private EncounterConfig CurrentEncounter => encounters[Mathf.Clamp(_encounterIndex, 0, encounters.Count - 1)];
+
         private void Awake()
         {
-            PlayerData = new PlayerData(stashSize, currentEncounter);
-            
+            if (encounters.Count == 0)
+                Debug.LogError("[GameLoop] No EncounterConfig assigned to Encounters — assign at least one in the Inspector.", this);
+
+            PlayerData = new PlayerData(stashSize, encounters.Count > 0 ? encounters[0] : null);
+
             combatCoordinator.Initialize(_registry);
             selectionHandler.Initialize(_registry);
             pawnFactory.Initialize(_registry);
-            
+
             _placementPhase = new PlacementPhase(
                 _registry.playerPawns,
                 confirmPlacementButton,
@@ -77,30 +81,42 @@ namespace Code.Runtime.Core
 
             _lootPhase = new LootPhase(
                 PlayerData,
-                itemPool,
-                lootCount,
+                () => CurrentEncounter.scriptedLoot,
                 continueAfterLootButton,
-                () => TransitionTo(GamePhase.Placement));
+                OnLootContinue);
 
             gameOverButton.onClick.AddListener(
                 () => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex));
         }
-        
+
         public void LoadMap(EncounterConfig encounterData)
         {
             _registry.ClearEnemies();
             pawnFactory.SpawnEnemies(encounterData);
-            pawnFactory.SpawnAllys(encounterData);
+            pawnFactory.SpawnAllys(encounterData); // additive: encounterData.players lists only newly-introduced pawns
+        }
+
+        // Advances to the next scripted encounter (clamped on the last one) and loads it before
+        // returning to Placement, so the player gears up against next fight's enemies, not the one
+        // they just won.
+        private void OnLootContinue()
+        {
+            _encounterIndex = Mathf.Min(_encounterIndex + 1, encounters.Count - 1);
+            PlayerData.currentEncounter = CurrentEncounter;
+            LoadMap(CurrentEncounter);
+            TransitionTo(GamePhase.Placement);
         }
 
         private void Start()
         {
+            if (encounters.Count == 0)
+                return; // Awake already logged the error; nothing to load.
+
             confirmPlacementButton.gameObject.SetActive(false);
             continueAfterLootButton.gameObject.SetActive(false);
             gameOverButton.gameObject.SetActive(false);
 
-            LoadMap(PlayerData.currentEncounter);
-            AddItems();
+            LoadMap(CurrentEncounter);
 
             CurrentStash = PlayerData.Stash;
             StashBound?.Invoke(CurrentStash);
@@ -130,16 +146,6 @@ namespace Code.Runtime.Core
             GamePhase.Loot      => _lootPhase,
             _                   => null,
         };
-
-        [ContextMenu("AddItems")]
-        private void AddItems()
-        {
-            foreach (var config in itemPool)
-            {
-                PlayerData.Stash.TryAdd(ItemFactory.Create(config));
-                PlayerData.Stash.TryAdd(ItemFactory.Create(config));
-            }
-        }
     }
 
     public interface IGamePhase
