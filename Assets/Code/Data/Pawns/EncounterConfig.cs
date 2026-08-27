@@ -16,9 +16,12 @@ namespace Code.Data.Pawns
         // are never cleared between encounters (their built inventory must persist), so re-listing
         // an already-fielded pawn here would spawn a duplicate, empty-inventory clone alongside it.
         public List<SpawnData> players;
-        // Granted to the stash when this encounter is won, in order. Replaces random pool loot —
-        // scripted so early encounters can double as a tutorial and later ones hand-tune the ramp.
+        // Offered to the player when this encounter is won — not auto-granted. Scripted so early
+        // encounters can double as a tutorial and later ones hand-tune the ramp.
         public List<ItemConfig> scriptedLoot = new();
+        // How many of the offer above the player may take; the rest are discarded once spent or
+        // once Continue is pressed. Not a currency/budget system — just how many picks this win buys.
+        [Min(0)] public int lootPickCount = 1;
 
         [Serializable]
         public struct SpawnData
