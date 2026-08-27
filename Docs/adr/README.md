@@ -72,5 +72,6 @@ issue trail**, not the ADR. The `Lifecycle` header field is the ADR's pointer at
 | [0009](0009-item-cost-modifiers-are-generic.md) | Cost modification is a generic, opt-in secondary property of any chain item | Implemented (pending Unity verification) |
 | [0010](0010-tooltip-two-tier-disclosure.md) | Tooltip is a two-tier disclosure: Tier-1 active-context only, Details mode is the "why" layer | Implemented (amended by 0011 §Worked example) |
 | [0011](0011-tooltip-cost-line-drops-root-gate-annotation.md) | Weapon-terminal cost line drops the "(root gate)" annotation | Implemented |
+| [0012](0012-core-loop-hands-off-and-itemized-enemies.md) | Hands-off combat; the plan is the game; itemized enemies read by inspection (start 1 pawn; squad + health economy deferred) | Accepted — design-only |
 
 Keep this table's `Lifecycle` column in step with each ADR's header when state changes.
