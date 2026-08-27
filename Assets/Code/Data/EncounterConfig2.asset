@@ -29,4 +29,8 @@ MonoBehaviour:
       name: Hex (-3, 2)
       <q>k__BackingField: -3
       <r>k__BackingField: 2
-  scriptedLoot: []
+  scriptedLoot:
+  - {fileID: 11400000, guid: d287988fc72bebe49a9a88107b6d4e2f, type: 2}
+  - {fileID: 11400000, guid: d27bd8a659792f741917243aa66dcfcb, type: 2}
+  - {fileID: 11400000, guid: 07e8abe6d3f44cf6baa6daf80e8f8e9d, type: 2}
+  lootPickCount: 2
