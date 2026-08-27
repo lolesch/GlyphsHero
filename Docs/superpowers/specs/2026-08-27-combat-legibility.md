@@ -7,11 +7,11 @@
 
 ## Progress
 
-- [ ] **A** — `AttackReport` event + post-combat recap
-- [ ] **B** — Damage numbers, attributed by source
-- [ ] **C** — Per-pawn attack indicator
-- [ ] **D** — Covered-hex flash on the grid
-- [ ] **E** — Enemy inspect during Placement
+- [ ] **A** ([#30](https://github.com/lolesch/GlyphsHero/issues/30)) — `AttackReport` event + post-combat recap
+- [ ] **B** ([#31](https://github.com/lolesch/GlyphsHero/issues/31)) — Damage numbers, attributed by source
+- [ ] **C** ([#32](https://github.com/lolesch/GlyphsHero/issues/32)) — Per-pawn attack indicator
+- [ ] **D** ([#33](https://github.com/lolesch/GlyphsHero/issues/33)) — Covered-hex flash on the grid
+- [ ] **E** ([#34](https://github.com/lolesch/GlyphsHero/issues/34)) — Enemy inspect during Placement
 
 `A` is the foundation for `B`/`C`/`D`. `E` is independent — it can run any time, and pairs naturally with `D`.
 
